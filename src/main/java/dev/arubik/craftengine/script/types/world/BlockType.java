@@ -5,6 +5,7 @@ import dev.arubik.craftengine.script.types.primitive.MapType;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -118,7 +119,11 @@ public final class BlockType {
                 } catch (Throwable ignored) { return ScriptValue.of(false); }
             })
             /** Every block glued to this one — what a bearing anchored here would carry. */
-            .method("glue_structure", (obj, args) -> {
+            // Migrated to methodTyped0 — instance kept as Object (not BlockRef) because ref(obj)
+            // does more than a plain cast (it also accepts a MachineRef, since Machine inherits
+            // this method from Block — see ref()'s doc), so that conversion must stay inside the
+            // body rather than being delegated to methodTypedN's generic cast.
+            .methodTyped0("glue_structure", TypeCodecs.RAW, (Object obj) -> {
                 java.util.List<ScriptValue> out = new java.util.ArrayList<>();
                 try {
                     BlockRef r = ref(obj);
@@ -213,14 +218,13 @@ public final class BlockType {
             // conversion, so Machine.set_property(...) still works, it just isn't a separate
             // implementation anymore). Named to match property()/has_property()/cycle_prop() — the
             // old "state" family (get_state/set_state) has been fully retired in favour of this one.
-            .method("set_property", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                String propName = args.get(0).asStr();
-                String value = args.get(1).asStr();
+            // Migrated to methodTyped2 (see glue_structure's note on why instance stays Object).
+            .methodTyped2("set_property", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (Object obj, String propName, String value) -> {
                 BlockRef r = ref(obj);
                 BlockState oldState = r.state();
                 BlockState newState = writeProperty(oldState, propName, value);
-                if (newState == null) return ScriptValue.of(false);
+                if (newState == null) return false;
                 r.level().setBlock(r.pos(), newState, 3);
                 // Overwrite (not just invalidate) PROPERTY_CACHE's entry for this exact key with
                 // the FRESH post-write value, stamped with the current tick — otherwise a same-tick
@@ -230,28 +234,30 @@ public final class BlockType {
                 // cache hit too.
                 overwritePropertyCache(r.level(), r.pos(), propName, newState);
                 fireOnPropertyChange(r, oldState, newState);
-                return ScriptValue.of(true);
+                return true;
             })
             // property(name) — reads CE custom OR vanilla block state property. Cached within the
             // SAME server tick (see PROPERTY_CACHE/readPropertyThisTick) — a machine's own action
             // script and its renderer entries commonly read the exact same property several times
             // per tick.
-            .method("property", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
+            // Migrated to methodTyped1 (see glue_structure's note on why instance stays Object).
+            .methodTyped1("property", TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
+                (Object obj, String propName) -> {
                 BlockRef r = ref(obj);
-                String val = readPropertyThisTick(r.level(), r.pos(), r.state(), args.get(0).asStr());
+                String val = readPropertyThisTick(r.level(), r.pos(), r.state(), propName);
                 return val != null ? ScriptValue.of(val) : ScriptValue.NULL;
             })
             // has_property(name) — checks both CE and vanilla property systems (same per-tick cache)
-            .method("has_property", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
+            // Migrated to methodTyped1.
+            .methodTyped1("has_property", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (Object obj, String propName) -> {
                 BlockRef r = ref(obj);
-                return ScriptValue.of(readPropertyThisTick(r.level(), r.pos(), r.state(), args.get(0).asStr()) != null);
+                return readPropertyThisTick(r.level(), r.pos(), r.state(), propName) != null;
             })
             // cycle_prop(name) — advance property to its next possible value
-            .method("cycle_prop", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                String propName = args.get(0).asStr();
+            // Migrated to methodTyped1.
+            .methodTyped1("cycle_prop", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (Object obj, String propName) -> {
                 BlockRef r = ref(obj);
                 BlockState bs = r.state();
                 for (Property<?> prop : bs.getProperties()) {
@@ -260,35 +266,37 @@ public final class BlockType {
                         if (newState != null) {
                             r.level().setBlock(r.pos(), newState, 3);
                             overwritePropertyCache(r.level(), r.pos(), propName, newState);
-                            return ScriptValue.of(true);
+                            return true;
                         }
                     }
                 }
-                return ScriptValue.of(false);
+                return false;
             })
             // combined_light — max of block+sky light at this position
             .property("combined_light", obj -> ScriptValue.of(ref(obj).level().getMaxLocalRawBrightness(ref(obj).pos())))
             .property("block_light",    obj -> ScriptValue.of(ref(obj).level().getBrightness(LightLayer.BLOCK, ref(obj).pos())))
             .property("sky_light",      obj -> ScriptValue.of(ref(obj).level().getBrightness(LightLayer.SKY, ref(obj).pos())))
             // apply_bone_meal() → bool — grows the plant/crop
-            .method("apply_bone_meal", (obj, args) -> {
+            // Migrated to methodTyped0.
+            .methodTyped0("apply_bone_meal", TypeCodecs.BOOL, (Object obj) -> {
                 BlockRef r = ref(obj);
                 try {
                     BlockState bs = r.state();
                     if (bs.getBlock() instanceof net.minecraft.world.level.block.BonemealableBlock g
                             && g.isValidBonemealTarget(r.level(), r.pos(), bs)) {
                         g.performBonemeal((net.minecraft.server.level.ServerLevel) r.level(), r.level().random, r.pos(), bs);
-                        return ScriptValue.of(true);
+                        return true;
                     }
                 } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
+                return false;
             })
             // break_and_drop() → Array<Item> — breaks block, awards its normal XP orb (if any), and
             // returns drops. The one true "break this block" implementation — Machine.break_block
             // used to hand-roll a near-identical copy (missing the XP award) for breaking a block
             // OTHER than the machine's own; since the caller already holds that Block value (from
             // Machine.facing_block, World.get_block, ...), it just calls this directly now.
-            .method("break_and_drop", (obj, args) -> {
+            // Migrated to methodTyped0.
+            .methodTyped0("break_and_drop", TypeCodecs.RAW, (Object obj) -> {
                 BlockRef r = ref(obj);
                 try {
                     BlockState bs = r.state();
@@ -306,23 +314,29 @@ public final class BlockType {
             // driven counterpart to replace(id): replace() unconditionally overwrites with a bare
             // block id, this only ever fills empty space and consumes the placed item, matching what
             // a dispenser/placer machine actually needs.
-            .method("place_from_item", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
+            // Migrated to methodTyped1 — item arg kept as TypeCodecs.RAW since it's an ScriptValue
+            // union (Item or Obj-wrapped ItemStack), not one fixed native type.
+            .methodTyped1("place_from_item", TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                (Object obj, ScriptValue itemArg) -> {
                 BlockRef r = ref(obj);
-                if (!r.state().isAir()) return ScriptValue.of(false);
-                ScriptValue itemArg = args.get(0);
+                if (!r.state().isAir()) return false;
                 net.minecraft.world.item.ItemStack stack;
                 if (itemArg instanceof ScriptValue.Item i) stack = i.stack();
                 else if (itemArg instanceof ScriptValue.Obj o && o.instance() instanceof net.minecraft.world.item.ItemStack is) stack = is;
-                else return ScriptValue.of(false);
-                if (stack.isEmpty() || !(stack.getItem() instanceof net.minecraft.world.item.BlockItem bi)) return ScriptValue.of(false);
+                else return false;
+                if (stack.isEmpty() || !(stack.getItem() instanceof net.minecraft.world.item.BlockItem bi)) return false;
                 r.level().setBlock(r.pos(), bi.getBlock().defaultBlockState(), 3);
                 stack.shrink(1);
-                return ScriptValue.of(true);
+                return true;
             })
             // play_sound(soundId, vol?, pitch?)
             // --- Facing / direction methods (CE + vanilla aware) ---
             // facing(fallback?) — reads "facing" from CE custom OR vanilla block state
+            // Left untyped: the single arg is an optional fallback that's only consulted when no
+            // facing property was found — methodTyped1's onMissingArgs short-circuits BEFORE that
+            // check runs, so a facing()-with-no-arg call on a block that DOES have a facing would
+            // wrongly return onMissingArgs instead of the real facing value. Doesn't fit the
+            // "missing args -> fixed early return" shape the typed API models.
             .method("facing", (obj, args) -> {
                 String val = readProperty(ref(obj).state(), "facing");
                 if (val == null) val = readProperty(ref(obj).state(), "horizontal_facing");
@@ -330,18 +344,20 @@ public final class BlockType {
                 return args.isEmpty() ? ScriptValue.NULL : args.get(0);
             })
             // relative(direction) — block adjacent in given direction ("north","south","east","west","up","down")
-            .method("relative", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
+            // Migrated to methodTyped1.
+            .methodTyped1("relative", TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
+                (Object obj, String dirName) -> {
                 BlockRef r = ref(obj);
-                net.minecraft.core.Direction dir = net.minecraft.core.Direction.byName(args.get(0).asStr());
+                net.minecraft.core.Direction dir = net.minecraft.core.Direction.byName(dirName);
                 if (dir == null) return ScriptValue.NULL;
                 return wrap(r.level(), r.pos().relative(dir));
             })
             // offset(dx,dy,dz) — block at relative offset
-            .method("offset", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.NULL;
+            // Migrated to methodTyped3.
+            .methodTyped3("offset", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.NULL,
+                (Object obj, Double dxArg, Double dyArg, Double dzArg) -> {
                 BlockRef r = ref(obj);
-                int dx = (int) args.get(0).asNum(), dy = (int) args.get(1).asNum(), dz = (int) args.get(2).asNum();
+                int dx = dxArg.intValue(), dy = dyArg.intValue(), dz = dzArg.intValue();
                 return wrap(r.level(), r.pos().offset(dx, dy, dz));
             })
             // facing_block — block this block faces, using CE or vanilla "facing" property
@@ -360,23 +376,25 @@ public final class BlockType {
                 return dev.arubik.craftengine.script.types.primitive.MapType.wrap(map);
             })
             // is_player_looking(playerArg) — true if a player is looking at this block
-            .method("is_player_looking", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                ScriptValue pv = args.get(0);
+            // Migrated to methodTyped1 — player arg kept as TypeCodecs.RAW (needs an instanceof
+            // narrowing to a wrapped Player, not a fixed native type).
+            .methodTyped1("is_player_looking", TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                (Object obj, ScriptValue pv) -> {
                 if (!(pv instanceof ScriptValue.Obj po) || !(po.instance() instanceof net.minecraft.world.entity.player.Player player))
-                    return ScriptValue.of(false);
+                    return false;
                 BlockRef r = ref(obj);
                 var hit = player.pick(5.0, 1.0f, false);
                 if (hit instanceof net.minecraft.world.phys.BlockHitResult bhr) {
-                    return ScriptValue.of(bhr.getBlockPos().equals(r.pos()));
+                    return bhr.getBlockPos().equals(r.pos());
                 }
-                return ScriptValue.of(false);
+                return false;
             })
             // hit_face(player) → face relative to THIS block's own facing
             // "front","back","left","right","top","bottom" — or absolute if block has no facing
-            .method("hit_face", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                ScriptValue pv = args.get(0);
+            // Migrated to methodTyped1 — player arg kept as TypeCodecs.RAW (same reason as
+            // is_player_looking above).
+            .methodTyped1("hit_face", TypeCodecs.RAW, TypeCodecs.RAW, ScriptValue.NULL,
+                (Object obj, ScriptValue pv) -> {
                 if (!(pv instanceof ScriptValue.Obj po) || !(po.instance() instanceof net.minecraft.world.entity.player.Player player))
                     return ScriptValue.NULL;
                 BlockRef r = ref(obj);
@@ -400,9 +418,10 @@ public final class BlockType {
             })
             // hit_uv(player) → {u: 0..1, v: 0..1} within the hit face (u=horizontal, v=vertical on face)
             // Useful for detecting sub-areas: hit_uv returns u,v in [0,1] within the hit face
-            .method("hit_uv", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                ScriptValue pv = args.get(0);
+            // Migrated to methodTyped1 — player arg kept as TypeCodecs.RAW (same reason as
+            // is_player_looking above).
+            .methodTyped1("hit_uv", TypeCodecs.RAW, TypeCodecs.RAW, ScriptValue.NULL,
+                (Object obj, ScriptValue pv) -> {
                 if (!(pv instanceof ScriptValue.Obj po) || !(po.instance() instanceof net.minecraft.world.entity.player.Player player))
                     return ScriptValue.NULL;
                 BlockRef r = ref(obj);
@@ -431,20 +450,21 @@ public final class BlockType {
             })
             // hit_in_area(player, face, u0, v0, u1, v1) → bool
             // True if player looks at this block's given face AND the hit point is within [u0,v0]..[u1,v1]
-            .method("hit_in_area", (obj, args) -> {
-                if (args.size() < 6) return ScriptValue.of(false);
-                ScriptValue pv = args.get(0);
+            // Migrated to methodTyped6 (per coordinator update — arity 4-7 now supported). Player
+            // arg stays TypeCodecs.RAW (needs an instanceof narrowing, not a fixed native type);
+            // faceFilter is a string, the four UV bounds are doubles.
+            .methodTyped6("hit_in_area", TypeCodecs.RAW, TypeCodecs.STRING,
+                TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE,
+                TypeCodecs.BOOL, false,
+                (Object obj, ScriptValue pv, String faceFilter, Double u0, Double v0, Double u1, Double v1) -> {
                 if (!(pv instanceof ScriptValue.Obj po) || !(po.instance() instanceof net.minecraft.world.entity.player.Player player))
-                    return ScriptValue.of(false);
-                String faceFilter = args.get(1).asStr();
-                double u0 = args.get(2).asNum(), v0 = args.get(3).asNum();
-                double u1 = args.get(4).asNum(), v1 = args.get(5).asNum();
+                    return false;
                 BlockRef r = ref(obj);
                 var hit = player.pick(5.0, 1.0f, false);
                 if (!(hit instanceof net.minecraft.world.phys.BlockHitResult bhr) || !bhr.getBlockPos().equals(r.pos()))
-                    return ScriptValue.of(false);
+                    return false;
                 if (!faceFilter.isEmpty() && !bhr.getDirection().getName().equals(faceFilter))
-                    return ScriptValue.of(false);
+                    return false;
                 net.minecraft.world.phys.Vec3 loc = bhr.getLocation();
                 net.minecraft.core.Direction face = bhr.getDirection();
                 double lx = loc.x - r.pos().getX(), ly = loc.y - r.pos().getY(), lz = loc.z - r.pos().getZ();
@@ -458,9 +478,12 @@ public final class BlockType {
                     case EAST  -> { u = 1 - lz; v = 1 - ly; }
                     default    -> { u = 0; v = 0; }
                 }
-                return ScriptValue.of(u >= u0 && u <= u1 && v >= v0 && v <= v1);
+                return u >= u0 && u <= u1 && v >= v0 && v <= v1;
             })
             // entities(radius?) — all entities near this block
+            // Left untyped: radius is optional WITH a real default (4) that's used to compute an
+            // actual result when omitted, not an early-return sentinel — doesn't fit
+            // methodTyped1's onMissingArgs short-circuit shape.
             .method("entities", (obj, args) -> {
                 BlockRef r = ref(obj);
                 double radius = args.isEmpty() ? 4 : args.get(0).asNum();
@@ -472,17 +495,17 @@ public final class BlockType {
                 return new ScriptValue.Array(result);
             })
             // replace(blockId) — set this block to given id
-            .method("replace", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
+            // Migrated to methodTyped1.
+            .methodTyped1("replace", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (Object obj, String id) -> {
                 BlockRef r = ref(obj);
-                String id = args.get(0).asStr();
                 try {
                     net.minecraft.resources.Identifier loc = net.minecraft.resources.Identifier.parse(id.contains(":") ? id : "minecraft:" + id);
                     net.minecraft.world.level.block.Block block = (net.minecraft.world.level.block.Block) BuiltInRegistries.BLOCK.getValue(loc);
-                    if (block == null) return ScriptValue.of(false);
+                    if (block == null) return false;
                     r.level().setBlock(r.pos(), block.defaultBlockState(), 3);
-                    return ScriptValue.of(true);
-                } catch (Throwable e) { return ScriptValue.of(false); }
+                    return true;
+                } catch (Throwable e) { return false; }
             })
             // place_custom(id[, props_map]) -> bool. Places a CraftEngine CUSTOM block (not a
             // vanilla one — see replace(id) for that) at this position, optionally setting
@@ -490,6 +513,11 @@ public final class BlockType {
             // make_map("facing", "north")) — the generic primitive a "place a different custom
             // block depending on which face was clicked" item script needs (see
             // ItemActionEvent.clicked_block/clicked_face).
+            // Left untyped: the optional 2nd arg (props map) is inspected via args.size()>=2 and,
+            // when present, iterated as a raw Map — a shape methodTypedN's fixed per-slot codecs
+            // can't express without either forcing the map required (methodTyped2, breaking the
+            // valid 1-arg call) or losing the ability to tell "arg omitted" from "arg present but
+            // empty" once decoded through a codec.
             .method("place_custom", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.of(false);
                 BlockRef r = ref(obj);
@@ -555,6 +583,9 @@ public final class BlockType {
                     return VectorType.wrap(flow.x, flow.y, flow.z);
                 } catch (Throwable ignored) { return VectorType.wrap(0, 0, 0); }
             })
+            // Left untyped: only soundId is required — vol/pitch are optional trailing args each
+            // with their own real default (1.0f) computed from args.size(), not an early-return
+            // sentinel — doesn't fit methodTypedN's fixed-arity onMissingArgs shape.
             .method("play_sound", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.of(false);
                 try {

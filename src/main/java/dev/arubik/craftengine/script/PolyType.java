@@ -17,6 +17,13 @@ public final class PolyType {
     private final PolyType parent;
     private final Map<String, PropertyHandler> properties = new ConcurrentHashMap<>();
     private final Map<String, MethodHandler> methods = new ConcurrentHashMap<>();
+    // Typed-registration metadata, kept ALONGSIDE (not instead of) the untyped `methods` entry a
+    // typed registration also installs (see methodTyped0..7 below) — so every existing dispatch
+    // path (interpreter, PolyTypeRegistry.callMethod, ScriptValue.callMethod, the current JIT
+    // direct-dispatch specialization) keeps working completely unchanged against `methods`, while
+    // a FUTURE JIT specialization can additionally consult this map to skip ScriptValue coercion
+    // entirely for a method that opted in. Never read by anything today except resolveTypedMethod.
+    private final Map<String, TypedMethodDescriptor> typedMethods = new ConcurrentHashMap<>();
     private DefaultPropertyHandler defaultProperty = null;
     private DefaultMethodHandler defaultMethod = null;
 
@@ -46,6 +53,134 @@ public final class PolyType {
     public PolyType replaceProperty(String name, PropertyHandler handler) {
         properties.put(name, handler);
         return this;
+    }
+
+    // --- Typed method registration -----------------------------------------------------------
+    //
+    // The untyped MethodHandler above (Object instance, List<ScriptValue> args) -> ScriptValue is
+    // deliberately erased of all type information — nothing for a compiler to introspect. These
+    // methodTypedN(...) overloads let a call site register a handler with REAL native parameter/
+    // return types (e.g. (MachineRef, String, double) -> boolean) while still producing a fully
+    // conforming untyped MethodHandler under the hood, via a TypeCodec<T> per argument/return that
+    // knows how to decode a ScriptValue -> T and encode a T -> ScriptValue. That decode/encode
+    // wrapper is installed into `methods` exactly the way `.method(name, handler)` would install
+    // one by hand, so every existing untyped call path (interpreter, PolyTypeRegistry.callMethod,
+    // ScriptValue.callMethod, the current JIT direct-dispatch specialization) is completely
+    // unaffected — this is purely additive.
+    //
+    // A TypedMethodDescriptor recording the argument/return TypeCodecs (and the original typed
+    // handler instance) is ALSO stashed in `typedMethods`, queryable via resolveTypedMethod(name).
+    // Nothing reads that map today; it exists so a FUTURE JIT specialization can look up a typed
+    // descriptor for a known top-level call and invoke the real native-typed handler directly,
+    // skipping ScriptValue boxing/coercion entirely. Building that codegen is explicitly out of
+    // scope for this pass — only the metadata needs to already be there.
+    //
+    // `onMissingArgs` mirrors the "not enough args -> return false/NULL" short-circuit nearly
+    // every hand-written untyped method already does at its very first line — since R's shape
+    // isn't known generically, the caller supplies the already-correct-for-R fallback value
+    // (e.g. Boolean.FALSE for a boolean-returning method, ScriptValue.NULL for a method whose
+    // return type is genuinely dynamic and left as TypeCodecs.RAW).
+
+    /** Register a 0-arg typed method. No missing-args case exists at this arity. */
+    public <I, R> PolyType methodTyped0(String name, TypeCodec<R> ret, TypedMethodHandler0<I, R> handler) {
+        methods.put(name, (instance, args) -> ret.encode(handler.call(cast(instance))));
+        typedMethods.put(name, new TypedMethodDescriptor(name, List.of(), ret, handler));
+        return this;
+    }
+
+    public <I, A1, R> PolyType methodTyped1(String name, TypeCodec<A1> a1, TypeCodec<R> ret, R onMissingArgs,
+                                             TypedMethodHandler1<I, A1, R> handler) {
+        methods.put(name, (instance, args) -> {
+            if (args.size() < 1) return ret.encode(onMissingArgs);
+            return ret.encode(handler.call(cast(instance), a1.decode(args.get(0))));
+        });
+        typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1), ret, handler));
+        return this;
+    }
+
+    public <I, A1, A2, R> PolyType methodTyped2(String name, TypeCodec<A1> a1, TypeCodec<A2> a2, TypeCodec<R> ret,
+                                                 R onMissingArgs, TypedMethodHandler2<I, A1, A2, R> handler) {
+        methods.put(name, (instance, args) -> {
+            if (args.size() < 2) return ret.encode(onMissingArgs);
+            return ret.encode(handler.call(cast(instance), a1.decode(args.get(0)), a2.decode(args.get(1))));
+        });
+        typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2), ret, handler));
+        return this;
+    }
+
+    public <I, A1, A2, A3, R> PolyType methodTyped3(String name, TypeCodec<A1> a1, TypeCodec<A2> a2, TypeCodec<A3> a3,
+                                                      TypeCodec<R> ret, R onMissingArgs,
+                                                      TypedMethodHandler3<I, A1, A2, A3, R> handler) {
+        methods.put(name, (instance, args) -> {
+            if (args.size() < 3) return ret.encode(onMissingArgs);
+            return ret.encode(handler.call(cast(instance), a1.decode(args.get(0)), a2.decode(args.get(1)), a3.decode(args.get(2))));
+        });
+        typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2, a3), ret, handler));
+        return this;
+    }
+
+    public <I, A1, A2, A3, A4, R> PolyType methodTyped4(String name, TypeCodec<A1> a1, TypeCodec<A2> a2, TypeCodec<A3> a3,
+                                                          TypeCodec<A4> a4, TypeCodec<R> ret, R onMissingArgs,
+                                                          TypedMethodHandler4<I, A1, A2, A3, A4, R> handler) {
+        methods.put(name, (instance, args) -> {
+            if (args.size() < 4) return ret.encode(onMissingArgs);
+            return ret.encode(handler.call(cast(instance), a1.decode(args.get(0)), a2.decode(args.get(1)),
+                    a3.decode(args.get(2)), a4.decode(args.get(3))));
+        });
+        typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2, a3, a4), ret, handler));
+        return this;
+    }
+
+    public <I, A1, A2, A3, A4, A5, R> PolyType methodTyped5(String name, TypeCodec<A1> a1, TypeCodec<A2> a2, TypeCodec<A3> a3,
+                                                              TypeCodec<A4> a4, TypeCodec<A5> a5, TypeCodec<R> ret, R onMissingArgs,
+                                                              TypedMethodHandler5<I, A1, A2, A3, A4, A5, R> handler) {
+        methods.put(name, (instance, args) -> {
+            if (args.size() < 5) return ret.encode(onMissingArgs);
+            return ret.encode(handler.call(cast(instance), a1.decode(args.get(0)), a2.decode(args.get(1)),
+                    a3.decode(args.get(2)), a4.decode(args.get(3)), a5.decode(args.get(4))));
+        });
+        typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2, a3, a4, a5), ret, handler));
+        return this;
+    }
+
+    public <I, A1, A2, A3, A4, A5, A6, R> PolyType methodTyped6(String name, TypeCodec<A1> a1, TypeCodec<A2> a2, TypeCodec<A3> a3,
+                                                                  TypeCodec<A4> a4, TypeCodec<A5> a5, TypeCodec<A6> a6,
+                                                                  TypeCodec<R> ret, R onMissingArgs,
+                                                                  TypedMethodHandler6<I, A1, A2, A3, A4, A5, A6, R> handler) {
+        methods.put(name, (instance, args) -> {
+            if (args.size() < 6) return ret.encode(onMissingArgs);
+            return ret.encode(handler.call(cast(instance), a1.decode(args.get(0)), a2.decode(args.get(1)),
+                    a3.decode(args.get(2)), a4.decode(args.get(3)), a5.decode(args.get(4)), a6.decode(args.get(5))));
+        });
+        typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2, a3, a4, a5, a6), ret, handler));
+        return this;
+    }
+
+    public <I, A1, A2, A3, A4, A5, A6, A7, R> PolyType methodTyped7(String name, TypeCodec<A1> a1, TypeCodec<A2> a2, TypeCodec<A3> a3,
+                                                                      TypeCodec<A4> a4, TypeCodec<A5> a5, TypeCodec<A6> a6, TypeCodec<A7> a7,
+                                                                      TypeCodec<R> ret, R onMissingArgs,
+                                                                      TypedMethodHandler7<I, A1, A2, A3, A4, A5, A6, A7, R> handler) {
+        methods.put(name, (instance, args) -> {
+            if (args.size() < 7) return ret.encode(onMissingArgs);
+            return ret.encode(handler.call(cast(instance), a1.decode(args.get(0)), a2.decode(args.get(1)),
+                    a3.decode(args.get(2)), a4.decode(args.get(3)), a5.decode(args.get(4)), a6.decode(args.get(5)),
+                    a7.decode(args.get(6))));
+        });
+        typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2, a3, a4, a5, a6, a7), ret, handler));
+        return this;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <I> I cast(Object instance) { return (I) instance; }
+
+    /** Walks the parent chain like resolveMethod, but for typed-registration metadata. Returns
+     *  null for any method registered only via the untyped {@code .method(...)} API — there is no
+     *  obligation for a method to have a typed descriptor. */
+    public TypedMethodDescriptor resolveTypedMethod(String method) {
+        TypedMethodDescriptor d = typedMethods.get(method);
+        if (d != null) return d;
+        if (parent != null) return parent.resolveTypedMethod(method);
+        return null;
     }
 
     /** Fallback handler called when no named property matches. */
@@ -114,5 +249,74 @@ public final class PolyType {
     @FunctionalInterface
     public interface DefaultMethodHandler {
         ScriptValue call(Object instance, String methodName, List<ScriptValue> args);
+    }
+
+    // --- Typed registration support -----------------------------------------------------------
+
+    @FunctionalInterface
+    public interface TypedMethodHandler0<I, R> {
+        R call(I instance);
+    }
+
+    @FunctionalInterface
+    public interface TypedMethodHandler1<I, A1, R> {
+        R call(I instance, A1 arg1);
+    }
+
+    @FunctionalInterface
+    public interface TypedMethodHandler2<I, A1, A2, R> {
+        R call(I instance, A1 arg1, A2 arg2);
+    }
+
+    @FunctionalInterface
+    public interface TypedMethodHandler3<I, A1, A2, A3, R> {
+        R call(I instance, A1 arg1, A2 arg2, A3 arg3);
+    }
+
+    @FunctionalInterface
+    public interface TypedMethodHandler4<I, A1, A2, A3, A4, R> {
+        R call(I instance, A1 arg1, A2 arg2, A3 arg3, A4 arg4);
+    }
+
+    @FunctionalInterface
+    public interface TypedMethodHandler5<I, A1, A2, A3, A4, A5, R> {
+        R call(I instance, A1 arg1, A2 arg2, A3 arg3, A4 arg4, A5 arg5);
+    }
+
+    @FunctionalInterface
+    public interface TypedMethodHandler6<I, A1, A2, A3, A4, A5, A6, R> {
+        R call(I instance, A1 arg1, A2 arg2, A3 arg3, A4 arg4, A5 arg5, A6 arg6);
+    }
+
+    @FunctionalInterface
+    public interface TypedMethodHandler7<I, A1, A2, A3, A4, A5, A6, A7, R> {
+        R call(I instance, A1 arg1, A2 arg2, A3 arg3, A4 arg4, A5 arg5, A6 arg6, A7 arg7);
+    }
+
+    /**
+     * Knows how to convert between a native Java type {@code T} and the boxed {@link ScriptValue}
+     * union every untyped handler already speaks. A typed registration uses one TypeCodec per
+     * declared argument (to decode) and one for its return value (to encode), so the untyped
+     * MethodHandler it installs behaves identically to a hand-written one.
+     *
+     * <p>{@code type()} is exposed so future JIT codegen can identify, at compile time, exactly
+     * which native type a descriptor's slot uses without invoking anything.
+     */
+    public interface TypeCodec<T> {
+        Class<T> type();
+        T decode(ScriptValue value);
+        ScriptValue encode(T value);
+    }
+
+    /**
+     * Metadata captured by a methodTypedN(...) registration: the method's name, its argument
+     * codecs in declared order, its return codec, and the original typed handler instance (kept
+     * as {@code Object} — callers that want to actually invoke it natively need to know, out of
+     * band, which of the TypedMethodHandlerN interfaces it implements; today nothing does, this is
+     * purely for a future JIT specialization to consume). Not used by any dispatch path today —
+     * see resolveTypedMethod.
+     */
+    public record TypedMethodDescriptor(String name, List<TypeCodec<?>> argTypes, TypeCodec<?> returnType, Object handler) {
+        public int arity() { return argTypes.size(); }
     }
 }

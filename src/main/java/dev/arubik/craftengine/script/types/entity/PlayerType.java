@@ -82,12 +82,17 @@ public final class PlayerType {
             // close_inventory() — the generic "Quit"/close-menu button action this scripting API
             // was otherwise missing entirely (every menu system here relies on the player closing
             // the inventory themselves or navigating to another page).
-            .method("close_inventory", (obj, args) -> {
-                try {
-                    ((org.bukkit.entity.Player) player(obj).getBukkitEntity()).closeInventory();
-                    return ScriptValue.of(true);
-                } catch (Throwable t) { return ScriptValue.of(false); }
-            })
+            // Migrated to the typed-registration API (PolyType.methodTyped0, see
+            // dev.arubik.craftengine.script.TypeCodecs) as a second prototype call site — 0 args,
+            // and its real body genuinely calls out to a Bukkit method after unwrapping the NMS
+            // Player, proving the typed API can represent that shape cleanly.
+            .methodTyped0("close_inventory", dev.arubik.craftengine.script.TypeCodecs.BOOL,
+                (Player p) -> {
+                    try {
+                        ((org.bukkit.entity.Player) p.getBukkitEntity()).closeInventory();
+                        return true;
+                    } catch (Throwable t) { return false; }
+                })
             // has_permission(node) — the generic gate a data-driven feature (e.g. /warps' sponsor-
             // locked extra warp slots) needs to distinguish "free tier" from "unlocked" content
             // without any bespoke rank/economy concept of its own.

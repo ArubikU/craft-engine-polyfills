@@ -10,6 +10,7 @@ import dev.arubik.craftengine.script.types.entity.EntityType;
 import dev.arubik.craftengine.script.types.primitive.VectorType;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import net.minecraft.core.BlockPos;
 import org.joml.Vector3d;
 
@@ -124,29 +125,31 @@ public final class ContraptionType {
             // See Contraption.speed's javadoc above for the three fallback sources (physics body,
             // ContraptionState#lastDelta from ANY attached MovementBehavior — e.g. a minecart
             // bearing's MinecartFollowBehavior — and a recently-reported script move()/teleport()).
-            .method("is_moving", (obj, args) -> {
-                try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity != null) {
-                        if (PhysicsWorld.isHeld(entity.state().id())) return ScriptValue.of(false);
-                        var body = PhysicsWorld.bodyOf(entity.state().id());
-                        if (body != null) return ScriptValue.of(body.body.linearVelocity.lengthSquared() > 0.001);
-                        var st = entity.state();
-                        double dx = st.lastDeltaX(), dy = st.lastDeltaY(), dz = st.lastDeltaZ();
-                        if (dx * dx + dy * dy + dz * dz > 0.001 * 0.001) return ScriptValue.of(true);
-                        return ScriptValue.of(st.scriptMoveRecent(
-                                net.minecraft.server.MinecraftServer.getServer().getTickCount(), SCRIPT_MOVE_GRACE_TICKS));
-                    }
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
-            .method("has_riders", (obj, args) -> {
-                try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity != null) return ScriptValue.of(!entity.state().seatedRiders().isEmpty());
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
+            .methodTyped0("is_moving", TypeCodecs.BOOL,
+                (ContraptionLevel obj) -> {
+                    try {
+                        var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                        if (entity != null) {
+                            if (PhysicsWorld.isHeld(entity.state().id())) return false;
+                            var body = PhysicsWorld.bodyOf(entity.state().id());
+                            if (body != null) return body.body.linearVelocity.lengthSquared() > 0.001;
+                            var st = entity.state();
+                            double dx = st.lastDeltaX(), dy = st.lastDeltaY(), dz = st.lastDeltaZ();
+                            if (dx * dx + dy * dy + dz * dz > 0.001 * 0.001) return true;
+                            return st.scriptMoveRecent(
+                                    net.minecraft.server.MinecraftServer.getServer().getTickCount(), SCRIPT_MOVE_GRACE_TICKS);
+                        }
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
+            .methodTyped0("has_riders", TypeCodecs.BOOL,
+                (ContraptionLevel obj) -> {
+                    try {
+                        var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                        if (entity != null) return !entity.state().seatedRiders().isEmpty();
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
             .property("uuid", obj -> {
                 try {
                     var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
@@ -173,6 +176,10 @@ public final class ContraptionType {
             // lift) has no physics body either, so without this, hold() would have zero effect on
             // it too and a drill riding along would sail straight through its target the same way
             // it did for a rotating one before this fix.
+            // NOT migrated to methodTyped3: teleport(x,y,z[,yaw]) has a genuinely optional 4th
+            // argument (yaw) whose presence is checked via args.size() >= 4 inside the body — a
+            // typed handler only receives its fixed-arity decoded arguments, not the original args
+            // list/size, so that conditional read can't be expressed. Left untyped.
             .method("teleport", (obj, args) -> {
                 if (args.size() < 3) return ScriptValue.of(false);
                 try {
@@ -195,115 +202,113 @@ public final class ContraptionType {
                 } catch (Throwable ignored) {}
                 return ScriptValue.of(false);
             })
-            .method("move", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.of(false);
-                try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity == null) return ScriptValue.of(false);
-                    if (PhysicsWorld.isHeld(entity.state().id())) return ScriptValue.of(true);
-                    net.minecraft.world.phys.Vec3 origin = cl(obj).realWorldPositionOf(new BlockPos(0,0,0));
-                    double dx = args.get(0).asNum(), dy = args.get(1).asNum(), dz = args.get(2).asNum();
-                    double nx = origin.x + dx, ny = origin.y + dy, nz = origin.z + dz;
-                    if (cl(obj).realLevel() instanceof net.minecraft.server.level.ServerLevel rl) {
-                        entity.teleport(rl.getWorld(), nx, ny, nz, cl(obj).realYawRadians());
-                        // See teleport() above and Contraption.speed/is_moving() below.
-                        entity.state().reportScriptMove(net.minecraft.server.MinecraftServer.getServer().getTickCount(), dx, dy, dz);
-                        return ScriptValue.of(true);
-                    }
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
-            .method("set_velocity", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.of(false);
-                try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity == null) return ScriptValue.of(false);
-                    PhysicsWorld.setLinearVelocity(entity.state().id(),
-                        new Vector3d(args.get(0).asNum(), args.get(1).asNum(), args.get(2).asNum()));
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
-            .method("apply_impulse", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.of(false);
-                try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity == null) return ScriptValue.of(false);
-                    PhysicsWorld.applyThrustCentral(entity.state().id(),
-                        new Vector3d(args.get(0).asNum(), args.get(1).asNum(), args.get(2).asNum()));
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
-            .method("set_yaw", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity == null) return ScriptValue.of(false);
-                    entity.state().setYawRadians(Math.toRadians(args.get(0).asNum()));
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
+            .methodTyped3("move", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (ContraptionLevel obj, Double dxArg, Double dyArg, Double dzArg) -> {
+                    try {
+                        var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                        if (entity == null) return false;
+                        if (PhysicsWorld.isHeld(entity.state().id())) return true;
+                        net.minecraft.world.phys.Vec3 origin = obj.realWorldPositionOf(new BlockPos(0,0,0));
+                        double dx = dxArg, dy = dyArg, dz = dzArg;
+                        double nx = origin.x + dx, ny = origin.y + dy, nz = origin.z + dz;
+                        if (obj.realLevel() instanceof net.minecraft.server.level.ServerLevel rl) {
+                            entity.teleport(rl.getWorld(), nx, ny, nz, obj.realYawRadians());
+                            // See teleport() above and Contraption.speed/is_moving() below.
+                            entity.state().reportScriptMove(net.minecraft.server.MinecraftServer.getServer().getTickCount(), dx, dy, dz);
+                            return true;
+                        }
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
+            .methodTyped3("set_velocity", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (ContraptionLevel obj, Double vx, Double vy, Double vz) -> {
+                    try {
+                        var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                        if (entity == null) return false;
+                        PhysicsWorld.setLinearVelocity(entity.state().id(), new Vector3d(vx, vy, vz));
+                        return true;
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
+            .methodTyped3("apply_impulse", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (ContraptionLevel obj, Double ix, Double iy, Double iz) -> {
+                    try {
+                        var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                        if (entity == null) return false;
+                        PhysicsWorld.applyThrustCentral(entity.state().id(), new Vector3d(ix, iy, iz));
+                        return true;
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
+            .methodTyped1("set_yaw", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (ContraptionLevel obj, Double deg) -> {
+                    try {
+                        var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                        if (entity == null) return false;
+                        entity.state().setYawRadians(Math.toRadians(deg));
+                        return true;
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
             // yaw/pitch/roll were readable but only yaw was settable, so a script could see a
             // contraption's full orientation and change just one third of it. These complete the pair.
-            .method("set_pitch", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity == null) return ScriptValue.of(false);
-                    entity.state().setPitchRadians(Math.toRadians(args.get(0).asNum()));
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
-            .method("set_roll", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity == null) return ScriptValue.of(false);
-                    entity.state().setRollRadians(Math.toRadians(args.get(0).asNum()));
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
+            .methodTyped1("set_pitch", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (ContraptionLevel obj, Double deg) -> {
+                    try {
+                        var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                        if (entity == null) return false;
+                        entity.state().setPitchRadians(Math.toRadians(deg));
+                        return true;
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
+            .methodTyped1("set_roll", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (ContraptionLevel obj, Double deg) -> {
+                    try {
+                        var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                        if (entity == null) return false;
+                        entity.state().setRollRadians(Math.toRadians(deg));
+                        return true;
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
             /** set_rotation(yaw, pitch, roll) in degrees — the whole orientation in one call. */
-            .method("set_rotation", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.of(false);
-                try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity == null) return ScriptValue.of(false);
-                    entity.state().setYawRadians(Math.toRadians(args.get(0).asNum()));
-                    entity.state().setPitchRadians(Math.toRadians(args.get(1).asNum()));
-                    entity.state().setRollRadians(Math.toRadians(args.get(2).asNum()));
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
+            .methodTyped3("set_rotation", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (ContraptionLevel obj, Double yawDeg, Double pitchDeg, Double rollDeg) -> {
+                    try {
+                        var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                        if (entity == null) return false;
+                        entity.state().setYawRadians(Math.toRadians(yawDeg));
+                        entity.state().setPitchRadians(Math.toRadians(pitchDeg));
+                        entity.state().setRollRadians(Math.toRadians(rollDeg));
+                        return true;
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
             /** Advances the orientation by a delta in degrees — the usual way to spin something. */
-            .method("rotate_by", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.of(false);
-                try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity == null) return ScriptValue.of(false);
-                    var st = entity.state();
-                    st.setYawRadians(st.yawRadians() + Math.toRadians(args.get(0).asNum()));
-                    st.setPitchRadians(st.pitchRadians() + Math.toRadians(args.get(1).asNum()));
-                    st.setRollRadians(st.rollRadians() + Math.toRadians(args.get(2).asNum()));
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
-            .method("set_yaw_rate", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity == null) return ScriptValue.of(false);
-                    PhysicsWorld.setYawRate(entity.state().id(), args.get(0).asNum());
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
+            .methodTyped3("rotate_by", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (ContraptionLevel obj, Double yawDeg, Double pitchDeg, Double rollDeg) -> {
+                    try {
+                        var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                        if (entity == null) return false;
+                        var st = entity.state();
+                        st.setYawRadians(st.yawRadians() + Math.toRadians(yawDeg));
+                        st.setPitchRadians(st.pitchRadians() + Math.toRadians(pitchDeg));
+                        st.setRollRadians(st.rollRadians() + Math.toRadians(rollDeg));
+                        return true;
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
+            .methodTyped1("set_yaw_rate", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (ContraptionLevel obj, Double rate) -> {
+                    try {
+                        var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                        if (entity == null) return false;
+                        PhysicsWorld.setYawRate(entity.state().id(), rate);
+                        return true;
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
             // hold(key) / release(key) — REGISTERS/un-registers `key` as a reason the contraption
             // must stay still, rather than a single shared on/off flag. Two blocks riding the same
             // contraption (two drills on one rotating arm, say) each call hold() independently while
@@ -314,26 +319,29 @@ public final class ContraptionType {
             // be something stable and unique per calling block, e.g. Machine.pos as a drill script
             // would pass; the same key is safe to hold() again while already held (re-registration,
             // not a second independent hold needing two releases).
-            .method("hold", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity == null) return ScriptValue.of(false);
-                    PhysicsWorld.hold(entity.state().id(), holderKey(args.get(0)));
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
-            .method("release", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity == null) return ScriptValue.of(false);
-                    PhysicsWorld.release(entity.state().id(), holderKey(args.get(0)));
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
+            // Argument decoded with TypeCodecs.STRING (ScriptValue.asStr()) — identical to what the
+            // holderKey(ScriptValue) helper did (it was a plain `v.asStr()` passthrough, see its
+            // javadoc below), so the decoded String is passed straight through without calling it.
+            .methodTyped1("hold", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (ContraptionLevel obj, String key) -> {
+                    try {
+                        var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                        if (entity == null) return false;
+                        PhysicsWorld.hold(entity.state().id(), key);
+                        return true;
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
+            .methodTyped1("release", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (ContraptionLevel obj, String key) -> {
+                    try {
+                        var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                        if (entity == null) return false;
+                        PhysicsWorld.release(entity.state().id(), key);
+                        return true;
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
             // set_spin(axis, rpm) — turn the contraption about a world axis at a given RPM.
             //
             // Drives the contraption's OWN rotation state directly (state.setYawRadians/
@@ -344,11 +352,11 @@ public final class ContraptionType {
             // and silently no-ops (entry.physBody == null) for anything else, including
             // "machine_contraption" (create_bearing's default type), which is why a script-driven
             // bearing calling this used to visibly do nothing at all.
-            .method("set_spin", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
+            .methodTyped2("set_spin", TypeCodecs.STRING, TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (ContraptionLevel obj, String axis, Double rpmArg) -> {
                 try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity == null) return ScriptValue.of(false);
+                    var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                    if (entity == null) return false;
                     var state = entity.state();
                     // Scale by how many REAL ticks actually elapsed since the last call, not a
                     // flat "one tick" per call — a script gated by action_interval (windmill.pf,
@@ -383,88 +391,90 @@ public final class ContraptionType {
                     // "is this contraption spinning" off contraption.rpm (rather than polling yaw
                     // itself) always saw false. Stamped even while held, below, so a reader still
                     // sees "this is meant to be spinning at N rpm" rather than a stale/zero value.
-                    state.setGlobalRpm((float) args.get(1).asNum());
+                    state.setGlobalRpm(rpmArg.floatValue());
                     if (PhysicsWorld.isHeld(entity.state().id())) {
-                        return ScriptValue.of(true);
+                        return true;
                     }
                     // 1 RPM = one turn per 60s = 2*PI rad / 1200 ticks.
-                    double radiansPerTick = args.get(1).asNum() * (2.0 * Math.PI / 1200.0) * elapsedTicks;
-                    switch (args.get(0).asStr().trim().toLowerCase(java.util.Locale.ROOT)) {
+                    double radiansPerTick = rpmArg * (2.0 * Math.PI / 1200.0) * elapsedTicks;
+                    switch (axis.trim().toLowerCase(java.util.Locale.ROOT)) {
                         case "x" -> state.setPitchRadians(state.pitchRadians() + radiansPerTick);
                         case "z" -> state.setRollRadians(state.rollRadians() + radiansPerTick);
                         default -> state.setYawRadians(state.yawRadians() + radiansPerTick);
                     }
-                    return ScriptValue.of(true);
+                    return true;
                 } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
+                return false;
+                })
             // set_angular_velocity(x, y, z) — drives a REAL physics body (radians per tick about
             // each world axis simultaneously) — for an actual physics-vehicle contraption, unlike
             // set_spin above which is for a script/behavior-driven bearing with no physics body.
-            .method("set_angular_velocity", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.of(false);
-                try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity == null) return ScriptValue.of(false);
-                    PhysicsWorld.setAngularVelocity(entity.state().id(),
-                            args.get(0).asNum(), args.get(1).asNum(), args.get(2).asNum());
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
-            .method("set_rpm", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity == null) return ScriptValue.of(false);
-                    entity.state().setGlobalRpm((float) args.get(0).asNum());
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
-            .method("get_rpm", (obj, args) -> {
-                try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity != null) return ScriptValue.of(entity.state().globalRpm());
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(0.0);
-            })
-            .method("set_scale", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity == null) return ScriptValue.of(false);
-                    entity.state().setScale(args.get(0).asNum());
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
+            .methodTyped3("set_angular_velocity", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (ContraptionLevel obj, Double ax, Double ay, Double az) -> {
+                    try {
+                        var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                        if (entity == null) return false;
+                        PhysicsWorld.setAngularVelocity(entity.state().id(), ax, ay, az);
+                        return true;
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
+            .methodTyped1("set_rpm", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (ContraptionLevel obj, Double rpm) -> {
+                    try {
+                        var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                        if (entity == null) return false;
+                        entity.state().setGlobalRpm(rpm.floatValue());
+                        return true;
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
+            .methodTyped0("get_rpm", TypeCodecs.DOUBLE,
+                (ContraptionLevel obj) -> {
+                    try {
+                        var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                        if (entity != null) return (double) entity.state().globalRpm();
+                    } catch (Throwable ignored) {}
+                    return 0.0;
+                })
+            .methodTyped1("set_scale", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (ContraptionLevel obj, Double scale) -> {
+                    try {
+                        var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                        if (entity == null) return false;
+                        entity.state().setScale(scale);
+                        return true;
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
             // report_su(su) — no-op on contraption; SU is reported by the bearing machine script
             // Exists so windmill.pf can call contraption.report_su(su) without errors
-            .method("report_su", (obj, args) -> ScriptValue.of(true))
+            .methodTyped0("report_su", TypeCodecs.BOOL, (ContraptionLevel obj) -> true)
             // Hard force-remove — despawns/disposes but does NOT restore blocks. See
             // ContraptionManagerType#disassemble's javadoc for when to use which.
-            .method("kill", (obj, args) -> {
-                try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity != null) { dev.arubik.craftengine.contraption.ContraptionKill.kill(entity); return ScriptValue.of(true); }
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
+            .methodTyped0("kill", TypeCodecs.BOOL,
+                (ContraptionLevel obj) -> {
+                    try {
+                        var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                        if (entity != null) { dev.arubik.craftengine.contraption.ContraptionKill.kill(entity); return true; }
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
             // The real "return this structure to the world" operation — same primitive the
             // hammer-disassemble listener uses (BearingHammerListener). Restores every block
             // (rotation-snapped), glue edges, and furniture to their resting positions, then
             // despawns/disposes the contraption.
-            .method("disassemble", (obj, args) -> {
-                try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity == null) return ScriptValue.of(false);
-                    if (!(cl(obj).realLevel() instanceof net.minecraft.server.level.ServerLevel rl)) return ScriptValue.of(false);
-                    dev.arubik.craftengine.contraption.assembly.ContraptionAssembler.disassemble(rl.getWorld(), entity);
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
+            .methodTyped0("disassemble", TypeCodecs.BOOL,
+                (ContraptionLevel obj) -> {
+                    try {
+                        var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                        if (entity == null) return false;
+                        if (!(obj.realLevel() instanceof net.minecraft.server.level.ServerLevel rl)) return false;
+                        dev.arubik.craftengine.contraption.assembly.ContraptionAssembler.disassemble(rl.getWorld(), entity);
+                        return true;
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
             .property("rpm", obj -> {
                 try {
                     var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
@@ -496,42 +506,47 @@ public final class ContraptionType {
             // which is completely normal) even when perfectly cardinal-aligned, and only ever
             // checked yaw anyway — a contraption tipped on its side (rolled/pitched 90°) has a
             // perfectly well-defined facing too, just not one yaw alone can express.
-            .method("real_direction", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.NULL;
-                try {
-                    double yaw = ContraptionMath.snapYawToCardinal(cl(obj).realYawRadians());
-                    double pitch = ContraptionMath.snapYawToCardinal(cl(obj).realPitchRadians());
-                    double roll = ContraptionMath.snapYawToCardinal(cl(obj).realRollRadians());
-                    // Widened from 0.02 rad (~1.1°) to 0.12 rad (~6.9°): a contraption spinning fast
-                    // enough can rotate several degrees between action_script ticks, so a too-tight
-                    // window meant it was frequently sampled just past "aligned" and never matched at
-                    // all — this still rejects anything visibly off-axis while giving fast movers a
-                    // real chance of being caught mid-tick.
-                    if (angleDiff(cl(obj).realYawRadians(), yaw) > 0.12
-                            || angleDiff(cl(obj).realPitchRadians(), pitch) > 0.12
-                            || angleDiff(cl(obj).realRollRadians(), roll) > 0.12) {
-                        return ScriptValue.NULL;
-                    }
+            // Return codec is TypeCodecs.RAW (identity passthrough) rather than STRING — this method
+            // returns ScriptValue.NULL on several distinct paths (missing args, misalignment, no
+            // matching direction), so keeping the original ScriptValue.NULL / ScriptValue.of(name)
+            // calls in the body unchanged is the zero-risk substitution (RAW.encode is identity, so
+            // behavior is byte-for-byte identical to the untyped version).
+            .methodTyped3("real_direction", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.NULL,
+                (ContraptionLevel obj, Double dxArg, Double dyArg, Double dzArg) -> {
+                    try {
+                        double yaw = ContraptionMath.snapYawToCardinal(obj.realYawRadians());
+                        double pitch = ContraptionMath.snapYawToCardinal(obj.realPitchRadians());
+                        double roll = ContraptionMath.snapYawToCardinal(obj.realRollRadians());
+                        // Widened from 0.02 rad (~1.1°) to 0.12 rad (~6.9°): a contraption spinning fast
+                        // enough can rotate several degrees between action_script ticks, so a too-tight
+                        // window meant it was frequently sampled just past "aligned" and never matched at
+                        // all — this still rejects anything visibly off-axis while giving fast movers a
+                        // real chance of being caught mid-tick.
+                        if (angleDiff(obj.realYawRadians(), yaw) > 0.12
+                                || angleDiff(obj.realPitchRadians(), pitch) > 0.12
+                                || angleDiff(obj.realRollRadians(), roll) > 0.12) {
+                            return ScriptValue.NULL;
+                        }
 
-                    int dx = (int) args.get(0).asNum(), dy = (int) args.get(1).asNum(), dz = (int) args.get(2).asNum();
-                    net.minecraft.core.Direction local = net.minecraft.core.Direction.getNearest(dx, dy, dz, net.minecraft.core.Direction.NORTH);
-                    net.minecraft.world.phys.Vec3 rotated = ContraptionMath.rotateYawPitchRoll(
-                            new net.minecraft.world.phys.Vec3(local.getStepX(), local.getStepY(), local.getStepZ()), yaw, pitch, roll);
-                    int rx = (int) Math.round(rotated.x), ry = (int) Math.round(rotated.y), rz = (int) Math.round(rotated.z);
-                    for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
-                        if (d.getStepX() == rx && d.getStepY() == ry && d.getStepZ() == rz) return ScriptValue.of(d.getName());
-                    }
-                } catch (Throwable ignored) {}
-                return ScriptValue.NULL;
-            })
+                        int dx = (int) (double) dxArg, dy = (int) (double) dyArg, dz = (int) (double) dzArg;
+                        net.minecraft.core.Direction local = net.minecraft.core.Direction.getNearest(dx, dy, dz, net.minecraft.core.Direction.NORTH);
+                        net.minecraft.world.phys.Vec3 rotated = ContraptionMath.rotateYawPitchRoll(
+                                new net.minecraft.world.phys.Vec3(local.getStepX(), local.getStepY(), local.getStepZ()), yaw, pitch, roll);
+                        int rx = (int) Math.round(rotated.x), ry = (int) Math.round(rotated.y), rz = (int) Math.round(rotated.z);
+                        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+                            if (d.getStepX() == rx && d.getStepY() == ry && d.getStepZ() == rz) return ScriptValue.of(d.getName());
+                        }
+                    } catch (Throwable ignored) {}
+                    return ScriptValue.NULL;
+                })
             // get_block(lx,ly,lz) → BlockType at local contraption coords.
-            .method("get_block", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.NULL;
-                int x = (int) args.get(0).asNum(), y = (int) args.get(1).asNum(), z = (int) args.get(2).asNum();
-                BlockPos bp = new BlockPos(x, y, z);
-                try { cl(obj).ensureChunkReady(bp); } catch (Throwable ignored) {}
-                return BlockType.wrap(cl(obj).serverLevel(), bp);
-            })
+            .methodTyped3("get_block", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.NULL,
+                (ContraptionLevel obj, Double xArg, Double yArg, Double zArg) -> {
+                    int x = (int) (double) xArg, y = (int) (double) yArg, z = (int) (double) zArg;
+                    BlockPos bp = new BlockPos(x, y, z);
+                    try { obj.ensureChunkReady(bp); } catch (Throwable ignored) {}
+                    return BlockType.wrap(obj.serverLevel(), bp);
+                })
             // blocks() → Array of BlockType for all local positions with a real (non-air) block.
             // This is what windmill.pf (and anything counting/inspecting a contraption's own
             // contents) actually calls — it lives HERE on Contraption, not on ContraptionWorld
@@ -542,29 +557,31 @@ public final class ContraptionType {
             // forces each position's virtual chunk ready before reading it (see ensureChunkReady's
             // other callers, ContraptionInteractionListener/ContraptionFurnitureCapture) since
             // nothing else keeps them loaded for a periodic action_script to query later.
-            .method("blocks", (obj, args) -> {
-                try {
-                    java.util.Set<BlockPos> positions = cl(obj).localPositions();
-                    net.minecraft.server.level.ServerLevel fakeLevel = cl(obj).serverLevel();
-                    java.util.List<ScriptValue> list = new java.util.ArrayList<>(positions.size());
-                    for (BlockPos bp : positions) {
-                        try { cl(obj).ensureChunkReady(bp); } catch (Throwable ignored) {}
-                        if (!cl(obj).getBlockState(bp).isAir())
-                            list.add(BlockType.wrap(fakeLevel, bp));
-                    }
-                    return new ScriptValue.Array(list);
-                } catch (Throwable ignored) { return new ScriptValue.Array(java.util.List.of()); }
-            })
+            .methodTyped0("blocks", TypeCodecs.RAW,
+                (ContraptionLevel obj) -> {
+                    try {
+                        java.util.Set<BlockPos> positions = obj.localPositions();
+                        net.minecraft.server.level.ServerLevel fakeLevel = obj.serverLevel();
+                        java.util.List<ScriptValue> list = new java.util.ArrayList<>(positions.size());
+                        for (BlockPos bp : positions) {
+                            try { obj.ensureChunkReady(bp); } catch (Throwable ignored) {}
+                            if (!obj.getBlockState(bp).isAir())
+                                list.add(BlockType.wrap(fakeLevel, bp));
+                        }
+                        return new ScriptValue.Array(list);
+                    } catch (Throwable ignored) { return new ScriptValue.Array(java.util.List.of()); }
+                })
             // entities() → Array of EntityType for entities inside the contraption's own level.
-            .method("entities", (obj, args) -> {
-                try {
-                    net.minecraft.server.level.ServerLevel fakeLevel = cl(obj).serverLevel();
-                    net.minecraft.world.phys.AABB huge = new net.minecraft.world.phys.AABB(-30000000, -512, -30000000, 30000000, 512, 30000000);
-                    java.util.List<net.minecraft.world.entity.Entity> ents =
-                        fakeLevel.getEntitiesOfClass(net.minecraft.world.entity.Entity.class, huge, e -> true);
-                    return EntityType.wrapList(ents);
-                } catch (Throwable ignored) { return new ScriptValue.Array(java.util.List.of()); }
-            });
+            .methodTyped0("entities", TypeCodecs.RAW,
+                (ContraptionLevel obj) -> {
+                    try {
+                        net.minecraft.server.level.ServerLevel fakeLevel = obj.serverLevel();
+                        net.minecraft.world.phys.AABB huge = new net.minecraft.world.phys.AABB(-30000000, -512, -30000000, 30000000, 512, 30000000);
+                        java.util.List<net.minecraft.world.entity.Entity> ents =
+                            fakeLevel.getEntitiesOfClass(net.minecraft.world.entity.Entity.class, huge, e -> true);
+                        return EntityType.wrapList(ents);
+                    } catch (Throwable ignored) { return new ScriptValue.Array(java.util.List.of()); }
+                });
 
         // ContraptionWorld extends World — full contraption-level API
         PolyTypeRegistry.define("ContraptionWorld", "World")
@@ -580,12 +597,12 @@ public final class ContraptionType {
             })
             .property("container", obj -> ScriptValue.ofObj("ContraptionContainer", ContraptionContainerView.build(cl(obj))))
             // real_pos(x,y,z) → Vec3 in real-world coords
-            .method("real_pos", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.NULL;
-                net.minecraft.world.phys.Vec3 rp = cl(obj).realWorldPositionOf(
-                    new net.minecraft.world.phys.Vec3(args.get(0).asNum(), args.get(1).asNum(), args.get(2).asNum()));
-                return VectorType.wrap(rp.x, rp.y, rp.z);
-            })
+            .methodTyped3("real_pos", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.NULL,
+                (ContraptionLevel obj, Double xArg, Double yArg, Double zArg) -> {
+                    net.minecraft.world.phys.Vec3 rp = obj.realWorldPositionOf(
+                        new net.minecraft.world.phys.Vec3(xArg, yArg, zArg));
+                    return VectorType.wrap(rp.x, rp.y, rp.z);
+                })
             // real_block(lx,ly,lz) → BlockType at projected real-world pos. lx/ly/lz are treated as
             // a BLOCK (corner) coordinate, like get_block()/blocks() use — but the +0.5 centering
             // below before rotating is NOT optional: every other renderPosition() caller in this
@@ -599,17 +616,17 @@ public final class ContraptionType {
             // exercised by any real caller before that feature). Math.floor via BlockPos.containing
             // (not a raw (int) cast, which truncates toward zero and is wrong for negative inputs)
             // then recovers the containing block from that centered, rotated point.
-            .method("real_block", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.NULL;
-                try {
-                    net.minecraft.world.phys.Vec3 rp = cl(obj).realWorldPositionOf(
-                        new net.minecraft.world.phys.Vec3(
-                            args.get(0).asNum() + 0.5, args.get(1).asNum() + 0.5, args.get(2).asNum() + 0.5));
-                    if (cl(obj).realLevel() instanceof net.minecraft.server.level.ServerLevel rl)
-                        return BlockType.wrap(rl, BlockPos.containing(rp.x, rp.y, rp.z));
-                } catch (Throwable ignored) {}
-                return ScriptValue.NULL;
-            })
+            .methodTyped3("real_block", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.NULL,
+                (ContraptionLevel obj, Double xArg, Double yArg, Double zArg) -> {
+                    try {
+                        net.minecraft.world.phys.Vec3 rp = obj.realWorldPositionOf(
+                            new net.minecraft.world.phys.Vec3(
+                                xArg + 0.5, yArg + 0.5, zArg + 0.5));
+                        if (obj.realLevel() instanceof net.minecraft.server.level.ServerLevel rl)
+                            return BlockType.wrap(rl, BlockPos.containing(rp.x, rp.y, rp.z));
+                    } catch (Throwable ignored) {}
+                    return ScriptValue.NULL;
+                })
             // local_block(rx,ry,rz) → BlockType at the LOCAL contraption position that
             // corresponds to real-world (rx,ry,rz) right now — the exact inverse of real_block(),
             // using the same centered-then-floored convention (so real_block(local_block(p)) round-
@@ -617,28 +634,28 @@ public final class ContraptionType {
             // contraption (a stationary Portable Storage Interface, say) answer "is the real block
             // directly in front of me currently PART of this contraption" precisely — accounting for
             // its current position AND rotation — instead of a rough is-it-nearby distance check.
-            .method("local_block", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.NULL;
-                try {
-                    net.minecraft.world.phys.Vec3 bearing = cl(obj).realWorldPositionOf(BlockPos.ZERO);
-                    net.minecraft.world.phys.Vec3 lp = ContraptionMath.realToLocal(
-                        new net.minecraft.world.phys.Vec3(
-                            args.get(0).asNum() + 0.5, args.get(1).asNum() + 0.5, args.get(2).asNum() + 0.5),
-                        bearing, cl(obj).realYawRadians(), cl(obj).realPitchRadians(), cl(obj).realRollRadians(), cl(obj).realScaleFactor());
-                    BlockPos bp = BlockPos.containing(lp.x, lp.y, lp.z);
-                    cl(obj).ensureChunkReady(bp);
-                    return BlockType.wrap(cl(obj).serverLevel(), bp);
-                } catch (Throwable ignored) {}
-                return ScriptValue.NULL;
-            })
+            .methodTyped3("local_block", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.NULL,
+                (ContraptionLevel obj, Double xArg, Double yArg, Double zArg) -> {
+                    try {
+                        net.minecraft.world.phys.Vec3 bearing = obj.realWorldPositionOf(BlockPos.ZERO);
+                        net.minecraft.world.phys.Vec3 lp = ContraptionMath.realToLocal(
+                            new net.minecraft.world.phys.Vec3(
+                                xArg + 0.5, yArg + 0.5, zArg + 0.5),
+                            bearing, obj.realYawRadians(), obj.realPitchRadians(), obj.realRollRadians(), obj.realScaleFactor());
+                        BlockPos bp = BlockPos.containing(lp.x, lp.y, lp.z);
+                        obj.ensureChunkReady(bp);
+                        return BlockType.wrap(obj.serverLevel(), bp);
+                    } catch (Throwable ignored) {}
+                    return ScriptValue.NULL;
+                })
             // get_block(lx,ly,lz) → BlockType at local contraption coords
-            .method("get_block", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.NULL;
-                int x = (int)args.get(0).asNum(), y = (int)args.get(1).asNum(), z = (int)args.get(2).asNum();
-                BlockPos bp = new BlockPos(x, y, z);
-                try { cl(obj).ensureChunkReady(bp); } catch (Throwable ignored) {}
-                return BlockType.wrap(cl(obj).serverLevel(), bp);
-            })
+            .methodTyped3("get_block", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.NULL,
+                (ContraptionLevel obj, Double xArg, Double yArg, Double zArg) -> {
+                    int x = (int) (double) xArg, y = (int) (double) yArg, z = (int) (double) zArg;
+                    BlockPos bp = new BlockPos(x, y, z);
+                    try { obj.ensureChunkReady(bp); } catch (Throwable ignored) {}
+                    return BlockType.wrap(obj.serverLevel(), bp);
+                })
             // blocks() → Array of BlockType for all local positions. Used to read the contraption's
             // own contents (e.g. windmill.pf counting sails) — was silently always empty a few
             // ticks after assembly: nothing outside a player interacting with a contraption block
@@ -646,30 +663,36 @@ public final class ContraptionType {
             // its virtual chunks, so by the time a periodic action_script queried them they'd gone
             // unloaded and getBlockState quietly answered air for every position. Force each
             // position's chunk ready before reading it, same as those other two callers already do.
-            .method("blocks", (obj, args) -> {
-                try {
-                    java.util.Set<BlockPos> positions = cl(obj).localPositions();
-                    net.minecraft.server.level.ServerLevel fakeLevel = cl(obj).serverLevel();
-                    java.util.List<ScriptValue> list = new java.util.ArrayList<>(positions.size());
-                    for (BlockPos bp : positions) {
-                        try { cl(obj).ensureChunkReady(bp); } catch (Throwable ignored) {}
-                        if (!cl(obj).getBlockState(bp).isAir())
-                            list.add(BlockType.wrap(fakeLevel, bp));
-                    }
-                    return new ScriptValue.Array(list);
-                } catch (Throwable ignored) { return new ScriptValue.Array(java.util.List.of()); }
-            })
+            .methodTyped0("blocks", TypeCodecs.RAW,
+                (ContraptionLevel obj) -> {
+                    try {
+                        java.util.Set<BlockPos> positions = obj.localPositions();
+                        net.minecraft.server.level.ServerLevel fakeLevel = obj.serverLevel();
+                        java.util.List<ScriptValue> list = new java.util.ArrayList<>(positions.size());
+                        for (BlockPos bp : positions) {
+                            try { obj.ensureChunkReady(bp); } catch (Throwable ignored) {}
+                            if (!obj.getBlockState(bp).isAir())
+                                list.add(BlockType.wrap(fakeLevel, bp));
+                        }
+                        return new ScriptValue.Array(list);
+                    } catch (Throwable ignored) { return new ScriptValue.Array(java.util.List.of()); }
+                })
             // entities() → Array of EntityType for entities inside contraption
-            .method("entities", (obj, args) -> {
-                try {
-                    net.minecraft.server.level.ServerLevel fakeLevel = cl(obj).serverLevel();
-                    net.minecraft.world.phys.AABB huge = new net.minecraft.world.phys.AABB(-30000000, -512, -30000000, 30000000, 512, 30000000);
-                    java.util.List<net.minecraft.world.entity.Entity> ents =
-                        fakeLevel.getEntitiesOfClass(net.minecraft.world.entity.Entity.class, huge, e -> true);
-                    return EntityType.wrapList(ents);
-                } catch (Throwable ignored) { return new ScriptValue.Array(java.util.List.of()); }
-            })
+            .methodTyped0("entities", TypeCodecs.RAW,
+                (ContraptionLevel obj) -> {
+                    try {
+                        net.minecraft.server.level.ServerLevel fakeLevel = obj.serverLevel();
+                        net.minecraft.world.phys.AABB huge = new net.minecraft.world.phys.AABB(-30000000, -512, -30000000, 30000000, 512, 30000000);
+                        java.util.List<net.minecraft.world.entity.Entity> ents =
+                            fakeLevel.getEntitiesOfClass(net.minecraft.world.entity.Entity.class, huge, e -> true);
+                        return EntityType.wrapList(ents);
+                    } catch (Throwable ignored) { return new ScriptValue.Array(java.util.List.of()); }
+                })
             // play_sound — forwards to real world at projected position
+            // NOT migrated to a typed method: 4 required args plus 2 optional trailing (vol, pitch)
+            // checked via args.size() >= 5 / >= 6 — a typed handler has no access to the raw args
+            // list/size to express that, only its fixed decoded arguments (see move()/teleport()'s
+            // NOT-migrated notes above for the same reasoning). Left untyped.
             .method("play_sound", (obj, args) -> {
                 if (args.size() < 4) return ScriptValue.of(false);
                 try {
@@ -707,15 +730,13 @@ public final class ContraptionType {
 
     private static ContraptionLevel cl(Object obj) { return (ContraptionLevel) obj; }
 
-    /** Normalizes a hold()/release() key argument into a stable String for
-     *  PhysicsWorld#hold/#release's registry — ScriptValue.asStr() is only well-defined for a
-     *  primitive (string/number/bool), so a caller MUST pass one of those (e.g.
-     *  {@code Machine.x + "," + Machine.y + "," + Machine.z}), not a raw object like Machine.pos
-     *  (a Vector), which would coerce to the same "?" for every caller and collapse every holder
-     *  onto one key. */
-    private static String holderKey(ScriptValue v) {
-        return v.asStr();
-    }
+    // holderKey(ScriptValue) — the old hold()/release() key-normalizer (a plain v.asStr()
+    // passthrough) — was removed: both methods are now methodTyped1 with TypeCodecs.STRING, whose
+    // decode() already performs the exact same asStr() coercion, so the helper became dead code.
+    // The original caveat still applies unchanged: a caller MUST pass a primitive (string/number/
+    // bool), e.g. {@code Machine.x + "," + Machine.y + "," + Machine.z}, not a raw object like
+    // Machine.pos (a Vector), which would coerce to the same "?" for every caller and collapse
+    // every holder onto one key.
 
     /** Smallest absolute angular distance between two radian angles, wrapped into [-PI, PI] first —
      *  used by real_direction() to check each of yaw/pitch/roll against its own 90°-snapped value. */

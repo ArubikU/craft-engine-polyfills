@@ -2,6 +2,7 @@ package dev.arubik.craftengine.script.types.util;
 
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import dev.arubik.craftengine.virtualui.DynamicFieldResolver;
 import dev.arubik.craftengine.virtualui.VirtualUICameraSystem;
 import dev.arubik.craftengine.virtualui.model.CameraSession;
@@ -59,42 +60,66 @@ public final class VirtualUIManagerType {
 
     public static void register() {
         PolyTypeRegistry.define("VirtualUI")
+                // Left untyped: with args empty this must still return a FRESH mutable Builder
+                // (title ""), same as with args present. A typed methodTyped1's onMissingArgs is
+                // one fixed value computed ONCE at registration — reusing that Builder instance
+                // across every "no title given" call would leak state between callers (contrast
+                // with the immutable HologramLineConfig in "hologram" below, where sharing a fixed
+                // value is safe).
                 .method("screen", (obj, args) -> {
                     Builder b = new Builder();
                     if (!args.isEmpty()) b.title = args.get(0).asStr();
                     return ScriptValue.ofObj("VirtualUIBuilder", b);
                 })
-                .method("hide", (obj, args) -> {
-                    Player p = playerOf(args.isEmpty() ? null : args.get(0));
-                    if (p == null) return ScriptValue.of(false);
-                    VirtualUICameraSystem.hide(p);
-                    return ScriptValue.of(true);
-                })
-                .method("is_open", (obj, args) -> {
-                    Player p = playerOf(args.isEmpty() ? null : args.get(0));
-                    return ScriptValue.of(p != null && VirtualUICameraSystem.isOpen(p));
-                })
+                // hide/is_open: migrated to the typed-registration API. The single arg is a
+                // ScriptValue passthrough (TypeCodecs.RAW) — playerOf(...) needs the raw
+                // ScriptValue to unwrap an NMS Player, there's no dedicated TypeCodec for that.
+                // onMissingArgs=false is exact: playerOf(null) is always null regardless of
+                // instance, so the original "args empty -> p==null -> false" path is
+                // instance-independent and safely fixed at registration time.
+                .methodTyped1("hide", TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                    (Object obj, ScriptValue arg0) -> {
+                        Player p = playerOf(arg0);
+                        if (p == null) return false;
+                        VirtualUICameraSystem.hide(p);
+                        return true;
+                    })
+                .methodTyped1("is_open", TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                    (Object obj, ScriptValue arg0) -> {
+                        Player p = playerOf(arg0);
+                        return p != null && VirtualUICameraSystem.isOpen(p);
+                    })
                 // change_hologram(player, widget_id, text_or_style_map) — restyles/retexts an
                 // already-shown ButtonWidget/LabelWidget in place. Accepts either a plain string
                 // (keeps the widget's current styling, swaps only the text) or a "Hologram" value
                 // built via .hologram(text)....build() below (full restyle).
-                .method("change_hologram", (obj, args) -> {
-                    if (args.size() < 3) return ScriptValue.of(false);
-                    Player p = playerOf(args.get(0));
-                    if (p == null) return ScriptValue.of(false);
-                    CameraSession session = VirtualUICameraSystem.session(p);
-                    if (session == null) return ScriptValue.of(false);
-                    String widgetId = args.get(1).asStr();
-                    HologramLineConfig content = resolveContent(args.get(2), session, widgetId);
-                    if (content == null) return ScriptValue.of(false);
-                    session.liveHolograms().put(widgetId, content);
-                    return ScriptValue.of(true);
-                })
+                // Migrated to the typed-registration API: player and content are dynamic
+                // (TypeCodecs.RAW — playerOf/resolveContent need the raw ScriptValue), widget_id
+                // is a real string. onMissingArgs=false matches the original's "args.size()<3"
+                // short-circuit, which is instance-independent (VirtualUI's obj is the stateless
+                // singleton, unused).
+                .methodTyped3("change_hologram", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.RAW,
+                    TypeCodecs.BOOL, false,
+                    (Object obj, ScriptValue playerArg, String widgetId, ScriptValue contentArg) -> {
+                        Player p = playerOf(playerArg);
+                        if (p == null) return false;
+                        CameraSession session = VirtualUICameraSystem.session(p);
+                        if (session == null) return false;
+                        HologramLineConfig content = resolveContent(contentArg, session, widgetId);
+                        if (content == null) return false;
+                        session.liveHolograms().put(widgetId, content);
+                        return true;
+                    })
                 // show_tooltip(player, text, offset_x?, offset_y?) — a cursor-following floating
                 // label (port of Create's TooltipArea), independent of any widget; typically called
                 // from a widget's on_hover/on_unhover. offset_y defaults to 0.4 (just above the
                 // cursor glyph). Plain MiniMessage text, not dynamic (no ${...}/".pf:" resolution —
                 // call again with new text to change it).
+                // Left untyped: offset_x/offset_y are optional trailing args with their OWN
+                // individual defaults (0.0 / 0.4) read via args.size()>2 / args.size()>3 checks —
+                // a typed handler only ever receives its fixed N decoded args, it can't peek at
+                // "was arg 3 supplied" to fall back per-arg like this, and forcing arity 4 would
+                // wrongly reject the legal 2- and 3-arg call shapes. No methodTypedN fits.
                 .method("show_tooltip", (obj, args) -> {
                     if (args.size() < 2) return ScriptValue.of(false);
                     Player p = playerOf(args.get(0));
@@ -111,65 +136,96 @@ public final class VirtualUIManagerType {
                 // widget kind's fill level ever changes, since it has no click/drag gesture of its
                 // own. Call it whenever the real state it represents changes (a machine tick, a
                 // network update, ...); value is clamped into [0,1].
-                .method("set_progress", (obj, args) -> {
-                    if (args.size() < 3) return ScriptValue.of(false);
-                    Player p = playerOf(args.get(0));
-                    if (p == null) return ScriptValue.of(false);
-                    CameraSession session = VirtualUICameraSystem.session(p);
-                    if (session == null) return ScriptValue.of(false);
-                    String widgetId = args.get(1).asStr();
-                    double value = Math.max(0.0, Math.min(1.0, args.get(2).asNum()));
-                    session.progressValues().put(widgetId, value);
-                    return ScriptValue.of(true);
-                })
+                // Migrated to the typed-registration API: player is TypeCodecs.RAW (playerOf
+                // needs the raw ScriptValue), widget_id is a real string, value a real double
+                // (clamp kept inside the body unchanged). onMissingArgs=false matches the
+                // original's "args.size()<3" short-circuit (instance-independent — VirtualUI's
+                // obj is the stateless singleton).
+                .methodTyped3("set_progress", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.DOUBLE,
+                    TypeCodecs.BOOL, false,
+                    (Object obj, ScriptValue playerArg, String widgetId, Double valueArg) -> {
+                        Player p = playerOf(playerArg);
+                        if (p == null) return false;
+                        CameraSession session = VirtualUICameraSystem.session(p);
+                        if (session == null) return false;
+                        double value = Math.max(0.0, Math.min(1.0, valueArg));
+                        session.progressValues().put(widgetId, value);
+                        return true;
+                    })
                 // hide_tooltip(player) — hides whatever show_tooltip(...) last showed for them.
-                .method("hide_tooltip", (obj, args) -> {
-                    if (args.isEmpty()) return ScriptValue.of(false);
-                    Player p = playerOf(args.get(0));
-                    if (p == null) return ScriptValue.of(false);
-                    CameraSession session = VirtualUICameraSystem.session(p);
-                    if (session == null) return ScriptValue.of(false);
-                    session.hideTooltip();
-                    return ScriptValue.of(true);
-                })
+                // Migrated: same RAW-player / onMissingArgs=false rationale as hide/is_open above.
+                .methodTyped1("hide_tooltip", TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                    (Object obj, ScriptValue playerArg) -> {
+                        Player p = playerOf(playerArg);
+                        if (p == null) return false;
+                        CameraSession session = VirtualUICameraSystem.session(p);
+                        if (session == null) return false;
+                        session.hideTooltip();
+                        return true;
+                    })
                 // hologram(text) — starts a standalone styled-text builder (offset/scale/rotation/
                 // alignment/billboard/background/etc.), independent of any specific widget; its
                 // .build() result can be fed straight into .button(id, hologram, ...) / .label(id,
                 // hologram) below, or into change_hologram(...) above.
-                .method("hologram", (obj, args) -> {
-                    String text = args.isEmpty() ? "" : args.get(0).asStr();
-                    return ScriptValue.ofObj("HologramBuilder", HologramLineConfig.text(text, 0, 0, 0, 0.8f));
-                })
+                // Migrated to the typed-registration API. onMissingArgs is a single fixed
+                // ScriptValue computed once at registration — safe here only because
+                // HologramLineConfig is an immutable record, so every "args empty" call sharing
+                // that one instance is behaviorally identical to constructing
+                // HologramLineConfig.text("", 0, 0, 0, 0.8f) fresh each time (unlike e.g. "screen"
+                // below, whose Builder is mutable and must stay untyped for this exact reason).
+                .methodTyped1("hologram", TypeCodecs.STRING, TypeCodecs.RAW,
+                    ScriptValue.ofObj("HologramBuilder", HologramLineConfig.text("", 0, 0, 0, 0.8f)),
+                    (Object obj, String text) -> ScriptValue.ofObj("HologramBuilder",
+                            HologramLineConfig.text(text, 0, 0, 0, 0.8f)))
                 // set_cursor_state(player, state) — forces the cursor-state provider (virtualui.yml's
                 // cursor.states.<name>, e.g. "processing") regardless of hover/drag context, until
                 // cleared. Lets a script show a busy/loading cursor around an async operation.
-                .method("set_cursor_state", (obj, args) -> {
-                    if (args.size() < 2) return ScriptValue.of(false);
-                    Player p = playerOf(args.get(0));
-                    if (p == null) return ScriptValue.of(false);
-                    CameraSession session = VirtualUICameraSystem.session(p);
-                    if (session == null) return ScriptValue.of(false);
-                    String stateName = nullIfBlank(args.get(1).asStr());
-                    session.setCursorStateOverride(stateName);
-                    dev.arubik.craftengine.CraftEnginePolyfills.instance().getLogger().info(
-                            "[VirtualUI][debug] set_cursor_state(" + p.getName() + ", \"" + stateName + "\")");
-                    return ScriptValue.of(true);
-                })
+                // Migrated: player RAW, state_name a real string. onMissingArgs=false matches
+                // "args.size()<2" (instance-independent — stateless VirtualUI singleton).
+                .methodTyped2("set_cursor_state", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                    (Object obj, ScriptValue playerArg, String stateNameArg) -> {
+                        Player p = playerOf(playerArg);
+                        if (p == null) return false;
+                        CameraSession session = VirtualUICameraSystem.session(p);
+                        if (session == null) return false;
+                        String stateName = nullIfBlank(stateNameArg);
+                        session.setCursorStateOverride(stateName);
+                        dev.arubik.craftengine.CraftEnginePolyfills.instance().getLogger().info(
+                                "[VirtualUI][debug] set_cursor_state(" + p.getName() + ", \"" + stateName + "\")");
+                        return true;
+                    })
                 // clear_cursor_state(player) — releases a set_cursor_state override, letting the
                 // engine go back to picking the state from hover/drag context.
-                .method("clear_cursor_state", (obj, args) -> {
-                    Player p = playerOf(args.isEmpty() ? null : args.get(0));
-                    if (p == null) return ScriptValue.of(false);
-                    CameraSession session = VirtualUICameraSystem.session(p);
-                    if (session == null) return ScriptValue.of(false);
-                    session.setCursorStateOverride(null);
-                    dev.arubik.craftengine.CraftEnginePolyfills.instance().getLogger().info(
-                            "[VirtualUI][debug] clear_cursor_state(" + p.getName() + ")");
-                    return ScriptValue.of(true);
-                });
+                // Migrated: same RAW-player / onMissingArgs=false rationale as hide/is_open above.
+                .methodTyped1("clear_cursor_state", TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                    (Object obj, ScriptValue playerArg) -> {
+                        Player p = playerOf(playerArg);
+                        if (p == null) return false;
+                        CameraSession session = VirtualUICameraSystem.session(p);
+                        if (session == null) return false;
+                        session.setCursorStateOverride(null);
+                        dev.arubik.craftengine.CraftEnginePolyfills.instance().getLogger().info(
+                                "[VirtualUI][debug] clear_cursor_state(" + p.getName() + ")");
+                        return true;
+                    });
 
         registerHologramBuilder();
 
+        // NOTE on the whole VirtualUIBuilder chain below (through hover_state) and the
+        // HologramBuilder setter chain further down (at/scale/rotation/alignment/billboard/
+        // line_width/opacity/see_through/shadow/background): left untyped, not migrated to
+        // methodTypedN. Every one of these follows the same "chainable setter" shape — when an
+        // arg is missing/insufficient, the ORIGINAL body still returns ScriptValue.ofObj(...,
+        // builder(obj)) wrapping THIS CALL's own instance unchanged, e.g.
+        // "if (!args.isEmpty()) b.field = ...; return ScriptValue.ofObj(..., b)". A typed
+        // methodTypedN's "not enough args" fallback (onMissingArgs) is one FIXED value computed
+        // once at registration time — it has no access to `obj`/`instance` — so it structurally
+        // cannot reproduce "wrap whichever builder instance was passed this call" for the
+        // missing-arg path. Several of these (button/label/image/icon/item/slot/scrollbar/toggle/
+        // select/progress) ALSO read optional trailing args individually past their required
+        // minimum (each with its own default), which a typed handler — fixed arity, no raw args
+        // list — can't express either (same reasoning as show_tooltip above). Neither issue is
+        // solved by the newer methodTyped4..7 arities; the blocker isn't argument count.
         PolyTypeRegistry.define("VirtualUIBuilder")
                 .method("camera_distance", (obj, args) -> {
                     Builder b = builder(obj);
@@ -440,20 +496,24 @@ public final class VirtualUIManagerType {
                     }
                     return ScriptValue.ofObj("VirtualUIBuilder", b);
                 })
-                .method("build", (obj, args) -> {
-                    Builder b = builder(obj);
-                    return ScriptValue.ofObj("BuiltVirtualUI",
-                            VirtualUIScreen.of(b.title, b.widgets, b.cameraDistance, b.playerInvisible, b.onCloseRef,
-                                    b.maxOffsetX, b.maxOffsetY, b.cursorIcon, b.cursorItemId, b.hoverCursorStates));
-                }));
+                // build() takes no args at all — methodTyped0 has no "missing args" branch to
+                // worry about (that's the whole issue blocking its siblings above), so this one
+                // migrates cleanly.
+                .methodTyped0("build", TypeCodecs.RAW, (Builder b) -> ScriptValue.ofObj("BuiltVirtualUI",
+                        VirtualUIScreen.of(b.title, b.widgets, b.cameraDistance, b.playerInvisible, b.onCloseRef,
+                                b.maxOffsetX, b.maxOffsetY, b.cursorIcon, b.cursorItemId, b.hoverCursorStates))));
 
+        // Migrated: "show"'s missing-arg fallback (args.isEmpty() -> false) is
+        // instance-independent — unlike the VirtualUIBuilder chain above, it does NOT touch obj —
+        // so onMissingArgs=false is exact. The player arg stays TypeCodecs.RAW (playerOf needs the
+        // raw ScriptValue); the instanceof check on screenOf(obj) stays inside the body unchanged.
         PolyTypeRegistry.define("BuiltVirtualUI")
-                .method("show", (obj, args) -> {
-                    if (args.isEmpty()) return ScriptValue.of(false);
-                    Player p = playerOf(args.get(0));
-                    if (p == null || !(screenOf(obj) instanceof VirtualUIScreen screen)) return ScriptValue.of(false);
-                    return ScriptValue.of(VirtualUICameraSystem.show(p, screen));
-                });
+                .methodTyped1("show", TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                    (Object obj, ScriptValue playerArg) -> {
+                        Player p = playerOf(playerArg);
+                        if (p == null || !(screenOf(obj) instanceof VirtualUIScreen screen)) return false;
+                        return VirtualUICameraSystem.show(p, screen);
+                    });
 
         registerPlayerExtensions();
     }
@@ -468,38 +528,41 @@ public final class VirtualUIManagerType {
                 // open_url(url) — vanilla has no server-forced "open the browser" packet (that's a
                 // deliberate client-security boundary); the standard workaround is a clickable chat
                 // component, same as every other Minecraft plugin that offers this.
-                .method("open_url", (obj, args) -> {
-                    if (args.isEmpty()) return ScriptValue.of(false);
-                    try {
-                        String url = args.get(0).asStr();
-                        org.bukkit.entity.Player bp = bukkitPlayerOf(obj);
-                        if (bp == null) return ScriptValue.of(false);
-                        net.kyori.adventure.text.Component msg = net.kyori.adventure.text.Component
-                                .text(url)
-                                .color(net.kyori.adventure.text.format.NamedTextColor.AQUA)
-                                .decorate(net.kyori.adventure.text.format.TextDecoration.UNDERLINED)
-                                .clickEvent(net.kyori.adventure.text.event.ClickEvent.openUrl(url))
-                                .hoverEvent(net.kyori.adventure.text.event.HoverEvent.showText(
-                                        net.kyori.adventure.text.Component.text("Click to open")));
-                        bp.sendMessage(msg);
-                        return ScriptValue.of(true);
-                    } catch (Throwable ex) { return ScriptValue.of(false); }
-                })
+                // Migrated: missing-arg fallback (args.isEmpty() -> false) is instance-independent
+                // (doesn't touch obj), so onMissingArgs=false is exact; the try/catch around the
+                // real logic is kept unchanged inside the typed body.
+                .methodTyped1("open_url", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                    (Object obj, String url) -> {
+                        try {
+                            org.bukkit.entity.Player bp = bukkitPlayerOf(obj);
+                            if (bp == null) return false;
+                            net.kyori.adventure.text.Component msg = net.kyori.adventure.text.Component
+                                    .text(url)
+                                    .color(net.kyori.adventure.text.format.NamedTextColor.AQUA)
+                                    .decorate(net.kyori.adventure.text.format.TextDecoration.UNDERLINED)
+                                    .clickEvent(net.kyori.adventure.text.event.ClickEvent.openUrl(url))
+                                    .hoverEvent(net.kyori.adventure.text.event.HoverEvent.showText(
+                                            net.kyori.adventure.text.Component.text("Click to open")));
+                            bp.sendMessage(msg);
+                            return true;
+                        } catch (Throwable ex) { return false; }
+                    })
                 // switch_server(name) — BungeeCord/Velocity "Connect" plugin-message, standard
                 // proxy-switch mechanism; a no-op (returns false) on a non-proxied standalone server.
-                .method("switch_server", (obj, args) -> {
-                    if (args.isEmpty()) return ScriptValue.of(false);
-                    try {
-                        org.bukkit.entity.Player bp = bukkitPlayerOf(obj);
-                        if (bp == null) return ScriptValue.of(false);
-                        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
-                        java.io.DataOutputStream data = new java.io.DataOutputStream(out);
-                        data.writeUTF("Connect");
-                        data.writeUTF(args.get(0).asStr());
-                        bp.sendPluginMessage(dev.arubik.craftengine.CraftEnginePolyfills.instance(), "BungeeCord", out.toByteArray());
-                        return ScriptValue.of(true);
-                    } catch (Throwable ex) { return ScriptValue.of(false); }
-                }));
+                // Migrated: same instance-independent onMissingArgs=false rationale as open_url.
+                .methodTyped1("switch_server", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                    (Object obj, String name) -> {
+                        try {
+                            org.bukkit.entity.Player bp = bukkitPlayerOf(obj);
+                            if (bp == null) return false;
+                            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+                            java.io.DataOutputStream data = new java.io.DataOutputStream(out);
+                            data.writeUTF("Connect");
+                            data.writeUTF(name);
+                            bp.sendPluginMessage(dev.arubik.craftengine.CraftEnginePolyfills.instance(), "BungeeCord", out.toByteArray());
+                            return true;
+                        } catch (Throwable ex) { return false; }
+                    }));
     }
 
     private static org.bukkit.entity.Player bukkitPlayerOf(Object obj) {
@@ -510,6 +573,11 @@ public final class VirtualUIManagerType {
     }
 
     private static void registerHologramBuilder() {
+        // See the NOTE above the VirtualUIBuilder chain (register()) — every setter below
+        // (at/scale/rotation/alignment/billboard/line_width/opacity/see_through/shadow/
+        // background) has the same "return wrap(config(obj)) unchanged when args are
+        // missing/insufficient" shape, which needs `obj` on the missing-arg path — something a
+        // typed methodTypedN's fixed onMissingArgs value structurally can't provide. Left untyped.
         PolyTypeRegistry.define("HologramBuilder")
                 .method("at", (obj, args) -> {
                     HologramLineConfig c = config(obj);
@@ -561,7 +629,10 @@ public final class VirtualUIManagerType {
                     }
                     return ScriptValue.ofObj("HologramBuilder", c);
                 })
-                .method("build", (obj, args) -> ScriptValue.ofObj("Hologram", config(obj)));
+                // 0-arg — no missing-args branch to worry about, same rationale as
+                // VirtualUIBuilder.build() above.
+                .methodTyped0("build", TypeCodecs.RAW,
+                    (HologramLineConfig c) -> ScriptValue.ofObj("Hologram", c));
     }
 
     // --- helpers ---

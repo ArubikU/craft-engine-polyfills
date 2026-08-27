@@ -2,6 +2,7 @@ package dev.arubik.craftengine.script.types.primitive;
 
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -231,51 +232,49 @@ public final class ItemType {
             // "#"-prefixed tag ("#minecraft:logs", vanilla or a CraftEngine custom item's own
             // declared tags) — see ItemMatch, the shared id/tag matcher used across the script
             // engine (Container.pull_item, the matches()/has_item() builtins, here).
-            .method("matches", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                return ScriptValue.of(dev.arubik.craftengine.script.types.util.ItemMatch.matches(stack(obj), args.get(0).asStr()));
-            })
+            .methodTyped1("matches", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (ItemStack obj, String pattern) ->
+                    dev.arubik.craftengine.script.types.util.ItemMatch.matches(obj, pattern))
             // Full identity comparison (type + every data component — enchantments, custom name,
             // durability, everything), ignoring stack COUNT — the same rule vanilla stacking uses.
             // `matches(id)` above only ever compared the base item type; a filter that wants to
             // require a SPECIFIC enchanted book (not just "any book") needs this instead.
-            .method("same_as", (obj, args) -> {
-                if (args.isEmpty() || !(args.get(0) instanceof ScriptValue.Item other))
-                    return ScriptValue.of(false);
-                return ScriptValue.of(ItemStack.isSameItemSameComponents(stack(obj), other.stack()));
-            })
+            // arg1 uses RAW — the arg is checked via `instanceof ScriptValue.Item`, not coerced to a
+            // native type, so it must stay a ScriptValue for that check to work identically.
+            .methodTyped1("same_as", TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                (ItemStack obj, ScriptValue arg0) -> {
+                    if (!(arg0 instanceof ScriptValue.Item other)) return false;
+                    return ItemStack.isSameItemSameComponents(obj, other.stack());
+                })
             .method("with_count", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.ofItem(stack(obj));
                 ItemStack copy = stack(obj).copy();
                 copy.setCount((int) args.get(0).asNum());
                 return ScriptValue.ofItem(copy);
             })
-            .method("can_break", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                try {
-                    String blockId = args.get(0).asStr();
-                    net.minecraft.world.level.block.Block block = (net.minecraft.world.level.block.Block)
-                        BuiltInRegistries.BLOCK.getValue(net.minecraft.resources.Identifier.parse(
-                            blockId.contains(":") ? blockId : "minecraft:" + blockId));
-                    if (block == null) return ScriptValue.of(false);
-                    net.minecraft.world.level.block.state.BlockState bs = block.defaultBlockState();
-                    return ScriptValue.of(stack(obj).getDestroySpeed(bs) > 1.0f);
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
-            })
+            .methodTyped1("can_break", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (ItemStack obj, String blockId) -> {
+                    try {
+                        net.minecraft.world.level.block.Block block = (net.minecraft.world.level.block.Block)
+                            BuiltInRegistries.BLOCK.getValue(net.minecraft.resources.Identifier.parse(
+                                blockId.contains(":") ? blockId : "minecraft:" + blockId));
+                        if (block == null) return false;
+                        net.minecraft.world.level.block.state.BlockState bs = block.defaultBlockState();
+                        return obj.getDestroySpeed(bs) > 1.0f;
+                    } catch (Throwable ignored) { return false; }
+                })
 
             // ---- Data component API (pure NMS) ----
 
             // item.component("name") → {Name}Component obj or NULL
-            .method("component", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                return DataComponentTypes.getComponent(stack(obj), args.get(0).asStr());
-            })
+            // RAW return — getComponent already returns a ScriptValue (component obj or NULL), no
+            // native return type to pin it to.
+            .methodTyped1("component", TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
+                (ItemStack obj, String name) -> DataComponentTypes.getComponent(obj, name))
 
             // item.has_component("name") → bool
-            .method("has_component", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                return ScriptValue.of(DataComponentTypes.hasComponent(stack(obj), args.get(0).asStr()));
-            })
+            .methodTyped1("has_component", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (ItemStack obj, String name) -> DataComponentTypes.hasComponent(obj, name))
 
             // item.with_component(comp) → item copy with component set
             // Also accepts: item.with_component("name", value_or_map_of_primitives)
@@ -357,18 +356,22 @@ public final class ItemType {
             // counterpart of Machine.get_typed/set_typed — one key/type convention instead of a
             // bespoke accessor pair per feature. Items are values here, so with_typed returns a
             // NEW copy (same idiom as with_component) rather than mutating in place.
-            .method("get_typed", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.NULL;
-                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
-                if (codec == null) return ScriptValue.NULL;
-                return readTyped(stack(obj), TYPED_PREFIX + args.get(0).asStr(), codec);
-            })
-            .method("has_typed", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
-                if (codec == null) return ScriptValue.of(false);
-                return ScriptValue.of(hasTyped(stack(obj), TYPED_PREFIX + args.get(0).asStr()));
-            })
+            // Migrated to the typed-registration API (PolyType.methodTyped2, mirrors
+            // MachineType.get_typed) — key/type are always strings; the stored VALUE stays
+            // TypeCodecs.RAW since its real coercion is dynamic, decided by whichever
+            // TypedKeyBridge.Codec `typeName` names.
+            .methodTyped2("get_typed", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
+                (ItemStack obj, String key, String typeName) -> {
+                    dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(typeName);
+                    if (codec == null) return ScriptValue.NULL;
+                    return readTyped(obj, TYPED_PREFIX + key, codec);
+                })
+            .methodTyped2("has_typed", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (ItemStack obj, String key, String typeName) -> {
+                    dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(typeName);
+                    if (codec == null) return false;
+                    return hasTyped(obj, TYPED_PREFIX + key);
+                })
             .method("with_typed", (obj, args) -> {
                 if (args.size() < 3) return ScriptValue.ofItem(stack(obj));
                 dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
@@ -425,20 +428,19 @@ public final class ItemType {
                 } catch (Throwable ignored) { return ScriptValue.ofItem(stack(obj)); }
             })
             // item.tank("name") → current amount stored in that named tank buffer
-            .method("tank", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(0);
-                return ScriptValue.of(dev.arubik.craftengine.item.ItemStateData.tankAmount(stack(obj), args.get(0).asStr()));
-            })
+            .methodTyped1("tank", TypeCodecs.STRING, TypeCodecs.DOUBLE, 0.0,
+                (ItemStack obj, String name) ->
+                    (double) dev.arubik.craftengine.item.ItemStateData.tankAmount(obj, name))
 
 
             // item.tank_capacity("name") → capacity declared on this item's ItemDefinition, or 0
-            .method("tank_capacity", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(0);
-                var def = dev.arubik.craftengine.item.ItemDefinition.byId(ceKey(stack(obj)));
-                if (def == null) return ScriptValue.of(0);
-                var tank = def.tank(args.get(0).asStr());
-                return ScriptValue.of(tank != null ? tank.capacity() : 0);
-            })
+            .methodTyped1("tank_capacity", TypeCodecs.STRING, TypeCodecs.DOUBLE, 0.0,
+                (ItemStack obj, String name) -> {
+                    var def = dev.arubik.craftengine.item.ItemDefinition.byId(ceKey(obj));
+                    if (def == null) return 0.0;
+                    var tank = def.tank(name);
+                    return tank != null ? (double) tank.capacity() : 0.0;
+                })
 
             // item.set_tank("name", amount) → item copy with that tank buffer set (clamped to
             // capacity when the item's own ItemDefinition declares one, uncapped otherwise)
@@ -470,33 +472,34 @@ public final class ItemType {
             // items/*.json ItemDefinition (as opposed to a plain vanilla item or some other CE
             // item behavior). Lets a script introspect an arbitrary item (e.g. one read out of a
             // slot via Player.get_inventory_slot) before assuming it has tanks/scripts/pages.
-            .method("has_definition", (obj, args) -> {
-                try {
-                    return ScriptValue.of(dev.arubik.craftengine.item.ItemDefinition.byId(ceKey(stack(obj))) != null);
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
-            })
+            .methodTyped0("has_definition", TypeCodecs.BOOL,
+                (ItemStack obj) -> {
+                    try {
+                        return dev.arubik.craftengine.item.ItemDefinition.byId(ceKey(obj)) != null;
+                    } catch (Throwable ignored) { return false; }
+                })
 
             // item.has_script("on_equipped_tick") → true if this item's ItemDefinition declares a
             // script ref for that event.
-            .method("has_script", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                try {
-                    var def = dev.arubik.craftengine.item.ItemDefinition.byId(ceKey(stack(obj)));
-                    return ScriptValue.of(def != null && def.script(args.get(0).asStr()) != null);
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
-            })
+            .methodTyped1("has_script", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (ItemStack obj, String eventName) -> {
+                    try {
+                        var def = dev.arubik.craftengine.item.ItemDefinition.byId(ceKey(obj));
+                        return def != null && def.script(eventName) != null;
+                    } catch (Throwable ignored) { return false; }
+                })
 
             // item.get_script("on_equipped_tick") → the "file.pf:function" ref, or "" if this item
             // has no definition or doesn't declare that event.
-            .method("get_script", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of("");
-                try {
-                    var def = dev.arubik.craftengine.item.ItemDefinition.byId(ceKey(stack(obj)));
-                    if (def == null) return ScriptValue.of("");
-                    String ref = def.script(args.get(0).asStr());
-                    return ScriptValue.of(ref != null ? ref : "");
-                } catch (Throwable ignored) { return ScriptValue.of(""); }
-            })
+            .methodTyped1("get_script", TypeCodecs.STRING, TypeCodecs.STRING, "",
+                (ItemStack obj, String eventName) -> {
+                    try {
+                        var def = dev.arubik.craftengine.item.ItemDefinition.byId(ceKey(obj));
+                        if (def == null) return "";
+                        String ref = def.script(eventName);
+                        return ref != null ? ref : "";
+                    } catch (Throwable ignored) { return ""; }
+                })
 
             // item.update() → re-renders this item's display name/lore from its ItemDefinition's
             // "name"/"lore" templates (MiniMessage, "${expr}" inline scripts, or a bare
@@ -504,8 +507,10 @@ public final class ItemType {
             // this after changing state that a template reads (e.g. item.with_typed/set_tank) to make
             // the change visible — there is no automatic re-render, since a plain data component
             // write has no hook of its own to piggyback on.
-            .method("update", (obj, args) -> {
-                ItemStack self = stack(obj);
+            // RAW return — this returns a rebuilt Item (ScriptValue.ofItem), no native return type
+            // to pin it to; 0 args (args isn't consulted by the original body either).
+            .methodTyped0("update", TypeCodecs.RAW,
+                (ItemStack self) -> {
                 try {
                     var def = dev.arubik.craftengine.item.ItemDefinition.byId(ceKey(self));
                     if (def == null || (def.nameTemplate() == null && def.loreTemplate().isEmpty())) {
@@ -535,7 +540,7 @@ public final class ItemType {
                     }
                     return ScriptValue.ofItem(result);
                 } catch (Throwable ignored) { return ScriptValue.ofItem(self); }
-            });
+                });
     }
 
     /** MiniMessage text → NMS Component with italics defaulted off (the convention every menu

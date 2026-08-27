@@ -4,6 +4,7 @@ import dev.arubik.craftengine.script.types.primitive.VectorType;
 import dev.arubik.craftengine.script.types.world.LocationType;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -61,17 +62,22 @@ public final class EntityType {
             .property("name",     obj -> ScriptValue.of(entity(obj).getName().getString()))
             .property("tick_age", obj -> ScriptValue.of(entity(obj).tickCount))
             .property("location", obj -> LocationType.wrapEntity(entity(obj)))
+            // Left untyped: original requires args.size() == 1 EXACTLY (an extra arg falls through
+            // to the 0.0 default) — methodTypedN's onMissingArgs only guards a MINIMUM arg count,
+            // so it can't reproduce the "too many args" branch of this exact check.
             .method("distance_to", (obj, args) -> {
                 if (args.size() == 1 && args.get(0) instanceof ScriptValue.Obj o && o.instance() instanceof Entity other)
                     return ScriptValue.of(entity(obj).distanceTo(other));
                 return ScriptValue.of(0.0);
             })
-            .method("set_velocity", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.of(false);
-                entity(obj).setDeltaMovement(args.get(0).asNum(), args.get(1).asNum(), args.get(2).asNum());
-                entity(obj).hurtMarked = true;
-                return ScriptValue.of(true);
-            })
+            .methodTyped3("set_velocity", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (Entity e, Double x, Double y, Double z) -> {
+                    e.setDeltaMovement(x, y, z);
+                    e.hurtMarked = true;
+                    return true;
+                })
+            // Left untyped: dynamically branches between a Vector-object first arg and a 3-double
+            // form — no single methodTypedN arity/codec combination represents both call shapes.
             .method("push", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.of(false);
                 Entity e = entity(obj);
@@ -88,30 +94,33 @@ public final class EntityType {
                 }
                 return ScriptValue.of(false);
             })
-            .method("teleport", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.of(false);
-                entity(obj).setPos(args.get(0).asNum(), args.get(1).asNum(), args.get(2).asNum());
-                return ScriptValue.of(true);
-            })
+            .methodTyped3("teleport", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (Entity e, Double x, Double y, Double z) -> {
+                    e.setPos(x, y, z);
+                    return true;
+                })
             // teleport_to(Location) — unlike teleport(x,y,z) above (setPos, SAME level only), this
             // goes through Bukkit's real Entity#teleport(Location), which properly moves an entity
             // ACROSS dimensions/worlds. Needed for anything building a cross-dimension link (a
             // teleporter network, ...) — setPos silently does nothing useful if the target Location
             // is in a different world.
-            .method("teleport_to", (obj, args) -> {
-                if (args.isEmpty() || !(args.get(0) instanceof ScriptValue.Obj o)
-                        || !(o.instance() instanceof dev.arubik.craftengine.script.types.world.LocationType.LocationRef loc)
-                        || loc.level() == null)
-                    return ScriptValue.of(false);
-                try {
-                    org.bukkit.World world = loc.level().getWorld();
-                    if (world == null) return ScriptValue.of(false);
-                    org.bukkit.Location bukkitLoc = new org.bukkit.Location(world, loc.x(), loc.y(), loc.z());
-                    return ScriptValue.of(entity(obj).getBukkitEntity().teleport(bukkitLoc));
-                } catch (Throwable ignored) {
-                    return ScriptValue.of(false);
-                }
-            })
+            // Arg stays TypeCodecs.RAW: it's a dynamic ScriptValue.Obj/instanceof check, not a
+            // fixed native type — same reasoning as MachineType's get_typed/set_typed value slot.
+            .methodTyped1("teleport_to", TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                (Entity e, ScriptValue arg0) -> {
+                    if (!(arg0 instanceof ScriptValue.Obj o)
+                            || !(o.instance() instanceof dev.arubik.craftengine.script.types.world.LocationType.LocationRef loc)
+                            || loc.level() == null)
+                        return false;
+                    try {
+                        org.bukkit.World world = loc.level().getWorld();
+                        if (world == null) return false;
+                        org.bukkit.Location bukkitLoc = new org.bukkit.Location(world, loc.x(), loc.y(), loc.z());
+                        return e.getBukkitEntity().teleport(bukkitLoc);
+                    } catch (Throwable ignored) {
+                        return false;
+                    }
+                })
             // Fall-distance control — the Bukkit-mirror side is stable across NMS internals, unlike
             // the raw `fallDistance` field's visibility/type, which has moved around between
             // versions. Used by e.g. a jetpack's thrust logic to keep the ensuing landing damage-free.
@@ -119,13 +128,17 @@ public final class EntityType {
                 try { return ScriptValue.of(entity(obj).getBukkitEntity().getFallDistance()); }
                 catch (Throwable ignored) { return ScriptValue.of(0.0); }
             })
-            .method("reset_fall_distance", (obj, args) -> {
-                try { entity(obj).getBukkitEntity().setFallDistance(0f); return ScriptValue.of(true); }
-                catch (Throwable ignored) { return ScriptValue.of(false); }
-            })
+            .methodTyped0("reset_fall_distance", TypeCodecs.BOOL,
+                (Entity e) -> {
+                    try { e.getBukkitEntity().setFallDistance(0f); return true; }
+                    catch (Throwable ignored) { return false; }
+                })
             // Generic potion-effect application — usable by any script (a jetpack softening its
             // own landing with slow-falling, a trap item poisoning whoever picks it up, etc).
             // add_potion_effect(name, duration_ticks, amplifier?)
+            // Left untyped: the 3rd arg (amplifier) is genuinely OPTIONAL with a default (0) when
+            // omitted, while args 0-1 are required — methodTyped3's onMissingArgs short-circuits
+            // the WHOLE call below size 3, which would wrongly reject the valid 2-arg call form.
             .method("add_potion_effect", (obj, args) -> {
                 if (args.size() < 2 || !(entity(obj) instanceof LivingEntity living)) return ScriptValue.of(false);
                 try {
@@ -137,26 +150,28 @@ public final class EntityType {
                     return ScriptValue.of(true);
                 } catch (Throwable ignored) { return ScriptValue.of(false); }
             })
-            .method("remove_potion_effect", (obj, args) -> {
-                if (args.isEmpty() || !(entity(obj) instanceof LivingEntity living)) return ScriptValue.of(false);
-                try {
-                    var holder = mobEffectHolder(args.get(0).asStr());
-                    if (holder == null) return ScriptValue.of(false);
-                    living.removeEffect(holder);
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
-            })
-            .method("has_potion_effect", (obj, args) -> {
-                if (args.isEmpty() || !(entity(obj) instanceof LivingEntity living)) return ScriptValue.of(false);
-                try {
-                    var holder = mobEffectHolder(args.get(0).asStr());
-                    return holder == null ? ScriptValue.of(false) : ScriptValue.of(living.hasEffect(holder));
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
-            })
-            .method("kill", (obj, args) -> { entity(obj).kill(null); return ScriptValue.of(true); })
-            .method("remove", (obj, args) -> {
-                entity(obj).discard();
-                return ScriptValue.of(true);
+            .methodTyped1("remove_potion_effect", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (Entity e, String effectName) -> {
+                    if (!(e instanceof LivingEntity living)) return false;
+                    try {
+                        var holder = mobEffectHolder(effectName);
+                        if (holder == null) return false;
+                        living.removeEffect(holder);
+                        return true;
+                    } catch (Throwable ignored) { return false; }
+                })
+            .methodTyped1("has_potion_effect", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (Entity e, String effectName) -> {
+                    if (!(e instanceof LivingEntity living)) return false;
+                    try {
+                        var holder = mobEffectHolder(effectName);
+                        return holder != null && living.hasEffect(holder);
+                    } catch (Throwable ignored) { return false; }
+                })
+            .methodTyped0("kill", TypeCodecs.BOOL, (Entity e) -> { e.kill(null); return true; })
+            .methodTyped0("remove", TypeCodecs.BOOL, (Entity e) -> {
+                e.discard();
+                return true;
             })
             // --- Generic TypedKey storage (see dev.arubik.craftengine.script.TypedKeyBridge) ----
             // Entity/Player-side counterpart of Machine.get_typed/set_typed/has_typed — backed by
@@ -164,24 +179,24 @@ public final class EntityType {
             // NMS Entity no longer exposes its custom-data CompoundTag for live mutation (it's a
             // private CustomData component now, no public getter) — PDC is the actually-supported,
             // version-stable way to attach arbitrary per-entity data today.
-            .method("get_typed", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.NULL;
-                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
-                if (codec == null) return ScriptValue.NULL;
-                return readTyped(obj, TYPED_PREFIX + args.get(0).asStr(), codec);
-            })
-            .method("set_typed", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.of(false);
-                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
-                if (codec == null) return ScriptValue.of(false);
-                return ScriptValue.of(writeTyped(obj, TYPED_PREFIX + args.get(0).asStr(), codec, args.get(2)));
-            })
-            .method("has_typed", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
-                if (codec == null) return ScriptValue.of(false);
-                return ScriptValue.of(hasTyped(obj, TYPED_PREFIX + args.get(0).asStr(), codec));
-            });
+            .methodTyped2("get_typed", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
+                (Entity e, String key, String typeName) -> {
+                    dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(typeName);
+                    if (codec == null) return ScriptValue.NULL;
+                    return readTyped(e, TYPED_PREFIX + key, codec);
+                })
+            .methodTyped3("set_typed", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                (Entity e, String key, String typeName, ScriptValue value) -> {
+                    dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(typeName);
+                    if (codec == null) return false;
+                    return writeTyped(e, TYPED_PREFIX + key, codec, value);
+                })
+            .methodTyped2("has_typed", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (Entity e, String key, String typeName) -> {
+                    dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(typeName);
+                    if (codec == null) return false;
+                    return hasTyped(e, TYPED_PREFIX + key, codec);
+                });
 
         // ---- LivingEntity extends Entity ----------------------------------------
         PolyTypeRegistry.define("LivingEntity", "Entity")
@@ -196,6 +211,9 @@ public final class EntityType {
             .property("is_dead",      obj -> ScriptValue.of(!living(obj).isAlive()))
             .property("last_damage",  obj -> ScriptValue.of(living(obj).getLastDamageSource() != null ?
                 living(obj).getLastDamageSource().typeHolder().getRegisteredName() : ""))
+            // fire/freeze left untyped: an OPTIONAL arg substituted with a default (60 / 140 ticks)
+            // when omitted, then execution continues unconditionally — not a short-circuit "return
+            // fallback on missing args" shape, which is all methodTyped1's onMissingArgs covers.
             .method("fire", (obj, args) -> {
                 int ticks = args.isEmpty() ? 60 : (int) args.get(0).asNum();
                 living(obj).setRemainingFireTicks(Math.max(living(obj).getRemainingFireTicks(), ticks));
@@ -206,31 +224,32 @@ public final class EntityType {
                 living(obj).setTicksFrozen(Math.max(living(obj).getTicksFrozen(), ticks));
                 return ScriptValue.of(true);
             })
-            .method("damage", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                float amount = (float) args.get(0).asNum();
-                LivingEntity le = living(obj);
-                if (le.level() instanceof ServerLevel sl)
-                    return ScriptValue.of(le.hurtOrSimulate(sl.damageSources().generic(), amount));
-                return ScriptValue.of(false);
-            })
-            .method("kill",       (obj, args) -> { living(obj).kill(null); return ScriptValue.of(true); })
-            .method("set_health", (obj, args) -> { if (!args.isEmpty()) living(obj).setHealth((float) args.get(0).asNum()); return ScriptValue.of(true); })
-            .method("give_item", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                net.minecraft.world.item.ItemStack stack = null;
-                ScriptValue v = args.get(0);
-                if (v instanceof ScriptValue.Item i) stack = i.stack().copy();
-                if (stack == null || stack.isEmpty()) return ScriptValue.of(false);
-                LivingEntity le = living(obj);
-                if (le instanceof net.minecraft.world.entity.player.Player p) {
-                    p.getInventory().add(stack);
-                } else {
-                    // Drop at entity position for non-players
-                    if (le.level() instanceof ServerLevel sl) le.spawnAtLocation(sl, stack);
-                }
-                return ScriptValue.of(true);
-            })
+            .methodTyped1("damage", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (LivingEntity le, Double amountArg) -> {
+                    float amount = amountArg.floatValue();
+                    if (le.level() instanceof ServerLevel sl)
+                        return le.hurtOrSimulate(sl.damageSources().generic(), amount);
+                    return false;
+                })
+            .methodTyped0("kill", TypeCodecs.BOOL, (LivingEntity le) -> { le.kill(null); return true; })
+            // set_health's onMissingArgs=true matches the original's "if empty, no-op, still return
+            // true" fallthrough exactly — no health mutation happens in either the missing-arg path
+            // above (methodTyped1 never invokes the handler) or the original's skipped `if` body.
+            .methodTyped1("set_health", TypeCodecs.DOUBLE, TypeCodecs.BOOL, true,
+                (LivingEntity le, Double h) -> { le.setHealth(h.floatValue()); return true; })
+            .methodTyped1("give_item", TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                (LivingEntity le, ScriptValue v) -> {
+                    net.minecraft.world.item.ItemStack stack = null;
+                    if (v instanceof ScriptValue.Item i) stack = i.stack().copy();
+                    if (stack == null || stack.isEmpty()) return false;
+                    if (le instanceof net.minecraft.world.entity.player.Player p) {
+                        p.getInventory().add(stack);
+                    } else {
+                        // Drop at entity position for non-players
+                        if (le.level() instanceof ServerLevel sl) le.spawnAtLocation(sl, stack);
+                    }
+                    return true;
+                })
             .property("equipment", obj -> {
                 LivingEntity le = living(obj);
                 java.util.LinkedHashMap<String, ScriptValue> eq = new java.util.LinkedHashMap<>();
@@ -242,24 +261,22 @@ public final class EntityType {
                 eq.put("feet",  ScriptValue.ofItem(le.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.FEET)));
                 return dev.arubik.craftengine.script.types.primitive.MapType.wrap(eq);
             })
-            .method("set_equipment", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                LivingEntity le = living(obj);
-                String slotName = args.get(0).asStr();
-                net.minecraft.world.item.ItemStack stack = args.get(1) instanceof ScriptValue.Item i ? i.stack() : net.minecraft.world.item.ItemStack.EMPTY;
-                net.minecraft.world.entity.EquipmentSlot slot = switch (slotName.toLowerCase()) {
-                    case "main_hand" -> net.minecraft.world.entity.EquipmentSlot.MAINHAND;
-                    case "off_hand"  -> net.minecraft.world.entity.EquipmentSlot.OFFHAND;
-                    case "head"  -> net.minecraft.world.entity.EquipmentSlot.HEAD;
-                    case "chest" -> net.minecraft.world.entity.EquipmentSlot.CHEST;
-                    case "legs"  -> net.minecraft.world.entity.EquipmentSlot.LEGS;
-                    case "feet"  -> net.minecraft.world.entity.EquipmentSlot.FEET;
-                    default -> null;
-                };
-                if (slot == null) return ScriptValue.of(false);
-                le.setItemSlot(slot, stack);
-                return ScriptValue.of(true);
-            });
+            .methodTyped2("set_equipment", TypeCodecs.STRING, TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                (LivingEntity le, String slotName, ScriptValue itemArg) -> {
+                    net.minecraft.world.item.ItemStack stack = itemArg instanceof ScriptValue.Item i ? i.stack() : net.minecraft.world.item.ItemStack.EMPTY;
+                    net.minecraft.world.entity.EquipmentSlot slot = switch (slotName.toLowerCase()) {
+                        case "main_hand" -> net.minecraft.world.entity.EquipmentSlot.MAINHAND;
+                        case "off_hand"  -> net.minecraft.world.entity.EquipmentSlot.OFFHAND;
+                        case "head"  -> net.minecraft.world.entity.EquipmentSlot.HEAD;
+                        case "chest" -> net.minecraft.world.entity.EquipmentSlot.CHEST;
+                        case "legs"  -> net.minecraft.world.entity.EquipmentSlot.LEGS;
+                        case "feet"  -> net.minecraft.world.entity.EquipmentSlot.FEET;
+                        default -> null;
+                    };
+                    if (slot == null) return false;
+                    le.setItemSlot(slot, stack);
+                    return true;
+                });
 
         // ---- Mob extends LivingEntity -------------------------------------------
         PolyTypeRegistry.define("Mob", "LivingEntity")
@@ -285,11 +302,12 @@ public final class EntityType {
         PolyTypeRegistry.define("ItemEntity", "Entity")
             .property("item",         obj -> ScriptValue.ofItem(itemEntity(obj).getItem()))
             .property("pickup_delay", obj -> ScriptValue.of(itemEntity(obj).pickupDelay))
-            .method("set_item", (obj, args) -> {
-                if (!args.isEmpty() && args.get(0) instanceof ScriptValue.Item i && i.stack() != null)
-                    itemEntity(obj).setItem(i.stack());
-                return ScriptValue.of(true);
-            });
+            // onMissingArgs=true matches the original's "empty args -> no-op, still return true".
+            .methodTyped1("set_item", TypeCodecs.RAW, TypeCodecs.BOOL, true,
+                (ItemEntity ie, ScriptValue v) -> {
+                    if (v instanceof ScriptValue.Item i && i.stack() != null) ie.setItem(i.stack());
+                    return true;
+                });
 
         // ---- ExperienceOrb extends Entity ----------------------------------------
         PolyTypeRegistry.define("ExperienceOrb", "Entity")

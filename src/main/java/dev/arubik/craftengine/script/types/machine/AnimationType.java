@@ -4,6 +4,7 @@ import dev.arubik.craftengine.machine.render.ScriptAnimation;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptCall;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 
 import java.util.*;
 
@@ -57,6 +58,11 @@ public final class AnimationType {
         PolyTypeRegistry.define("Animation")
 
             // ---- Keyframe definition ----
+            // keyframe(tick, displays, easing?) — short-circuits (return false) only below 2 args,
+            // but the 3rd (easing) is separately optional with its own in-body default (LINEAR);
+            // methodTyped2/3 can't express "2 required + 1 optional with a different missing-args
+            // rule than the required ones" — a fixed arity decodes exactly N args or short-circuits
+            // for all of them uniformly. Left untyped.
             .method("keyframe", (obj, args) -> {
                 if (args.size() < 2) return ScriptValue.of(false);
                 int tick = (int) args.get(0).asNum();
@@ -69,24 +75,40 @@ public final class AnimationType {
             })
 
             // ---- Playback ----
-            .method("play", (obj, args) -> {
-                anim(obj).play();
-                return ScriptValue.ofObj("Animation", obj);
+            // play/stop/pause/resume/reset — migrated to the typed-registration API
+            // (PolyType.methodTyped0): all zero-arg, no missing-args case exists at that arity, and
+            // the `anim(obj)` helper is a plain (ScriptAnimation) cast so it maps directly to the
+            // typed handler's first parameter type.
+            .methodTyped0("play", TypeCodecs.RAW, (ScriptAnimation a) -> {
+                a.play();
+                return ScriptValue.ofObj("Animation", a);
             })
+            // play_from/seek take an OPTIONAL arg that defaults in-body (args.isEmpty() ? 0 : ...)
+            // rather than short-circuiting to a fixed return value when absent — methodTyped1's
+            // onMissingArgs can only supply a static fallback RETURN value, not a default argument,
+            // and the actual return here is a dynamic ScriptValue.ofObj(obj) that can't be
+            // precomputed at registration time. Left untyped.
             .method("play_from", (obj, args) -> {
                 anim(obj).playFrom(args.isEmpty() ? 0 : (int) args.get(0).asNum());
                 return ScriptValue.ofObj("Animation", obj);
             })
-            .method("stop",   (obj, args) -> { anim(obj).stop();   return ScriptValue.of(false); })
-            .method("pause",  (obj, args) -> { anim(obj).pause();  return ScriptValue.ofObj("Animation", obj); })
-            .method("resume", (obj, args) -> { anim(obj).resume(); return ScriptValue.ofObj("Animation", obj); })
+            .methodTyped0("stop", TypeCodecs.BOOL, (ScriptAnimation a) -> { a.stop(); return false; })
+            .methodTyped0("pause", TypeCodecs.RAW, (ScriptAnimation a) -> { a.pause(); return ScriptValue.ofObj("Animation", a); })
+            .methodTyped0("resume", TypeCodecs.RAW, (ScriptAnimation a) -> { a.resume(); return ScriptValue.ofObj("Animation", a); })
             .method("seek",   (obj, args) -> {
                 anim(obj).seek(args.isEmpty() ? 0 : (int) args.get(0).asNum());
                 return ScriptValue.ofObj("Animation", obj);
             })
-            .method("reset",  (obj, args) -> { anim(obj).reset(); return ScriptValue.ofObj("Animation", obj); })
+            .methodTyped0("reset", TypeCodecs.RAW, (ScriptAnimation a) -> { a.reset(); return ScriptValue.ofObj("Animation", a); })
 
             // ---- Configuration ----
+            // loop/max_loops/speed/interpolation, and on_end/on_loop/add_child/remove_child below,
+            // all share the same shape: a single OPTIONAL arg (missing -> skip the setter, or use
+            // an in-body default) but ALWAYS return ScriptValue.ofObj("Animation", obj) — a value
+            // that depends on the live `obj` instance and so can't be expressed as a static
+            // methodTyped1 onMissingArgs fallback (that only substitutes a fixed return value, and
+            // would also skip invoking the handler entirely rather than running it with a default
+            // arg). Left untyped.
             .method("loop", (obj, args) -> {
                 anim(obj).setLoop(args.isEmpty() || args.get(0).asBool());
                 return ScriptValue.ofObj("Animation", obj);
@@ -106,6 +128,9 @@ public final class AnimationType {
             })
 
             // ---- Sound events ----
+            // sound_at(tick, sound, volume?, pitch?) — 2 required + 2 further optional args beyond
+            // them (each independently defaulting to 1.0f in-body); methodTyped2 would decode only
+            // the first 2 and has no way to conditionally read args 2/3. Left untyped.
             .method("sound_at", (obj, args) -> {
                 if (args.size() < 2) return ScriptValue.of(false);
                 anim(obj).addSoundAt((int) args.get(0).asNum(), new ScriptAnimation.SoundSpec(
@@ -116,6 +141,7 @@ public final class AnimationType {
             })
 
             // ---- Event callbacks ----
+            // Same optional-arg-with-obj-dependent-return shape as loop/max_loops/speed above.
             .method("on_end", (obj, args) -> {
                 if (!args.isEmpty()) anim(obj).setOnEndCall(ScriptCall.parse(args.get(0).asStr()));
                 return ScriptValue.ofObj("Animation", obj);
@@ -126,6 +152,8 @@ public final class AnimationType {
             })
 
             // ---- Child animations ----
+            // Same optional-arg-with-obj-dependent-return shape, plus the arg is only acted on
+            // after an `instanceof ScriptValue.Obj` + typeName check (not a plain codec decode).
             .method("add_child", (obj, args) -> {
                 if (!args.isEmpty() && args.get(0) instanceof ScriptValue.Obj o
                         && o.typeName().equals("Animation"))

@@ -12,6 +12,7 @@ import dev.arubik.craftengine.script.types.world.BlockType;
 import dev.arubik.craftengine.script.types.entity.EntityType;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import dev.arubik.craftengine.util.NbtType;
 import dev.arubik.craftengine.util.TypedKey;
 import net.minecraft.resources.Identifier;
@@ -130,26 +131,6 @@ public final class MachineType {
      *  identical prefix so a value bridged between a machine and an item (Machine.to_item,
      *  ItemDefinition#bridgeTyped) round-trips under the exact same key either side reads. */
     private static final String TYPED_PREFIX = "tkey_";
-
-    /** Shared read path for every TypedKeyBridge-backed accessor (get_typed) — {@code storageKey}
-     *  is the FULL prefixed key ("tkey_foo", ...). */
-    private static ScriptValue readTyped(PersistentBlockEntity be, String storageKey, dev.arubik.craftengine.script.TypedKeyBridge.Codec codec) {
-        if (be == null) return codec.fromStorage(null);
-        TypedKey<Object> key = TypedKey.of("polyfills", storageKey, codec.storage());
-        return codec.fromStorage(be.get(key));
-    }
-
-    private static boolean hasTyped(PersistentBlockEntity be, String storageKey, dev.arubik.craftengine.script.TypedKeyBridge.Codec codec) {
-        if (be == null) return false;
-        TypedKey<Object> key = TypedKey.of("polyfills", storageKey, codec.storage());
-        return be.has(key);
-    }
-
-    private static boolean writeTyped(PersistentBlockEntity be, String storageKey, dev.arubik.craftengine.script.TypedKeyBridge.Codec codec, ScriptValue value) {
-        if (be == null) return false;
-        TypedKey<Object> key = TypedKey.of("polyfills", storageKey, codec.storage());
-        try { be.set(key, codec.toStorage(value)); return true; } catch (Throwable ignored) { return false; }
-    }
 
     @SuppressWarnings("deprecation")
     public static void register() {
@@ -880,17 +861,17 @@ public final class MachineType {
             })
 
             // --- Methods: RPM ---
-            .method("report_su", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                MachineRef m = ref(obj);
-                PersistentBlockEntity be = m.blockEntity();
-                if (!(be instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity machine)) return ScriptValue.of(false);
-                float su = (float) args.get(0).asNum();
-                // lastSuLoad is private — access via reportSuToNetwork which updates it internally
-                // Report to kinetic network (positive = consume, negative = generate)
-                machine.reportSuToNetwork(su);
-                return ScriptValue.of(true);
-            })
+            // Migrated to the typed-registration API (see get_typed/set_typed above).
+            .methodTyped1("report_su", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (MachineRef m, Double suArg) -> {
+                    PersistentBlockEntity be = m.blockEntity();
+                    if (!(be instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity machine)) return false;
+                    float su = suArg.floatValue();
+                    // lastSuLoad is private — access via reportSuToNetwork which updates it internally
+                    // Report to kinetic network (positive = consume, negative = generate)
+                    machine.reportSuToNetwork(su);
+                    return true;
+                })
             // progress/max_progress/progress_percent — the recipe processing bar's own raw ticks
             // (matches the "polyfills:progress" bar's barStat("progress") source exactly), exposed
             // to scripts so a layout item (e.g. recipe_info.pf) can show a live "% done" without
@@ -942,27 +923,33 @@ public final class MachineType {
             // ("int"/"double"/"bool"/"string"/"byte_array"/"item"/"vector"/a custom-registered
             // one/...) so scripts share ONE convention instead of every feature growing its own ad
             // hoc accessor pair. See TypedKeyBridge — including how to add a brand-new type name.
-            .method("get_typed", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.NULL;
-                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
-                if (codec == null) return ScriptValue.NULL;
-                PersistentBlockEntity be = ref(obj).blockEntity();
-                if (be == null) return codec.fromStorage(null);
-                TypedKey<Object> key = TypedKey.of("polyfills", "tkey_" + args.get(0).asStr(), codec.storage());
-                return codec.fromStorage(be.get(key));
-            })
-            .method("set_typed", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.of(false);
-                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
-                if (codec == null) return ScriptValue.of(false);
-                PersistentBlockEntity be = ref(obj).blockEntity();
-                if (be == null) return ScriptValue.of(false);
-                TypedKey<Object> key = TypedKey.of("polyfills", "tkey_" + args.get(0).asStr(), codec.storage());
-                try {
-                    be.set(key, codec.toStorage(args.get(2)));
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
-            })
+            // get_typed/set_typed migrated to the typed-registration API (PolyType.methodTyped2/3,
+            // dev.arubik.craftengine.script.TypeCodecs) as a prototype for the wider typed-PolyType
+            // initiative — key/type are always strings (TypeCodecs.STRING); the stored VALUE itself
+            // stays TypeCodecs.RAW (a ScriptValue passthrough) because its real coercion is dynamic,
+            // decided at call time by whichever TypedKeyBridge.Codec `type` names, not by anything
+            // fixed at registration time. Behavior is unchanged from the untyped version above.
+            .methodTyped2("get_typed", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
+                (MachineRef m, String key, String typeName) -> {
+                    dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(typeName);
+                    if (codec == null) return ScriptValue.NULL;
+                    PersistentBlockEntity be = m.blockEntity();
+                    if (be == null) return codec.fromStorage(null);
+                    TypedKey<Object> tk = TypedKey.of("polyfills", "tkey_" + key, codec.storage());
+                    return codec.fromStorage(be.get(tk));
+                })
+            .methodTyped3("set_typed", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                (MachineRef m, String key, String typeName, ScriptValue value) -> {
+                    dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(typeName);
+                    if (codec == null) return false;
+                    PersistentBlockEntity be = m.blockEntity();
+                    if (be == null) return false;
+                    TypedKey<Object> tk = TypedKey.of("polyfills", "tkey_" + key, codec.storage());
+                    try {
+                        be.set(tk, codec.toStorage(value));
+                        return true;
+                    } catch (Throwable ignored) { return false; }
+                })
             .method("has_typed", (obj, args) -> {
                 if (args.size() < 2) return ScriptValue.of(false);
                 dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
@@ -1080,23 +1067,24 @@ public final class MachineType {
             })
 
             // --- Methods: RPM output / relay ---
-            .method("set_rpm_output", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                MachineRef m = ref(obj);
-                PersistentBlockEntity be = m.blockEntity();
-                if (!(be instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(false);
-                try {
-                    var dm = (dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity) machine;
-                    float rpm = (float) args.get(0).asNum();
-                    // Source motors must have a network to report SU — auto-create if missing
-                    if (rpm != 0f && dm.rpmNetworkId() == 0L) {
-                        var net = dev.arubik.craftengine.rotation.RpmNetwork.create();
-                        dm.joinNetwork(net.id());
-                    }
-                    dm.setRpmSourceOutput(rpm);
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
-            })
+            // Migrated to the typed-registration API (see get_typed/set_typed above for the same
+            // note) — a single native double arg, boolean return.
+            .methodTyped1("set_rpm_output", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (MachineRef m, Double rpmArg) -> {
+                    PersistentBlockEntity be = m.blockEntity();
+                    if (!(be instanceof AbstractMachineBlockEntity machine)) return false;
+                    try {
+                        var dm = (dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity) machine;
+                        float rpm = rpmArg.floatValue();
+                        // Source motors must have a network to report SU — auto-create if missing
+                        if (rpm != 0f && dm.rpmNetworkId() == 0L) {
+                            var net = dev.arubik.craftengine.rotation.RpmNetwork.create();
+                            dm.joinNetwork(net.id());
+                        }
+                        dm.setRpmSourceOutput(rpm);
+                        return true;
+                    } catch (Throwable ignored) { return false; }
+                })
             // relay_to(block, rpm, network_id) — passes RPM from this machine to a neighbor machine.
             // - network_id: shared string ID (e.g. motor pos "x,y,z") so all machines in chain report SU to same network
             // - Parent tracking via str_flag "rpm_parent": first machine to relay to a target becomes its parent
