@@ -25,6 +25,23 @@ import java.util.logging.Logger;
  */
 public final class ScriptProgram {
 
+    private static final Logger LOG_ERR = Logger.getLogger("CraftEnginePolyfills");
+    /** Every distinct (script, statement) pair whose evaluation has already logged a thrown
+     *  exception — a statement runs every tick, so without this ONE broken line would spam a log
+     *  entry per tick forever. Logged once per distinct key for the life of the JVM (matches
+     *  {@code ScriptBytecodeCompiler}'s own logging convention for the same reason). */
+    private static final java.util.Set<String> LOGGED_STMT_FAIL = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    private void logStatementFailure(String kind, String detail, Throwable t) {
+        String key = name + "|" + kind + "|" + detail;
+        if (LOGGED_STMT_FAIL.add(key)) {
+            LOG_ERR.log(java.util.logging.Level.WARNING,
+                "[CEPolyfills] " + name + ".pf: " + kind + " '" + detail + "' threw "
+                    + t.getClass().getSimpleName() + (t.getMessage() != null ? ": " + t.getMessage() : "")
+                    + " (further occurrences of this exact line are suppressed)", t);
+        }
+    }
+
     private final String name;
     private final Map<String, ScriptFormula> topLevel;
     private final List<Statement> statements;
@@ -268,7 +285,7 @@ public final class ScriptProgram {
                         // `static` genuinely mutable shared state instead of a one-shot constant.
                         if (staticStore.containsKey(a.name())) staticStore.put(a.name(), v);
                         b.val(a.name(), v);
-                    } catch (Throwable ignored) {}
+                    } catch (Throwable t) { logStatementFailure("assign", a.name() + " = " + a.formula(), t); }
                 }
                 case Statement.StaticDecl sd -> {
                     // Computed once per ScriptProgram (ever) via computeIfAbsent's atomicity, then
@@ -278,13 +295,17 @@ public final class ScriptProgram {
                     ScriptValue v = staticStore.computeIfAbsent(sd.name(), n -> {
                         ScriptContext snap = b.peek();
                         try { return sd.formula().evaluate(snap); }
-                        catch (Throwable ignored) { return ScriptValue.NULL; }
+                        catch (Throwable t) {
+                            logStatementFailure(sd.isFinal() ? "final" : "static", sd.name() + " = " + sd.formula(), t);
+                            return ScriptValue.NULL;
+                        }
                     });
                     b.val(sd.name(), v);
                 }
                 case Statement.ExprStatement es -> {
                     ScriptContext snap = b.peek();
-                    try { es.formula().evaluate(snap); } catch (Throwable ignored) {}
+                    try { es.formula().evaluate(snap); }
+                    catch (Throwable t) { logStatementFailure("expr", es.formula().toString(), t); }
                 }
                 case Statement.IfChain chain -> {
                     // peek() — every clause condition in this chain is evaluated against the SAME
@@ -297,7 +318,10 @@ public final class ScriptProgram {
                             taken = true;
                         } else {
                             try { taken = clause.condition().evaluateBool(snap); }
-                            catch (Throwable ignored) { taken = false; }
+                            catch (Throwable t) {
+                                logStatementFailure("if-condition", clause.condition().toString(), t);
+                                taken = false;
+                            }
                         }
                         if (taken) { runStatements(clause.body(), b); break; }
                     }

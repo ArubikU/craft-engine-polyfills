@@ -8,7 +8,11 @@ import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static org.objectweb.asm.Opcodes.*;
 
@@ -87,6 +91,16 @@ final class ScriptBytecodeCompiler {
 
     private ScriptBytecodeCompiler() {}
 
+    private static final Logger LOG = Logger.getLogger("CraftEnginePolyfills");
+    /** Every distinct expression string this process has already logged a codegen/registration
+     *  outcome for — a formula is re-evaluated every tick, so without this a single bad/good
+     *  expression would spam one log line per tick forever. Logged exactly once per distinct
+     *  {@code expr} for the lifetime of the JVM (a config reload re-parses formulas but they're
+     *  the same strings, so this intentionally does NOT reset on reload — the first reload's
+     *  worth of log lines already told the story). */
+    private static final Set<String> LOGGED_COMPILE = ConcurrentHashMap.newKeySet();
+    private static final Set<String> LOGGED_FAIL = ConcurrentHashMap.newKeySet();
+
     private static final AtomicInteger COUNTER = new AtomicInteger();
     private static final String NODE_IFACE = "dev/arubik/craftengine/script/ScriptFormula$Node";
     private static final String FORMULA = "dev/arubik/craftengine/script/ScriptFormula";
@@ -152,8 +166,18 @@ final class ScriptBytecodeCompiler {
 
             byte[] bytes = cw.toByteArray();
             Class<?> defined = MethodHandles.lookup().defineHiddenClass(bytes, true).lookupClass();
-            return (ScriptFormula.Node) defined.getDeclaredConstructor().newInstance();
-        } catch (Throwable ignored) {
+            ScriptFormula.Node node = (ScriptFormula.Node) defined.getDeclaredConstructor().newInstance();
+            if (LOGGED_COMPILE.add(expr)) {
+                LOG.log(Level.FINE, "[CEPolyfills] JIT compiled + registered " + className
+                        + " for: " + expr);
+            }
+            return node;
+        } catch (Throwable t) {
+            if (LOGGED_FAIL.add(expr)) {
+                LOG.log(Level.FINE, "[CEPolyfills] JIT bailed on '" + expr
+                        + "' (falls back to the interpreter, this is not a script failure): "
+                        + t.getClass().getSimpleName() + (t.getMessage() != null ? ": " + t.getMessage() : ""));
+            }
             // Anything at all — an unsupported construct that slipped past a bail check, a real
             // bug in the generator, a verifier rejection — degrades to the interpreter, never a
             // broken script.
