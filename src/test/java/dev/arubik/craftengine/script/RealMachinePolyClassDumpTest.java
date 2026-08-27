@@ -56,5 +56,36 @@ class RealMachinePolyClassDumpTest {
                 + " typed=" + generated.typedMethods().size()
                 + " untyped=" + generated.untypedMethods().size()
                 + " properties=" + generated.properties().size());
+
+        dumpCompiledScript("windmill", "src/main/resources/scripts/kinetics/generators/windmill.pf");
+        dumpCompiledScript("shaft", "src/main/resources/scripts/kinetics/shafts/shaft.pf");
+    }
+
+    /**
+     * Compiles a REAL shipped {@code .pf} and writes the generated class next to the PolyClasses.
+     * This is the end-to-end artifact worth auditing: it shows what the whole motor actually emits
+     * for production script code — which calls reached a native PolyClass method, which fell to an
+     * erased shim, which linked an invokedynamic inline cache, and how much ScriptValue traffic is
+     * left. Only meaningful with the real types registered, which is why it lives in this test.
+     */
+    private static void dumpCompiledScript(String label, String path) {
+        String dir = System.getProperty("craftengine.polyclass.dump");
+        if (dir == null || dir.isBlank()) return;
+        try {
+            String src = java.nio.file.Files.readString(java.nio.file.Path.of(path));
+            ScriptProgram prog = ScriptProgram.parse(label, src, java.util.logging.Logger.getLogger("dump"));
+            ScriptClassCompiler.Compiled compiled =
+                    ScriptClassCompiler.tryCompile("dump/" + label, prog.statementsForCompiler());
+            if (compiled == null) {
+                System.out.println("[script dump] " + label + " did not compile (JIT declined)");
+                return;
+            }
+            java.nio.file.Path out = java.nio.file.Path.of(dir);
+            java.nio.file.Files.createDirectories(out);
+            java.nio.file.Files.write(out.resolve("Script_" + label + ".class"), compiled.classBytes());
+            System.out.println("[script dump] " + label + " -> " + compiled.methodsByDefName().size() + " defs");
+        } catch (Exception e) {
+            System.out.println("[script dump] " + label + " failed: " + e);
+        }
     }
 }

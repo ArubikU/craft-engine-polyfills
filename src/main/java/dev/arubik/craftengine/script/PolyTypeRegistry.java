@@ -143,5 +143,12 @@ public final class PolyTypeRegistry {
      */
     public static void clear() {
         TYPES.clear();
+        // Removing every type is a mutation like any other, and the most drastic one: without this,
+        // generated PolyClasses keep the handlers they resolved for the now-unregistered types and
+        // inline caches keep their linked targets. ScriptBootstrap.reload() happens to re-register
+        // immediately (each define notifies, so it self-corrects), but this is a public API — a
+        // standalone clear() would otherwise leave every cache pointing at types that no longer
+        // exist. After this, each re-resolves by name and correctly finds nothing.
+        notifyMutation();
     }
 }

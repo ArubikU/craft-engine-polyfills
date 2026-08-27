@@ -212,6 +212,12 @@ class PolyDispatchTest {
                 "a megamorphic site must stop linking (cap is the chain depth), but linked " + links + " times");
     }
 
+    // NOTE: PolyTypeRegistry.clear() also notifies now, so a warm cache does not survive a registry
+    // wipe. That is deliberately NOT tested here: clear() is process-global, and a test that wiped
+    // the registry mid-suite would destroy the types every other test class registers in its own
+    // @BeforeAll — the exact cross-test pollution that already made an earlier version of
+    // RealPolyClassGenerationTest order-dependent. There is no restore API to put them back.
+
     @Test
     void generatedBytecodeUsesInvokedynamicRatherThanADirectMemberCall() throws Exception {
         PolyTypeRegistry.define("DispatchDisasmType").method("greet", (o, a) -> ScriptValue.of("hi"));

@@ -52,3 +52,34 @@ Prefixed and index-suffixed so a script-level member name can never collide with
 A typed method also gets a `um$` companion: the native signature has a fixed arity, but a call site
 may legally pass fewer arguments (`methodTypedOptN` defaults, or `methodTypedN`'s `onMissingArgs`),
 and the shim is what applies that.
+
+## What the motor emits for real scripts
+
+`Script_windmill.class` / `Script_shaft.class` are the real shipped `.pf` files compiled with the
+real types registered — the end-to-end artifact worth auditing, not a fixture.
+
+Measured on `windmill.pf`:
+
+| | count |
+|---|---|
+| native PolyClass calls (`tm$`) | 14 |
+| PolyClass shim calls (`um$`/`pg$`) | 3 |
+| invokedynamic inline-cache sites | 22 |
+| `ScriptFormula.memberCall` / `memberGet` | **0** |
+| `ScriptFormula.compile(...)` | **0** |
+| `callBuiltin` | 4 |
+
+The two zeroes are the point. Every member access is now either a direct call on a generated
+PolyClass or a self-linking inline cache; the per-evaluation registry lookup is gone, and so is the
+`ScriptFormula.compile(expr).evaluate(ctx)` round-trip that started this work.
+
+### What is deliberately left
+
+- **4 `callBuiltin` sites** (`contains`, `tick`, `clamp` x2). An inline cache could hoist the
+  `ScriptBuiltins.get(name)` map lookup, but `callBuiltin` must FIRST probe `ctx.peekVar(name)` —
+  a user-defined `def` is allowed to shadow a builtin, and that probe is context-dependent, so it
+  cannot be cached away. Caching would halve the lookups, not remove them, in exchange for another
+  invalidation path. Not worth it.
+- **`ScriptValue.of` calls**, almost all `arrayList.add(ScriptValue.of(...))`. These are argument
+  lists for the erased shim / builtin APIs, which take `List<ScriptValue>` by signature. The typed
+  native path already skips the list entirely; these are the calls that genuinely cannot.
