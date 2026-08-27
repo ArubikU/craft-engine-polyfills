@@ -46,6 +46,66 @@ public final class ScriptProgram {
     private final Map<String, ScriptFormula> topLevel;
     private final List<Statement> statements;
 
+    /** Lazily/once-computed via {@link #ensureCompiled()} — {@code null} means either "not
+     *  attempted yet" (check {@link #compileAttempted}) or "attempted and nothing in this file
+     *  qualified" (see {@link ScriptClassCompiler#tryCompile}'s own doc for what disqualifies a
+     *  whole file). Uses this program's bare {@link #name} as the compiler's originPath rather
+     *  than the folder-relative path {@code ScriptRegistry} computes at load time (not threaded
+     *  through to {@code ScriptProgram} today) — the ONLY effect of that is cosmetic (the
+     *  generated class's package won't mirror the file's real folder the way {@code
+     *  ScriptClassCompilerTest}'s dedicated naming assertions describe), not a correctness
+     *  concern: two DIFFERENT files sharing the same bare name would collide on the SAME
+     *  generated binary name, but {@code GenLoader.define}'s resulting {@code LinkageError} is
+     *  already caught by {@code tryCompile}'s own catch-all, degrading that second file back to
+     *  the interpreter exactly as if it had never compiled — never a crash. */
+    private volatile ScriptClassCompiler.Compiled compiledClass;
+    private volatile boolean compileAttempted;
+
+    private static final java.util.Set<String> LOGGED_COMPILED_DEF_FAIL = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /** Every distinct (script, def) pair whose compiled-method invocation has already logged a
+     *  thrown exception — same dedup convention as {@link #logStatementFailure}, for the same
+     *  reason (a def can run every tick). Deliberately does NOT retry the interpreter on failure
+     *  — see the {@code FunctionDef} case's own comment in {@link #runStatements} for why a
+     *  partially-mutated {@code resultB} makes that unsafe; this only logs so a real problem is
+     *  visible, then degrades that ONE call to {@code NULL}. */
+    private void logCompiledDefFailure(String defName, Throwable t) {
+        String key = name + "|" + defName;
+        if (LOGGED_COMPILED_DEF_FAIL.add(key)) {
+            LOG_ERR.log(java.util.logging.Level.WARNING,
+                "[CEPolyfills] " + name + ".pf: compiled def '" + defName + "' threw "
+                    + t.getClass().getSimpleName() + (t.getMessage() != null ? ": " + t.getMessage() : "")
+                    + " — falling back to NULL for this call (further occurrences are suppressed)", t);
+        }
+    }
+
+    /** Compiles this file's {@code def}s exactly ONCE (memoized — {@link ScriptClassCompiler}'s
+     *  {@code GenLoader} can't redefine the same class twice, so a second attempt would only ever
+     *  throw), on the FIRST call that needs it. Never re-attempted even if it returns {@code
+     *  null} (nothing in this file qualified) — same one-shot contract {@code
+     *  ScriptClassCompiler.tryCompile}'s own doc already describes. */
+    private ScriptClassCompiler.Compiled ensureCompiled() {
+        if (compileAttempted) return compiledClass;
+        synchronized (this) {
+            if (compileAttempted) return compiledClass;
+            try { compiledClass = ScriptClassCompiler.tryCompile(name, statements); }
+            catch (Throwable ignored) { compiledClass = null; }
+            compileAttempted = true;
+            return compiledClass;
+        }
+    }
+
+    /** The compiled static method for {@code defName}, or {@code null} when the JIT kill switch
+     *  is off, this file didn't compile at all, or this SPECIFIC def wasn't eligible (see {@link
+     *  ScriptClassCompiler}'s per-def bail model). Checked on every {@code FunctionDef} binding —
+     *  see {@link ScriptClassCompiler#CLASS_JIT_ENABLED}'s own doc for why that's deliberate (an
+     *  instant, no-reload kill switch). */
+    private java.lang.reflect.Method compiledMethodFor(String defName) {
+        if (!ScriptClassCompiler.CLASS_JIT_ENABLED) return null;
+        ScriptClassCompiler.Compiled c = ensureCompiled();
+        return c == null ? null : c.methodsByDefName().get(defName);
+    }
+
     /** True when every top-level statement is a {@code def}/{@code import} — no top-level
      *  {@code Assign}/{@code ExprStatement}/control-flow that could read the CALLER's context.
      *  Covers the simplest machine .pf files (a flat collection of {@code def foo() {...}} blocks).
@@ -431,11 +491,29 @@ public final class ScriptProgram {
                     List<Statement> capturedBody = fd.body();
                     List<String> capturedParams = fd.params();
                     ScriptContext definingCtx = b.build();
+                    java.lang.reflect.Method compiledMethod = compiledMethodFor(fd.name());
                     UserFunction fn = new UserFunction(fd.name(), capturedParams, definingCtx,
-                        (callerCtx, resultB) -> {
-                            try { runStatements(capturedBody, resultB); }
-                            catch (ReturnSignal rs) { resultB.val("__return__", rs.value); }
-                        });
+                        compiledMethod != null
+                            ? (callerCtx, resultB) -> {
+                                try {
+                                    ScriptValue result = (ScriptValue) compiledMethod.invoke(null, resultB);
+                                    resultB.val("__return__", result);
+                                } catch (Throwable t) {
+                                    // Deliberately NOT re-run via the interpreter here: resultB may
+                                    // already be partially mutated by whatever the compiled method
+                                    // did before throwing, and re-running the WHOLE body on top of
+                                    // that risks double-applying a real side effect (a Machine.*
+                                    // call, a report_su, ...). Same fail-soft-to-NULL convention as
+                                    // every other JIT fallback in this file/ScriptFormula — logged so
+                                    // it's visible, never silently wrong or a crashed tick.
+                                    logCompiledDefFailure(fd.name(), t);
+                                    resultB.val("__return__", ScriptValue.NULL);
+                                }
+                            }
+                            : (callerCtx, resultB) -> {
+                                try { runStatements(capturedBody, resultB); }
+                                catch (ReturnSignal rs) { resultB.val("__return__", rs.value); }
+                            });
                     b.val(fd.name(), ScriptValue.ofObj(UserFunction.TYPE, fn));
                 }
                 case Statement.Import imp -> {

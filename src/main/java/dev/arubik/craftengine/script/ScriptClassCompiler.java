@@ -66,6 +66,18 @@ final class ScriptClassCompiler {
 
     private ScriptClassCompiler() {}
 
+    /** Kill switch for wiring this compiler's output into LIVE execution — same convention as
+     *  {@code ScriptFormula.JIT_ENABLED}. {@link ScriptProgram} checks this flag on EVERY call (in
+     *  {@code compiledMethodFor}/{@code compiledMainMethod}, not just once at compile time), so
+     *  flipping it to {@code false} instantly reverts every already-compiled file back to the
+     *  interpreter too, no restart or reload needed — {@code ensureCompiled}'s own memoized
+     *  compile result is left alone (compiling is still cheap to skip re-doing), only whether it's
+     *  ever CONSULTED is gated. Defaults {@code true}: this compiler's output has been validated
+     *  against the interpreter across every real def in the shipped {@code .pf} scripts (see
+     *  {@code ScriptClassCompilerCoverageTest}) with zero discrepancies, the same bar {@code
+     *  ScriptBytecodeCompiler}'s own {@code JIT_ENABLED} was held to before shipping enabled. */
+    static volatile boolean CLASS_JIT_ENABLED = true;
+
     private static final String BUILDER = "dev/arubik/craftengine/script/ScriptContext$Builder";
     private static final String CTX = "dev/arubik/craftengine/script/ScriptContext";
     private static final String FORMULA = "dev/arubik/craftengine/script/ScriptFormula";
