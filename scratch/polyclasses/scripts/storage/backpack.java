@@ -18,7 +18,6 @@ import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.lang.invoke.MethodHandles;
-import java.util.ArrayList;
 
 /*
  * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
@@ -45,9 +44,7 @@ public final class Backpack {
                 PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
                 v0 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
             } else {
-                ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)string));
-                v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
+                v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
         } else {
             v0 = ScriptValue.NULL;
@@ -69,9 +66,7 @@ public final class Backpack {
                     PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object2);
                     v1 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
                 } else {
-                    ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                    arrayList.add(ScriptValue.of((String)string));
-                    v1 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue2, arrayList, (ScriptContext)scriptContext);
+                    v1 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }
             } else {
                 v1 = ScriptValue.NULL;

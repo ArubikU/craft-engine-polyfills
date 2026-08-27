@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v4
+ *  dev.arubik.craftengine.script.PolyClassMachine_v3
  *  dev.arubik.craftengine.script.PolyClassWorld
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -14,12 +14,11 @@
 package dev.arubik.craftengine.script.gen.sensors;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v4;
+import dev.arubik.craftengine.script.PolyClassMachine_v3;
 import dev.arubik.craftengine.script.PolyClassWorld;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
-import java.util.ArrayList;
 
 public final class RainSensor {
     private static volatile ScriptContext FILE_SCOPE;
@@ -54,27 +53,23 @@ public final class RainSensor {
             if (var6_6 != ScriptValue.NULL) {
                 var7_7 = 15.0;
                 if (var6_6 instanceof ScriptValue.Obj && (var10_9 = (var9_8 = (ScriptValue.Obj)var6_6).instance()) != null && !(var10_9 instanceof PolyClass) && var9_8.typeName().equals("Machine")) {
-                    var11_10 = new PolyClassMachine_v4(var10_9);
+                    var11_10 = new PolyClassMachine_v3(var10_9);
                     v1 /* !! */  = ScriptValue.of((boolean)var11_10.tm$108_emit_redstone(var7_7));
                 } else {
-                    var12_11 = new ArrayList<ScriptValue>();
-                    var12_11.add(ScriptValue.of((double)var7_7));
-                    v1 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "emit_redstone", (ScriptValue)var6_6, var12_11, (ScriptContext)var1_1);
+                    v1 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "emit_redstone", (ScriptValue)var6_6, (ScriptValue)ScriptValue.of((double)var7_7), (ScriptContext)var1_1);
                 }
             } else {
                 v1 /* !! */  = ScriptValue.NULL;
             }
         } else {
-            var13_12 = var1_1.getClassOrVar("Machine");
-            if (var13_12 != ScriptValue.NULL) {
-                var14_13 = 0.0;
-                if (var13_12 instanceof ScriptValue.Obj && (var17_15 = (var16_14 = (ScriptValue.Obj)var13_12).instance()) != null && !(var17_15 instanceof PolyClass) && var16_14.typeName().equals("Machine")) {
-                    var18_16 = new PolyClassMachine_v4(var17_15);
-                    v2 /* !! */  = ScriptValue.of((boolean)var18_16.tm$108_emit_redstone(var14_13));
+            var12_11 = var1_1.getClassOrVar("Machine");
+            if (var12_11 != ScriptValue.NULL) {
+                var13_12 = 0.0;
+                if (var12_11 instanceof ScriptValue.Obj && (var16_14 = (var15_13 = (ScriptValue.Obj)var12_11).instance()) != null && !(var16_14 instanceof PolyClass) && var15_13.typeName().equals("Machine")) {
+                    var17_15 = new PolyClassMachine_v3(var16_14);
+                    v2 /* !! */  = ScriptValue.of((boolean)var17_15.tm$108_emit_redstone(var13_12));
                 } else {
-                    var19_17 = new ArrayList<ScriptValue>();
-                    var19_17.add(ScriptValue.of((double)var14_13));
-                    v2 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "emit_redstone", (ScriptValue)var13_12, var19_17, (ScriptContext)var1_1);
+                    v2 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "emit_redstone", (ScriptValue)var12_11, (ScriptValue)ScriptValue.of((double)var13_12), (ScriptContext)var1_1);
                 }
             } else {
                 v2 /* !! */  = ScriptValue.NULL;

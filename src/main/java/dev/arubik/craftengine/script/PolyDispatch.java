@@ -102,7 +102,7 @@ public final class PolyDispatch {
     public static CallSite bootstrapCall(MethodHandles.Lookup lookup, String invokedName, MethodType type,
                                           String methodName) {
         CallIC site = new CallIC(type, methodName);
-        site.setTarget(FALLBACK_CALL.bindTo(site).asType(type));
+        site.setTarget(site.adapt(FALLBACK_CALL.bindTo(site)));
         return site;
     }
 
@@ -115,10 +115,43 @@ public final class PolyDispatch {
         return site;
     }
 
+    /**
+     * The listified shape every handler in here naturally speaks:
+     * {@code (receiver, args, ctx) -> result}.
+     */
+    private static final MethodType LIST_CALL_TYPE =
+            MethodType.methodType(ScriptValue.class, ScriptValue.class, List.class, ScriptContext.class);
+
     private static final class CallIC extends MutableCallSite {
         final String methodName;
+        /** Number of argument slots the CALL SITE passes natively, or -1 when it passes a List. */
+        final int nargs;
         int depth;
-        CallIC(MethodType type, String methodName) { super(type); this.methodName = methodName; }
+
+        CallIC(MethodType type, String methodName) {
+            super(type);
+            this.methodName = methodName;
+            this.nargs = type.parameterCount() == 3 && type.parameterType(1) == List.class
+                    ? -1 : type.parameterCount() - 2;
+        }
+
+        /**
+         * Adapts a handler written against {@link #LIST_CALL_TYPE} to whatever shape this call site
+         * actually uses.
+         *
+         * <p>A native-argument call site spends no instructions building a list — it just pushes its
+         * arguments — so the collection happens here instead, once per link rather than once per
+         * emitted call site. {@code Arrays.asList} wraps the collector's array rather than copying
+         * it, so nothing is allocated beyond that array, which is exactly the kind of short-lived,
+         * non-escaping allocation the JIT is best at removing.
+         */
+        MethodHandle adapt(MethodHandle listShaped) {
+            MethodHandle m = listShaped.asType(LIST_CALL_TYPE);
+            if (nargs < 0) return m.asType(type());
+            return MethodHandles.filterArguments(m, 1, AS_LIST)
+                    .asCollector(1, ScriptValue[].class, nargs)
+                    .asType(type());
+        }
     }
 
     private static final class GetIC extends MutableCallSite {
@@ -162,8 +195,7 @@ public final class PolyDispatch {
             PolyType type = PolyTypeRegistry.get(typeName);
             PolyType.MethodHandler handler = type != null ? type.resolveMethod(site.methodName) : null;
             if (handler != null) {
-                MethodHandle target = MethodHandles.insertArguments(INVOKE_METHOD, 0, handler)
-                        .asType(site.type());
+                MethodHandle target = site.adapt(MethodHandles.insertArguments(INVOKE_METHOD, 0, handler));
                 MethodHandle test = MethodHandles.dropArguments(
                         MethodHandles.insertArguments(GUARD, 1, typeName), 1,
                         site.type().parameterList().subList(1, site.type().parameterCount()));
@@ -171,7 +203,7 @@ public final class PolyDispatch {
                 site.depth++;
 
                 LINKS.incrementAndGet();
-                site.setTarget(sp.guardWithTest(guarded, FALLBACK_CALL.bindTo(site).asType(site.type())));
+                site.setTarget(sp.guardWithTest(guarded, site.adapt(FALLBACK_CALL.bindTo(site))));
                 return invokeMethod(handler, sv, args, ctx);
             }
         }
@@ -179,7 +211,7 @@ public final class PolyDispatch {
             // Megamorphic: stop growing the chain and pin the generic path for good.
 
             MEGAMORPHIC.incrementAndGet();
-            site.setTarget(MethodHandles.insertArguments(MEMBER_CALL, 1, site.methodName).asType(site.type()));
+            site.setTarget(site.adapt(MethodHandles.insertArguments(MEMBER_CALL, 1, site.methodName)));
         }
         return ScriptFormula.memberCall(sv, site.methodName, args, ctx);
     }
@@ -223,6 +255,9 @@ public final class PolyDispatch {
     private static final MethodHandle GUARD;
     private static final MethodHandle INVOKE_METHOD;
     private static final MethodHandle INVOKE_PROPERTY;
+    /** {@code Arrays.asList} as a fixed-arity {@code (ScriptValue[]) -> List}, for {@link
+     *  CallIC#adapt}'s collector. */
+    private static final MethodHandle AS_LIST;
     private static final MethodHandle FALLBACK_CALL;
     private static final MethodHandle FALLBACK_GET;
     private static final MethodHandle MEMBER_CALL;
@@ -239,6 +274,10 @@ public final class PolyDispatch {
             INVOKE_PROPERTY = l.findStatic(PolyDispatch.class, "invokeProperty",
                     MethodType.methodType(ScriptValue.class, PolyType.PropertyHandler.class, ScriptValue.class,
                             ScriptContext.class));
+            AS_LIST = l.findStatic(java.util.Arrays.class, "asList",
+                            MethodType.methodType(List.class, Object[].class))
+                    .asFixedArity()
+                    .asType(MethodType.methodType(List.class, ScriptValue[].class));
             FALLBACK_CALL = l.findStatic(PolyDispatch.class, "fallbackCall",
                     MethodType.methodType(ScriptValue.class, CallIC.class, ScriptValue.class, List.class,
                             ScriptContext.class));

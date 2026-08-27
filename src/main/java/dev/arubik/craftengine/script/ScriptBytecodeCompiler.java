@@ -1432,11 +1432,23 @@ final class ScriptBytecodeCompiler {
             }
             Expr base = toAny(base0);
             List<Expr> args = rawArgs.stream().map(ScriptBytecodeCompiler::toAny).toList();
+            boolean nativeArgs = args.size() <= MAX_NATIVE_ARGS;
             return new BaseExpr(Type.ANY) {
                 @Override public void emit(MethodVisitor mv, Ctx c) {
+                    if (nativeArgs) {
+                        // Receiver first, then arguments — the order the interpreter itself uses
+                        // (memberCall(obj.eval(ctx), m, argNodes...) evaluates its own arguments
+                        // left to right). Building the list first, as this used to, evaluated the
+                        // arguments BEFORE the receiver.
+                        base.emit(mv, c);
+                        for (Expr a : args) a.emit(mv, c);
+                        mv.visitVarInsn(ALOAD, c.ctxSlot);
+                        emitDynamicCallN(mv, method, args.size());
+                        return;
+                    }
                     int listSlot = c.allocRef();
-                    emitBuildArgsList(mv, c, args, listSlot);
                     base.emit(mv, c);
+                    emitBuildArgsList(mv, c, args, listSlot);
                     mv.visitVarInsn(ALOAD, listSlot);
                     mv.visitVarInsn(ALOAD, c.ctxSlot);
                     emitDynamicCall(mv, method);
@@ -2108,12 +2120,19 @@ final class ScriptBytecodeCompiler {
                         mv.visitJumpInsn(GOTO, fastL);
 
                         mv.visitLabel(fallbackL);
-                        int listSlot = c.allocRef();
-                        emitListFromSlots(mv, argSlots, finalArgSlotKinds, listSlot);
-                        mv.visitVarInsn(ALOAD, svSlot);
-                        mv.visitVarInsn(ALOAD, listSlot);
-                        mv.visitVarInsn(ALOAD, c.ctxSlot);
-                        emitDynamicCall(mv, method);
+                        if (arity <= MAX_NATIVE_ARGS) {
+                            mv.visitVarInsn(ALOAD, svSlot);
+                            emitSlotsAsValues(mv, argSlots, finalArgSlotKinds);
+                            mv.visitVarInsn(ALOAD, c.ctxSlot);
+                            emitDynamicCallN(mv, method, arity);
+                        } else {
+                            int listSlot = c.allocRef();
+                            emitListFromSlots(mv, argSlots, finalArgSlotKinds, listSlot);
+                            mv.visitVarInsn(ALOAD, svSlot);
+                            mv.visitVarInsn(ALOAD, listSlot);
+                            mv.visitVarInsn(ALOAD, c.ctxSlot);
+                            emitDynamicCall(mv, method);
+                        }
                         mv.visitLabel(fastL);
                     } else if (specializeUntyped) {
                         // The wrapper's erased shim still takes List<ScriptValue>, so the list IS
@@ -2138,6 +2157,13 @@ final class ScriptBytecodeCompiler {
                         mv.visitVarInsn(ALOAD, c.ctxSlot);
                         emitDynamicCall(mv, method);
                         mv.visitLabel(fastL);
+                    } else if (args.size() <= MAX_NATIVE_ARGS) {
+                        // The receiver is already resolved into svSlot above, so only its LOAD moves
+                        // here — argument evaluation order is untouched.
+                        mv.visitVarInsn(ALOAD, svSlot);
+                        for (Expr a : args) a.emit(mv, c);
+                        mv.visitVarInsn(ALOAD, c.ctxSlot);
+                        emitDynamicCallN(mv, method, args.size());
                     } else {
                         int listSlot = c.allocRef();
                         emitBuildArgsList(mv, c, args, listSlot);
@@ -2175,23 +2201,36 @@ final class ScriptBytecodeCompiler {
             mv.visitVarInsn(ASTORE, listSlot);
             for (int i = 0; i < argSlots.length; i++) {
                 mv.visitVarInsn(ALOAD, listSlot);
-                switch (kinds[i]) {
+                emitSlotAsValue(mv, argSlots[i], kinds[i]);
+                mv.visitMethodInsn(INVOKEINTERFACE, LIST, "add", "(Ljava/lang/Object;)Z", true);
+                mv.visitInsn(POP);
+            }
+        }
+
+        /** Pushes every already-evaluated arg local as a {@code ScriptValue}, in order — the
+         *  native-signature counterpart of {@link #emitListFromSlots}, for a fallback that hands its
+         *  arguments to {@link #emitDynamicCallN} instead of to a list. */
+        private static void emitSlotsAsValues(MethodVisitor mv, int[] argSlots, ArgSlotKind[] kinds) {
+            for (int i = 0; i < argSlots.length; i++) emitSlotAsValue(mv, argSlots[i], kinds[i]);
+        }
+
+        private static void emitSlotAsValue(MethodVisitor mv, int slot, ArgSlotKind kind) {
+            {
+                switch (kind) {
                     case NUM_RAW -> {
-                        mv.visitVarInsn(DLOAD, argSlots[i]);
+                        mv.visitVarInsn(DLOAD, slot);
                         mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(D)L" + VALUE + ";", true);
                     }
                     case BOOL_RAW -> {
-                        mv.visitVarInsn(ILOAD, argSlots[i]);
+                        mv.visitVarInsn(ILOAD, slot);
                         mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Z)L" + VALUE + ";", true);
                     }
                     case STR_RAW -> {
-                        mv.visitVarInsn(ALOAD, argSlots[i]);
+                        mv.visitVarInsn(ALOAD, slot);
                         mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Ljava/lang/String;)L" + VALUE + ";", true);
                     }
-                    case ANY_BOXED -> mv.visitVarInsn(ALOAD, argSlots[i]);
+                    case ANY_BOXED -> mv.visitVarInsn(ALOAD, slot);
                 }
-                mv.visitMethodInsn(INVOKEINTERFACE, LIST, "add", "(Ljava/lang/Object;)Z", true);
-                mv.visitInsn(POP);
             }
         }
 
@@ -2361,6 +2400,24 @@ final class ScriptBytecodeCompiler {
         private static void emitDynamicCall(MethodVisitor mv, String method) {
             mv.visitInvokeDynamicInsn("memberCall",
                     "(L" + VALUE + ";L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", BSM_CALL, method);
+        }
+
+        /** Above how many arguments a call site keeps building a real list. Past this the native
+         *  signature stops paying for itself: the saved instructions no longer offset the widening
+         *  MethodType, and no script method comes close anyway. */
+        private static final int MAX_NATIVE_ARGS = 8;
+
+        /** Stack: {@code ..., ScriptValue receiver, ScriptValue arg0..argN-1, ScriptContext} -&gt;
+         *  {@code ..., ScriptValue}. Same {@link PolyDispatch} inline cache as {@link
+         *  #emitDynamicCall}, but the arguments ride the operand stack instead of an
+         *  {@code ArrayList} the call site has to build — nine bytes of setup plus eight per
+         *  argument, and one allocation per invocation, at every generic call site in a script.
+         *  {@code PolyDispatch.CallIC} collects them on the linking side instead. */
+        private static void emitDynamicCallN(MethodVisitor mv, String method, int nargs) {
+            StringBuilder desc = new StringBuilder("(L").append(VALUE).append(';');
+            desc.append(("L" + VALUE + ";").repeat(nargs));
+            desc.append('L').append(CTX).append(";)L").append(VALUE).append(';');
+            mv.visitInvokeDynamicInsn("memberCall", desc.toString(), BSM_CALL, method);
         }
 
         /** Stack: {@code ..., ScriptValue receiver, ScriptContext} -&gt; {@code ..., ScriptValue}.

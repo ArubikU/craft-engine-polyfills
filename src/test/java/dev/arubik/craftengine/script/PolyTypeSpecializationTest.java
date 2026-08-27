@@ -270,12 +270,12 @@ class PolyTypeSpecializationTest {
     }
 
     @Test
-    void typedDispatchDoesNotAllocateTheBoxedArgsListOnItsOwnFastPath() throws Exception {
-        // The boxed ArrayList<ScriptValue> only needs to exist for the untyped MethodHandler tier
-        // and the memberCall fallback — the typed tier reads each arg straight out of its own local
-        // instead. Assert NEW ArrayList doesn't appear before the typed handler's own INVOKEINTERFACE
-        // call — it must only show up later, inside the (structurally unreachable in practice) miss
-        // tiers, never on the path the typed dispatch itself takes.
+    void typedDispatchAllocatesNoBoxedArgsListAtAll() throws Exception {
+        // A typed call site reads each argument straight out of its own local, and its miss tier now
+        // hands them to the memberCall invokedynamic as native stack operands rather than as a list.
+        // So NEITHER path builds one. Asserting the list is absent from the whole method is strictly
+        // stronger than the ordering check this used to make (that the typed call merely came
+        // first), and it is what makes a regression back to a per-call allocation visible.
         PolyTypeRegistry.define("SpecTypedNoListType")
                 .methodTyped1("greet", TypeCodecs.STRING, TypeCodecs.STRING, "",
                         (Object o, String s) -> "hi " + s);
@@ -295,12 +295,10 @@ class PolyTypeSpecializationTest {
         cr.accept(new TraceClassVisitor(new PrintWriter(sw)), 0);
         String disassembly = sw.toString();
 
-        int typedCallIdx = disassembly.indexOf(".tm$");
-        int newArrayListIdx = disassembly.indexOf("NEW java/util/ArrayList");
-        assertTrue(typedCallIdx >= 0, "should call the generated native method:\n" + disassembly);
-        assertTrue(newArrayListIdx >= 0, "the fallback path still needs the list somewhere:\n" + disassembly);
-        assertTrue(typedCallIdx < newArrayListIdx,
-                "the PolyClass call must be reachable BEFORE any ArrayList allocation:\n" + disassembly);
+        assertTrue(disassembly.contains(".tm$"),
+                "should call the generated native method:\n" + disassembly);
+        assertFalse(disassembly.contains("NEW java/util/ArrayList"),
+                "a typed call site must not allocate an args list on ANY of its paths:\n" + disassembly);
     }
 
     @Test

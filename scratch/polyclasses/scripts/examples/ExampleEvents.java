@@ -17,7 +17,6 @@ import dev.arubik.craftengine.script.PolyClassPlayer;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
-import java.util.ArrayList;
 
 public final class ExampleEvents {
     private static volatile ScriptContext FILE_SCOPE;
@@ -43,9 +42,7 @@ public final class ExampleEvents {
                 PolyClassPlayer polyClassPlayer2 = new PolyClassPlayer(object);
                 v0 = ScriptValue.of((boolean)polyClassPlayer2.tm$42_send_message(scriptValue3.asStr()));
             } else {
-                ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(scriptValue3);
-                v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
+                v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)scriptValue3, (ScriptContext)scriptContext);
             }
         } else {
             v0 = ScriptValue.NULL;

@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v4
+ *  dev.arubik.craftengine.script.PolyClassMachine_v3
  *  dev.arubik.craftengine.script.PolyClassWorld
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -17,7 +17,7 @@
 package dev.arubik.craftengine.script.gen.kinetics;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v4;
+import dev.arubik.craftengine.script.PolyClassMachine_v3;
 import dev.arubik.craftengine.script.PolyClassWorld;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -76,12 +76,8 @@ public final class TreeUtils {
         Object object;
         ScriptContext scriptContext = builder.peek();
         if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("contraption"), (ScriptValue)scriptContext.getClassOrVar("null")) ^ true) {
-            ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(scriptContext.getClassOrVar("x"));
-            arrayList.add(scriptContext.getClassOrVar("y"));
-            arrayList.add(scriptContext.getClassOrVar("z"));
             ScriptValue scriptValue = scriptContext.getClassOrVar("contraption");
-            return PolyDispatch.bootstrapCall("memberCall", "real_block", (ScriptValue)(scriptValue != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "contraption_world", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL), arrayList, (ScriptContext)scriptContext);
+            return PolyDispatch.bootstrapCall("memberCall", "real_block", (ScriptValue)(scriptValue != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "contraption_world", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)scriptContext.getClassOrVar("x"), (ScriptValue)scriptContext.getClassOrVar("y"), (ScriptValue)scriptContext.getClassOrVar("z"), (ScriptContext)scriptContext);
         }
         ScriptValue scriptValue = scriptContext.getClassOrVar("World");
         if (scriptValue != ScriptValue.NULL) {
@@ -125,7 +121,7 @@ public final class TreeUtils {
         var0.val("round_i", var18_13);
         var19_14 = 0;
         while (var19_14 < 1000) {
-            block19: {
+            block15: {
                 ++var19_14;
                 if (!(((var1_1.getStr("frontier").equals("") ^ true) != false && var1_1.getNum("round_i") < var8_6 != false) != false && var1_1.getNum("log_count") < var2_2 != false)) break;
                 var20_15 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", TreeUtils.class, "");
@@ -134,7 +130,7 @@ public final class TreeUtils {
                 var24_19.add(var1_1.getClassOrVar("frontier"));
                 var24_19.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", TreeUtils.class, ";"));
                 var21_16 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"split", var24_19, (ScriptContext)var1_1));
-                if (var21_16 == null) break block19;
+                if (var21_16 == null) break block15;
                 block1: for (ScriptValue var23_18 : var21_16) {
                     var0.val("cell", var23_18);
                     var25_20 = new ArrayList<ScriptValue>();
@@ -173,13 +169,13 @@ public final class TreeUtils {
                             var0.val("dz", var43_35);
                             var44_36 = 0;
                             while (var44_36 < 1000) {
-                                block20: {
+                                block16: {
                                     ++var44_36;
                                     if (!(var1_1.getNum("dz") <= 1.0)) break;
                                     var45_37 = (ScriptFormula.valuesEqual((ScriptValue)var1_1.getClassOrVar("dx"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", TreeUtils.class, 0.0))) != false && ScriptFormula.valuesEqual((ScriptValue)var1_1.getClassOrVar("dy"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", TreeUtils.class, 0.0))) != false) != false && ScriptFormula.valuesEqual((ScriptValue)var1_1.getClassOrVar("dz"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", TreeUtils.class, 0.0))) != false;
                                     var46_38 = ScriptValue.of((boolean)var45_37);
                                     var0.val("is_self", var46_38);
-                                    if (!((var45_37 ^ true) != false && var1_1.getNum("log_count") < var2_2 != false)) break block20;
+                                    if (!((var45_37 ^ true) != false && var1_1.getNum("log_count") < var2_2 != false)) break block16;
                                     var47_39 = ScriptFormula.addPolymorphic((ScriptValue)var28_23, (ScriptValue)var1_1.getClassOrVar("dx"));
                                     var0.val("nx", var47_39);
                                     var48_40 = ScriptFormula.addPolymorphic((ScriptValue)var30_25, (ScriptValue)var1_1.getClassOrVar("dy"));
@@ -194,7 +190,7 @@ public final class TreeUtils {
                                     var52_44.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", TreeUtils.class, ";"));
                                     var51_43.add(ScriptFormula.callBuiltin((String)"split", var52_44, (ScriptContext)var1_1));
                                     var51_43.add(var50_42);
-                                    if (!(ScriptFormula.callBuiltin((String)"contains", var51_43, (ScriptContext)var1_1).asBool() ^ true)) break block20;
+                                    if (!(ScriptFormula.callBuiltin((String)"contains", var51_43, (ScriptContext)var1_1).asBool() ^ true)) break block16;
                                     var53_45 = ScriptContext.builder().copyFrom(var1_1);
                                     var53_45.val("contraption", var1_1.getClassOrVar("contraption"));
                                     var53_45.val("x", ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("start_x"), (ScriptValue)var47_39));
@@ -254,7 +250,7 @@ public final class TreeUtils {
         var0.val("lround_i", var75_65);
         var76_66 = 0;
         while (var76_66 < 1000) {
-            block21: {
+            block17: {
                 ++var76_66;
                 if (!(((var1_1.getStr("leaf_frontier").equals("") ^ true) != false && var1_1.getNum("lround_i") < var8_6 != false) != false && var1_1.getNum("leaf_count") < var5_4 != false)) break;
                 var77_67 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", TreeUtils.class, "");
@@ -263,7 +259,7 @@ public final class TreeUtils {
                 var81_71.add(var1_1.getClassOrVar("leaf_frontier"));
                 var81_71.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", TreeUtils.class, ";"));
                 var78_68 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"split", var81_71, (ScriptContext)var1_1));
-                if (var78_68 == null) break block21;
+                if (var78_68 == null) break block17;
                 for (ScriptValue var80_70 : var78_68) {
                     var0.val("cell", var80_70);
                     var82_72 = new ArrayList<ScriptValue>();
@@ -285,105 +281,87 @@ public final class TreeUtils {
                     var0.val("cz", var89_79);
                     var90_80 = new ArrayList<ScriptValue>();
                     var91_81 = var1_1.getClassOrVar("leaf_dist");
-                    if (var91_81 != ScriptValue.NULL) {
-                        var92_82 = new ArrayList<ScriptValue>();
-                        var92_82.add(var1_1.getClassOrVar("cell"));
-                        var92_82.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", TreeUtils.class, "0"));
-                        v1 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "switch", (ScriptValue)var91_81, var92_82, (ScriptContext)var1_1);
-                    } else {
-                        v1 /* !! */  = ScriptValue.NULL;
-                    }
-                    var90_80.add(v1 /* !! */ );
-                    var93_83 = ScriptFormula.callBuiltin((String)"num", var90_80, (ScriptContext)var1_1);
-                    var0.val("prev_dist", var93_83);
-                    var94_84 = ScriptProgram.elementsOf((ScriptValue)var1_1.getClassOrVar("OFFSETS6"));
-                    if (var94_84 == null) continue;
-                    for (ScriptValue var96_86 : var94_84) {
-                        var0.val("off", var96_86);
+                    var90_80.add((ScriptValue)(var91_81 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "switch", (ScriptValue)var91_81, (ScriptValue)var1_1.getClassOrVar("cell"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", TreeUtils.class, "0")), (ScriptContext)var1_1) : ScriptValue.NULL));
+                    var92_82 = ScriptFormula.callBuiltin((String)"num", var90_80, (ScriptContext)var1_1);
+                    var0.val("prev_dist", var92_82);
+                    var93_83 = ScriptProgram.elementsOf((ScriptValue)var1_1.getClassOrVar("OFFSETS6"));
+                    if (var93_83 == null) continue;
+                    for (ScriptValue var95_85 : var93_83) {
+                        var0.val("off", var95_85);
                         if (!(var1_1.getNum("leaf_count") < var5_4)) continue;
-                        var97_87 = ScriptFormula.addPolymorphic((ScriptValue)var85_75, (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)var1_1.getClassOrVar("off"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", TreeUtils.class, 0.0))));
-                        var0.val("nx", var97_87);
-                        var98_88 = ScriptFormula.addPolymorphic((ScriptValue)var87_77, (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)var1_1.getClassOrVar("off"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", TreeUtils.class, 1.0))));
-                        var0.val("ny", var98_88);
-                        var99_89 = ScriptFormula.addPolymorphic((ScriptValue)var89_79, (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)var1_1.getClassOrVar("off"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", TreeUtils.class, 2.0))));
-                        var0.val("nz", var99_89);
-                        var100_90 = ScriptValue.of((String)(var97_87.asStr() + "," + var98_88.asStr() + "," + var99_89.asStr()));
-                        var0.val("key", var100_90);
+                        var96_86 = ScriptFormula.addPolymorphic((ScriptValue)var85_75, (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)var1_1.getClassOrVar("off"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", TreeUtils.class, 0.0))));
+                        var0.val("nx", var96_86);
+                        var97_87 = ScriptFormula.addPolymorphic((ScriptValue)var87_77, (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)var1_1.getClassOrVar("off"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", TreeUtils.class, 1.0))));
+                        var0.val("ny", var97_87);
+                        var98_88 = ScriptFormula.addPolymorphic((ScriptValue)var89_79, (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)var1_1.getClassOrVar("off"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", TreeUtils.class, 2.0))));
+                        var0.val("nz", var98_88);
+                        var99_89 = ScriptValue.of((String)(var96_86.asStr() + "," + var97_87.asStr() + "," + var98_88.asStr()));
+                        var0.val("key", var99_89);
+                        var100_90 = new ArrayList<ScriptValue>();
                         var101_91 = new ArrayList<ScriptValue>();
+                        var101_91.add(var1_1.getClassOrVar("found"));
+                        var101_91.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", TreeUtils.class, ";"));
+                        var100_90.add(ScriptFormula.callBuiltin((String)"split", var101_91, (ScriptContext)var1_1));
+                        var100_90.add(var99_89);
+                        if (ScriptFormula.callBuiltin((String)"contains", var100_90, (ScriptContext)var1_1).asBool()) ** GOTO lbl-1000
                         var102_92 = new ArrayList<ScriptValue>();
-                        var102_92.add(var1_1.getClassOrVar("found"));
-                        var102_92.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", TreeUtils.class, ";"));
-                        var101_91.add(ScriptFormula.callBuiltin((String)"split", var102_92, (ScriptContext)var1_1));
-                        var101_91.add(var100_90);
-                        if (ScriptFormula.callBuiltin((String)"contains", var101_91, (ScriptContext)var1_1).asBool()) ** GOTO lbl-1000
                         var103_93 = new ArrayList<ScriptValue>();
-                        var104_94 = new ArrayList<ScriptValue>();
-                        var104_94.add(var1_1.getClassOrVar("leaves"));
-                        var104_94.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", TreeUtils.class, ";"));
-                        var103_93.add(ScriptFormula.callBuiltin((String)"split", var104_94, (ScriptContext)var1_1));
-                        var103_93.add(var100_90);
-                        if (!ScriptFormula.callBuiltin((String)"contains", var103_93, (ScriptContext)var1_1).asBool()) {
-                            v2 = false;
+                        var103_93.add(var1_1.getClassOrVar("leaves"));
+                        var103_93.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", TreeUtils.class, ";"));
+                        var102_92.add(ScriptFormula.callBuiltin((String)"split", var103_93, (ScriptContext)var1_1));
+                        var102_92.add(var99_89);
+                        if (!ScriptFormula.callBuiltin((String)"contains", var102_92, (ScriptContext)var1_1).asBool()) {
+                            v1 = false;
                         } else lbl-1000:
                         // 2 sources
 
                         {
-                            v2 = true;
+                            v1 = true;
                         }
-                        var105_95 = v2;
-                        var106_96 = ScriptValue.of((boolean)v2);
-                        var0.val("already", var106_96);
-                        if (!(var105_95 ^ true)) continue;
-                        var107_97 = ScriptContext.builder().copyFrom(var1_1);
-                        var107_97.val("contraption", var1_1.getClassOrVar("contraption"));
-                        var107_97.val("x", ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("start_x"), (ScriptValue)var97_87));
-                        var107_97.val("y", ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("start_y"), (ScriptValue)var98_88));
-                        var107_97.val("z", ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("start_z"), (ScriptValue)var99_89));
-                        var108_98 = TreeUtils._getTreeBlock(var107_97);
-                        var0.val("blk", var108_98);
-                        if (!((ScriptFormula.valuesEqual((ScriptValue)var108_98, (ScriptValue)var1_1.getClassOrVar("null")) ^ true) != false && (((var109_99 = var1_1.getClassOrVar("blk")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_air", (ScriptValue)var109_99, (ScriptContext)var1_1) : ScriptValue.NULL).asBool() ^ true) != false)) continue;
-                        var110_100 = var1_1.getClassOrVar("blk");
-                        if (var110_100 != ScriptValue.NULL) {
-                            var111_101 = new ArrayList<ScriptValue>();
-                            var111_101.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", TreeUtils.class, "distance"));
-                            v3 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "property", (ScriptValue)var110_100, var111_101, (ScriptContext)var1_1);
+                        var104_94 = v1;
+                        var105_95 = ScriptValue.of((boolean)v1);
+                        var0.val("already", var105_95);
+                        if (!(var104_94 ^ true)) continue;
+                        var106_96 = ScriptContext.builder().copyFrom(var1_1);
+                        var106_96.val("contraption", var1_1.getClassOrVar("contraption"));
+                        var106_96.val("x", ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("start_x"), (ScriptValue)var96_86));
+                        var106_96.val("y", ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("start_y"), (ScriptValue)var97_87));
+                        var106_96.val("z", ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("start_z"), (ScriptValue)var98_88));
+                        var107_97 = TreeUtils._getTreeBlock(var106_96);
+                        var0.val("blk", var107_97);
+                        if (!((ScriptFormula.valuesEqual((ScriptValue)var107_97, (ScriptValue)var1_1.getClassOrVar("null")) ^ true) != false && (((var108_98 = var1_1.getClassOrVar("blk")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_air", (ScriptValue)var108_98, (ScriptContext)var1_1) : ScriptValue.NULL).asBool() ^ true) != false)) continue;
+                        var109_99 = var1_1.getClassOrVar("blk");
+                        var110_100 = var109_99 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "property", (ScriptValue)var109_99, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", TreeUtils.class, "distance")), (ScriptContext)var1_1) : ScriptValue.NULL;
+                        var0.val("dist_str", var110_100);
+                        if (!((ScriptFormula.valuesEqual((ScriptValue)var110_100, (ScriptValue)var1_1.getClassOrVar("null")) ^ true) != false && (ScriptFormula.valuesEqualStr((ScriptValue)var110_100, (String)"") ^ true) != false)) continue;
+                        var111_101 = new ArrayList<ScriptValue>();
+                        var111_101.add(var110_100);
+                        var112_102 = ScriptFormula.callBuiltin((String)"num", var111_101, (ScriptContext)var1_1);
+                        var0.val("dist", var112_102);
+                        if (!(var112_102.asNum() > var92_82.asNum())) continue;
+                        var113_103 = var1_1.getStr("leaves").equals("") != false ? var99_89 : ScriptValue.of((String)(var1_1.getStr("leaves") + ";" + var99_89.asStr()));
+                        var0.val("leaves", var113_103);
+                        var114_104 = var1_1.getClassOrVar("leaf_dist");
+                        if (var114_104 != ScriptValue.NULL) {
+                            var115_105 = new ArrayList<ScriptValue>();
+                            var115_105.add(var112_102);
+                            v2 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "with", (ScriptValue)var114_104, (ScriptValue)var99_89, (ScriptValue)ScriptFormula.callBuiltin((String)"str", var115_105, (ScriptContext)var1_1), (ScriptContext)var1_1);
                         } else {
-                            v3 /* !! */  = ScriptValue.NULL;
+                            v2 /* !! */  = ScriptValue.NULL;
                         }
-                        var112_102 = v3 /* !! */ ;
-                        var0.val("dist_str", var112_102);
-                        if (!((ScriptFormula.valuesEqual((ScriptValue)var112_102, (ScriptValue)var1_1.getClassOrVar("null")) ^ true) != false && (ScriptFormula.valuesEqualStr((ScriptValue)var112_102, (String)"") ^ true) != false)) continue;
-                        var113_103 = new ArrayList<ScriptValue>();
-                        var113_103.add(var112_102);
-                        var114_104 = ScriptFormula.callBuiltin((String)"num", var113_103, (ScriptContext)var1_1);
-                        var0.val("dist", var114_104);
-                        if (!(var114_104.asNum() > var93_83.asNum())) continue;
-                        var115_105 = var1_1.getStr("leaves").equals("") != false ? var100_90 : ScriptValue.of((String)(var1_1.getStr("leaves") + ";" + var100_90.asStr()));
-                        var0.val("leaves", var115_105);
-                        var116_106 = var1_1.getClassOrVar("leaf_dist");
-                        if (var116_106 != ScriptValue.NULL) {
-                            var117_107 = new ArrayList<ScriptValue>();
-                            var117_107.add(var100_90);
-                            var118_108 = new ArrayList<ScriptValue>();
-                            var118_108.add(var114_104);
-                            var117_107.add(ScriptFormula.callBuiltin((String)"str", var118_108, (ScriptContext)var1_1));
-                            v4 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "with", (ScriptValue)var116_106, var117_107, (ScriptContext)var1_1);
-                        } else {
-                            v4 /* !! */  = ScriptValue.NULL;
-                        }
-                        var119_109 = v4 /* !! */ ;
-                        var0.val("leaf_dist", var119_109);
-                        var120_110 = var1_1.getStr("next_leaf_frontier").equals("") != false ? var100_90 : ScriptValue.of((String)(var1_1.getStr("next_leaf_frontier") + ";" + var100_90.asStr()));
-                        var0.val("next_leaf_frontier", var120_110);
-                        var121_111 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("leaf_count"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", TreeUtils.class, 1.0)));
-                        var0.val("leaf_count", var121_111);
+                        var116_106 = v2 /* !! */ ;
+                        var0.val("leaf_dist", var116_106);
+                        var117_107 = var1_1.getStr("next_leaf_frontier").equals("") != false ? var99_89 : ScriptValue.of((String)(var1_1.getStr("next_leaf_frontier") + ";" + var99_89.asStr()));
+                        var0.val("next_leaf_frontier", var117_107);
+                        var118_108 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("leaf_count"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", TreeUtils.class, 1.0)));
+                        var0.val("leaf_count", var118_108);
                     }
                 }
             }
-            var122_112 = var1_1.getClassOrVar("next_leaf_frontier");
-            var0.val("leaf_frontier", var122_112);
-            var123_113 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("lround_i"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", TreeUtils.class, 1.0)));
-            var0.val("lround_i", var123_113);
+            var119_109 = var1_1.getClassOrVar("next_leaf_frontier");
+            var0.val("leaf_frontier", var119_109);
+            var120_110 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("lround_i"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", TreeUtils.class, 1.0)));
+            var0.val("lround_i", var120_110);
         }
         return var1_1.getStr("leaves").equals("") != false ? var1_1.getClassOrVar("found") : ScriptValue.of((String)(var1_1.getStr("found") + ";" + var1_1.getStr("leaves")));
     }
@@ -438,13 +416,10 @@ public final class TreeUtils {
                     ScriptValue scriptValue11 = scriptValue9;
                     ScriptValue scriptValue12 = scriptContext.getClassOrVar("speed");
                     if (scriptValue10 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                        PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object2);
-                        object = polyClassMachine_v4.tm$2_tick_break(scriptValue11, scriptValue12.asNum());
+                        PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object2);
+                        object = polyClassMachine_v3.tm$2_tick_break(scriptValue11, scriptValue12.asNum());
                     } else {
-                        ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
-                        arrayList6.add(scriptValue11);
-                        arrayList6.add(scriptValue12);
-                        object = PolyDispatch.bootstrapCall("memberCall", "tick_break", (ScriptValue)scriptValue10, arrayList6, (ScriptContext)scriptContext);
+                        object = PolyDispatch.bootstrapCall("memberCall", "tick_break", (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptValue)scriptValue12, (ScriptContext)scriptContext);
                     }
                 } else {
                     object = ScriptValue.NULL;
@@ -456,9 +431,9 @@ public final class TreeUtils {
                 if (list2 != null) {
                     for (ScriptValue scriptValue14 : list2) {
                         builder.val("item", scriptValue14);
-                        ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
-                        arrayList7.add(scriptContext.getClassOrVar("item"));
-                        ScriptFormula.callBuiltin((String)"_deposit", arrayList7, (ScriptContext)scriptContext);
+                        ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
+                        arrayList6.add(scriptContext.getClassOrVar("item"));
+                        ScriptFormula.callBuiltin((String)"_deposit", arrayList6, (ScriptContext)scriptContext);
                     }
                 }
                 boolean bl2 = true;

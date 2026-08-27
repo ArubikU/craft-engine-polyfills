@@ -25,7 +25,7 @@ import dev.arubik.craftengine.script.PolyType;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.util.List;
 
-public class PolyClassMachine_v2
+public class PolyClassMachine_v7
 extends PolyClassBlock_v2 {
     private static volatile PolyType.TypedMethodHandler3 h$0;
     private static volatile PolyType.MethodHandler m$1;
@@ -1932,19 +1932,19 @@ extends PolyClassBlock_v2 {
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"owner_uuid", (Object)this.instance).asStr();
     }
 
-    public PolyClassMachine_v2(Object object) {
+    public PolyClassMachine_v7(Object object) {
         super(object);
     }
 
-    public static PolyClassMachine_v2 of(Object object) {
-        return new PolyClassMachine_v2(object);
+    public static PolyClassMachine_v7 of(Object object) {
+        return new PolyClassMachine_v7(object);
     }
 
-    public static PolyClassMachine_v2 ofGuarded(ScriptValue scriptValue) {
+    public static PolyClassMachine_v7 ofGuarded(ScriptValue scriptValue) {
         ScriptValue.Obj obj;
         Object object;
         if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-            return new PolyClassMachine_v2(object);
+            return new PolyClassMachine_v7(object);
         }
         return null;
     }

@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassEntity_v2
+ *  dev.arubik.craftengine.script.PolyClassEntity
  *  dev.arubik.craftengine.script.PolyClassItem
  *  dev.arubik.craftengine.script.PolyClassPlayer
  *  dev.arubik.craftengine.script.PolyClassWorld
@@ -17,7 +17,7 @@
 package dev.arubik.craftengine.script.gen.block_interaction;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassEntity_v2;
+import dev.arubik.craftengine.script.PolyClassEntity;
 import dev.arubik.craftengine.script.PolyClassItem;
 import dev.arubik.craftengine.script.PolyClassPlayer;
 import dev.arubik.craftengine.script.PolyClassWorld;
@@ -51,9 +51,7 @@ public final class Jetpack {
                 PolyClassItem polyClassItem = new PolyClassItem(object3);
                 object2 = ScriptValue.of((double)polyClassItem.tm$24_tank(string));
             } else {
-                ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)string));
-                object2 = PolyDispatch.bootstrapCall("memberCall", "tank", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
+                object2 = PolyDispatch.bootstrapCall("memberCall", "tank", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
         } else {
             object2 = ScriptValue.NULL;
@@ -69,9 +67,7 @@ public final class Jetpack {
                 PolyClassItem polyClassItem = new PolyClassItem(object4);
                 object = ScriptValue.of((double)polyClassItem.tm$16_tank_capacity(string));
             } else {
-                ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)string));
-                object = PolyDispatch.bootstrapCall("memberCall", "tank_capacity", (ScriptValue)scriptValue3, arrayList, (ScriptContext)scriptContext);
+                object = PolyDispatch.bootstrapCall("memberCall", "tank_capacity", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
         } else {
             object = ScriptValue.NULL;
@@ -87,9 +83,7 @@ public final class Jetpack {
                 PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object5);
                 v2 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue6.asStr()));
             } else {
-                ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(scriptValue6);
-                v2 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, arrayList, (ScriptContext)scriptContext);
+                v2 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)scriptValue6, (ScriptContext)scriptContext);
             }
         } else {
             v2 = ScriptValue.NULL;
@@ -108,9 +102,7 @@ public final class Jetpack {
                 PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
                 v0 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
             } else {
-                ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)string));
-                v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
+                v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
         } else {
             v0 = ScriptValue.NULL;
@@ -150,9 +142,7 @@ public final class Jetpack {
                     PolyClassItem polyClassItem = new PolyClassItem(object2);
                     object = ScriptValue.of((double)polyClassItem.tm$24_tank(string));
                 } else {
-                    ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                    arrayList.add(ScriptValue.of((String)string));
-                    object = PolyDispatch.bootstrapCall("memberCall", "tank", (ScriptValue)scriptValue7, arrayList, (ScriptContext)scriptContext);
+                    object = PolyDispatch.bootstrapCall("memberCall", "tank", (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }
             } else {
                 object = ScriptValue.NULL;
@@ -184,11 +174,7 @@ public final class Jetpack {
                             PolyClassPlayer polyClassPlayer5 = new PolyClassPlayer(object4);
                             v3 = ScriptValue.of((boolean)polyClassPlayer5.tm$16_set_velocity(scriptValue15.asNum(), d, scriptValue13.asNum()));
                         } else {
-                            ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                            arrayList.add(scriptValue15);
-                            arrayList.add(ScriptValue.of((double)d));
-                            arrayList.add(scriptValue13);
-                            v3 = PolyDispatch.bootstrapCall("memberCall", "set_velocity", (ScriptValue)scriptValue12, arrayList, (ScriptContext)scriptContext);
+                            v3 = PolyDispatch.bootstrapCall("memberCall", "set_velocity", (ScriptValue)scriptValue12, (ScriptValue)scriptValue15, (ScriptValue)ScriptValue.of((double)d), (ScriptValue)scriptValue13, (ScriptContext)scriptContext);
                         }
                     } else {
                         v3 = ScriptValue.NULL;
@@ -212,11 +198,7 @@ public final class Jetpack {
                                 PolyClassPlayer polyClassPlayer6 = new PolyClassPlayer(object7);
                                 v6 = ScriptValue.of((boolean)polyClassPlayer6.tm$16_set_velocity(scriptValue22.asNum(), d, scriptValue20.asNum()));
                             } else {
-                                ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                                arrayList.add(scriptValue22);
-                                arrayList.add(ScriptValue.of((double)d));
-                                arrayList.add(scriptValue20);
-                                v6 = PolyDispatch.bootstrapCall("memberCall", "set_velocity", (ScriptValue)scriptValue19, arrayList, (ScriptContext)scriptContext);
+                                v6 = PolyDispatch.bootstrapCall("memberCall", "set_velocity", (ScriptValue)scriptValue19, (ScriptValue)scriptValue22, (ScriptValue)ScriptValue.of((double)d), (ScriptValue)scriptValue20, (ScriptContext)scriptContext);
                             }
                         } else {
                             v6 = ScriptValue.NULL;
@@ -239,11 +221,7 @@ public final class Jetpack {
                         PolyClassPlayer polyClassPlayer7 = new PolyClassPlayer(object9);
                         v8 = ScriptValue.of((boolean)polyClassPlayer7.tm$16_set_velocity(scriptValue28.asNum(), d, scriptValue26.asNum()));
                     } else {
-                        ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                        arrayList.add(scriptValue28);
-                        arrayList.add(ScriptValue.of((double)d));
-                        arrayList.add(scriptValue26);
-                        v8 = PolyDispatch.bootstrapCall("memberCall", "set_velocity", (ScriptValue)scriptValue25, arrayList, (ScriptContext)scriptContext);
+                        v8 = PolyDispatch.bootstrapCall("memberCall", "set_velocity", (ScriptValue)scriptValue25, (ScriptValue)scriptValue28, (ScriptValue)ScriptValue.of((double)d), (ScriptValue)scriptValue26, (ScriptContext)scriptContext);
                     }
                 } else {
                     v8 = ScriptValue.NULL;
@@ -264,11 +242,7 @@ public final class Jetpack {
                         PolyClassPlayer polyClassPlayer8 = new PolyClassPlayer(object11);
                         v10 = ScriptValue.of((boolean)polyClassPlayer8.tm$16_set_velocity(scriptValue34.asNum(), d, scriptValue32.asNum()));
                     } else {
-                        ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                        arrayList.add(scriptValue34);
-                        arrayList.add(ScriptValue.of((double)d));
-                        arrayList.add(scriptValue32);
-                        v10 = PolyDispatch.bootstrapCall("memberCall", "set_velocity", (ScriptValue)scriptValue31, arrayList, (ScriptContext)scriptContext);
+                        v10 = PolyDispatch.bootstrapCall("memberCall", "set_velocity", (ScriptValue)scriptValue31, (ScriptValue)scriptValue34, (ScriptValue)ScriptValue.of((double)d), (ScriptValue)scriptValue32, (ScriptContext)scriptContext);
                     }
                 } else {
                     v10 = ScriptValue.NULL;
@@ -279,11 +253,10 @@ public final class Jetpack {
                 ScriptValue.Obj obj;
                 Object object13;
                 if (scriptValue37 instanceof ScriptValue.Obj && (object13 = (obj = (ScriptValue.Obj)scriptValue37).instance()) != null && !(object13 instanceof PolyClass) && obj.typeName().equals("Entity")) {
-                    PolyClassEntity_v2 polyClassEntity_v2 = new PolyClassEntity_v2(object13);
-                    v11 = ScriptValue.of((boolean)polyClassEntity_v2.tm$22_reset_fall_distance());
+                    PolyClassEntity polyClassEntity = new PolyClassEntity(object13);
+                    v11 = ScriptValue.of((boolean)polyClassEntity.tm$22_reset_fall_distance());
                 } else {
-                    ArrayList arrayList = new ArrayList();
-                    v11 = PolyDispatch.bootstrapCall("memberCall", "reset_fall_distance", (ScriptValue)scriptValue37, arrayList, (ScriptContext)scriptContext);
+                    v11 = PolyDispatch.bootstrapCall("memberCall", "reset_fall_distance", (ScriptValue)scriptValue37, (ScriptContext)scriptContext);
                 }
             } else {
                 v11 = ScriptValue.NULL;
@@ -301,10 +274,7 @@ public final class Jetpack {
                     PolyClassItem polyClassItem = new PolyClassItem(object14);
                     v12 = polyClassItem.tm$45_set_tank(string, d2);
                 } else {
-                    ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                    arrayList.add(ScriptValue.of((String)string));
-                    arrayList.add(ScriptValue.of((double)d2));
-                    v12 = PolyDispatch.bootstrapCall("memberCall", "set_tank", (ScriptValue)scriptValue39, arrayList, (ScriptContext)scriptContext);
+                    v12 = PolyDispatch.bootstrapCall("memberCall", "set_tank", (ScriptValue)scriptValue39, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((double)d2), (ScriptContext)scriptContext);
                 }
             } else {
                 v12 = ScriptValue.NULL;
@@ -399,14 +369,7 @@ public final class Jetpack {
                     PolyClassWorld polyClassWorld = new PolyClassWorld(object17);
                     v15 = polyClassWorld.tm$16_play_sound(scriptValue56.asNum(), scriptValue58.asNum(), scriptValue60.asNum(), string, d15, d16);
                 } else {
-                    ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                    arrayList.add(scriptValue56);
-                    arrayList.add(scriptValue58);
-                    arrayList.add(scriptValue60);
-                    arrayList.add(ScriptValue.of((String)string));
-                    arrayList.add(ScriptValue.of((double)d15));
-                    arrayList.add(ScriptValue.of((double)d16));
-                    v15 = PolyDispatch.bootstrapCall("memberCall", "play_sound", (ScriptValue)scriptValue54, arrayList, (ScriptContext)scriptContext);
+                    v15 = PolyDispatch.bootstrapCall("memberCall", "play_sound", (ScriptValue)scriptValue54, (ScriptValue)scriptValue56, (ScriptValue)scriptValue58, (ScriptValue)scriptValue60, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((double)d15), (ScriptValue)ScriptValue.of((double)d16), (ScriptContext)scriptContext);
                 }
             } else {
                 v15 = ScriptValue.NULL;
@@ -420,14 +383,10 @@ public final class Jetpack {
                 double d17 = 60.0;
                 double d18 = 0.0;
                 if (scriptValue61 instanceof ScriptValue.Obj && (object18 = (obj = (ScriptValue.Obj)scriptValue61).instance()) != null && !(object18 instanceof PolyClass) && obj.typeName().equals("Entity")) {
-                    PolyClassEntity_v2 polyClassEntity_v2 = new PolyClassEntity_v2(object18);
-                    v16 = ScriptValue.of((boolean)polyClassEntity_v2.tm$2_add_potion_effect(string, d17, d18));
+                    PolyClassEntity polyClassEntity = new PolyClassEntity(object18);
+                    v16 = ScriptValue.of((boolean)polyClassEntity.tm$2_add_potion_effect(string, d17, d18));
                 } else {
-                    ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                    arrayList.add(ScriptValue.of((String)string));
-                    arrayList.add(ScriptValue.of((double)d17));
-                    arrayList.add(ScriptValue.of((double)d18));
-                    v16 = PolyDispatch.bootstrapCall("memberCall", "add_potion_effect", (ScriptValue)scriptValue61, arrayList, (ScriptContext)scriptContext);
+                    v16 = PolyDispatch.bootstrapCall("memberCall", "add_potion_effect", (ScriptValue)scriptValue61, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((double)d17), (ScriptValue)ScriptValue.of((double)d18), (ScriptContext)scriptContext);
                 }
             } else {
                 v16 = ScriptValue.NULL;
@@ -441,9 +400,7 @@ public final class Jetpack {
                     PolyClassPlayer polyClassPlayer9 = new PolyClassPlayer(object19);
                     v17 = ScriptValue.of((boolean)polyClassPlayer9.tm$42_send_message(string));
                 } else {
-                    ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                    arrayList.add(ScriptValue.of((String)string));
-                    v17 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue62, arrayList, (ScriptContext)scriptContext);
+                    v17 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue62, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }
             } else {
                 v17 = ScriptValue.NULL;

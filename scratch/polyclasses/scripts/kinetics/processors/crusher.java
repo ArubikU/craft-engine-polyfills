@@ -92,9 +92,7 @@ public final class Crusher {
                 PolyClassUpgrades polyClassUpgrades2 = new PolyClassUpgrades(object2);
                 object = ScriptValue.of((double)polyClassUpgrades2.tm$2_count(string));
             } else {
-                ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)string));
-                object = PolyDispatch.bootstrapCall("memberCall", "count", (ScriptValue)scriptValue9, arrayList, (ScriptContext)scriptContext);
+                object = PolyDispatch.bootstrapCall("memberCall", "count", (ScriptValue)scriptValue9, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
         } else {
             object = ScriptValue.NULL;

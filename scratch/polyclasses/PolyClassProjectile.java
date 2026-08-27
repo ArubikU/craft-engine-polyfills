@@ -12,13 +12,13 @@
 package dev.arubik.craftengine.script;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassEntity_v2;
+import dev.arubik.craftengine.script.PolyClassEntity;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
 import dev.arubik.craftengine.script.ScriptValue;
 
 public class PolyClassProjectile
-extends PolyClassEntity_v2 {
+extends PolyClassEntity {
     private static volatile PolyType.PropertyHandler p$0;
     private static volatile PolyType.TypedPropertyHandler tp$1;
 

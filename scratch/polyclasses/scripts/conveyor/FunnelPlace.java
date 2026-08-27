@@ -39,8 +39,6 @@ public final class FunnelPlace {
     public static ScriptValue onRightClick(ScriptContext.Builder builder) {
         ScriptValue scriptValue;
         PolyClassPlayer polyClassPlayer;
-        Object object;
-        Object object2;
         ScriptValue scriptValue2;
         PolyClassPlayer polyClassPlayer2;
         ScriptContext scriptContext = builder.peek();
@@ -59,14 +57,7 @@ public final class FunnelPlace {
             return ScriptValue.NULL;
         }
         ScriptValue scriptValue8 = scriptContext.getClassOrVar("clicked");
-        if (scriptValue8 != ScriptValue.NULL) {
-            ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(scriptValue6);
-            object2 = PolyDispatch.bootstrapCall("memberCall", "relative", (ScriptValue)scriptValue8, arrayList, (ScriptContext)scriptContext);
-        } else {
-            object2 = ScriptValue.NULL;
-        }
-        ScriptValue scriptValue9 = object2;
+        ScriptValue scriptValue9 = scriptValue8 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "relative", (ScriptValue)scriptValue8, (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL;
         builder.val("target", scriptValue9);
         ScriptValue scriptValue10 = scriptContext.getClassOrVar("target");
         if ((scriptValue10 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_air", (ScriptValue)scriptValue10, (ScriptContext)scriptContext) : ScriptValue.NULL).asBool() ^ true) {
@@ -90,23 +81,10 @@ public final class FunnelPlace {
             builder.val("props", scriptValue15);
         }
         ScriptValue scriptValue16 = scriptContext.getClassOrVar("target");
-        if (scriptValue16 != ScriptValue.NULL) {
-            ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(scriptContext.getClassOrVar("block_id"));
-            arrayList.add(scriptContext.getClassOrVar("props"));
-            object = PolyDispatch.bootstrapCall("memberCall", "place_custom", (ScriptValue)scriptValue16, arrayList, (ScriptContext)scriptContext);
-        } else {
-            object = ScriptValue.NULL;
-        }
-        ScriptValue scriptValue17 = object;
+        ScriptValue scriptValue17 = scriptValue16 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "place_custom", (ScriptValue)scriptValue16, (ScriptValue)scriptContext.getClassOrVar("block_id"), (ScriptValue)scriptContext.getClassOrVar("props"), (ScriptContext)scriptContext) : ScriptValue.NULL;
         builder.val("placed", scriptValue17);
         ScriptValue scriptValue18 = scriptContext.getClassOrVar("event");
-        if (scriptValue18 != ScriptValue.NULL) {
-            ArrayList arrayList = new ArrayList();
-            v3 = PolyDispatch.bootstrapCall("memberCall", "cancel", (ScriptValue)scriptValue18, arrayList, (ScriptContext)scriptContext);
-        } else {
-            v3 = ScriptValue.NULL;
-        }
+        Object object = scriptValue18 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "cancel", (ScriptValue)scriptValue18, (ScriptContext)scriptContext) : ScriptValue.NULL;
         if (scriptValue17.asBool() ^ true) {
             return ScriptValue.NULL;
         }
@@ -116,31 +94,20 @@ public final class FunnelPlace {
             ScriptValue scriptValue20 = scriptContext.getClassOrVar("Player");
             if (scriptValue20 != ScriptValue.NULL) {
                 ScriptValue.Obj obj;
-                Object object3;
+                Object object2;
                 String string = "main_hand";
                 double d = 1.0;
-                if (scriptValue20 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue20).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer polyClassPlayer3 = new PolyClassPlayer(object3);
-                    v5 = ScriptValue.of((boolean)polyClassPlayer3.tm$34_remove_item(string, d));
+                if (scriptValue20 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue20).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Player")) {
+                    PolyClassPlayer polyClassPlayer3 = new PolyClassPlayer(object2);
+                    v3 = ScriptValue.of((boolean)polyClassPlayer3.tm$34_remove_item(string, d));
                 } else {
-                    ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                    arrayList.add(ScriptValue.of((String)string));
-                    arrayList.add(ScriptValue.of((double)d));
-                    v5 = PolyDispatch.bootstrapCall("memberCall", "remove_item", (ScriptValue)scriptValue20, arrayList, (ScriptContext)scriptContext);
+                    v3 = PolyDispatch.bootstrapCall("memberCall", "remove_item", (ScriptValue)scriptValue20, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
                 }
             } else {
-                v5 = ScriptValue.NULL;
+                v3 = ScriptValue.NULL;
             }
         }
-        if ((scriptValue = scriptContext.getClassOrVar("target")) != ScriptValue.NULL) {
-            ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", FunnelPlace.class, "minecraft:block.copper.place"));
-            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelPlace.class, 1.0));
-            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelPlace.class, 1.0));
-            v6 = PolyDispatch.bootstrapCall("memberCall", "play_sound", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
-        } else {
-            v6 = ScriptValue.NULL;
-        }
+        Object object3 = (scriptValue = scriptContext.getClassOrVar("target")) != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "play_sound", (ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", FunnelPlace.class, "minecraft:block.copper.place")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelPlace.class, 1.0)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelPlace.class, 1.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
         return ScriptValue.NULL;
     }
 }
