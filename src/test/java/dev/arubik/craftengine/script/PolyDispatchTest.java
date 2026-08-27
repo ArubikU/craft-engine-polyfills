@@ -170,6 +170,49 @@ class PolyDispatchTest {
     }
 
     @Test
+    void aMonomorphicSiteLinksExactlyOnceNoMatterHowOftenItRuns() {
+        // The entire value proposition, made measurable instead of assumed: a site that relinked on
+        // every call would be strictly SLOWER than the memberCall it replaced. One link for 200
+        // evaluations is the property that has to hold.
+        PolyTypeRegistry.define("DispatchLinkCountType")
+                .method("v", (o, a) -> ScriptValue.of("x"));
+
+        ScriptFormula.Node node = ScriptBytecodeCompiler.tryCompile("thing.v()");
+        assertNotNull(node);
+        ScriptValue receiver = ScriptValue.ofObj("DispatchLinkCountType", new Object());
+
+        long before = PolyDispatch.linkCount();
+        for (int i = 0; i < 200; i++) {
+            assertEquals("x", evalWith(node, "thing", receiver).asStr());
+        }
+        assertEquals(1, PolyDispatch.linkCount() - before,
+                "a monomorphic call site must link its fast path exactly once, then stay cached");
+    }
+
+    @Test
+    void aTrulyPolymorphicSiteStopsRelinkingInsteadOfGrowingForever() {
+        // The opposite guarantee: when a site genuinely sees many receiver types, it must give up
+        // and pin the generic path rather than relink indefinitely.
+        for (int t = 0; t < 6; t++) {
+            PolyTypeRegistry.define("DispatchMegaType" + t)
+                    .method("v", (o, a) -> ScriptValue.of("v"));
+        }
+        ScriptFormula.Node node = ScriptBytecodeCompiler.tryCompile("thing.v()");
+        assertNotNull(node);
+
+        long before = PolyDispatch.linkCount();
+        for (int round = 0; round < 10; round++) {
+            for (int t = 0; t < 6; t++) {
+                ScriptValue recv = ScriptValue.ofObj("DispatchMegaType" + t, new Object());
+                assertEquals("v", evalWith(node, "thing", recv).asStr(), "type " + t + " round " + round);
+            }
+        }
+        long links = PolyDispatch.linkCount() - before;
+        assertTrue(links <= 3,
+                "a megamorphic site must stop linking (cap is the chain depth), but linked " + links + " times");
+    }
+
+    @Test
     void generatedBytecodeUsesInvokedynamicRatherThanADirectMemberCall() throws Exception {
         PolyTypeRegistry.define("DispatchDisasmType").method("greet", (o, a) -> ScriptValue.of("hi"));
 

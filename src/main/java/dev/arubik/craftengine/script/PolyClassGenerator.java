@@ -410,12 +410,16 @@ final class PolyClassGenerator {
             dumpIfRequested(className, bytes);
             Class<?> defined = MethodHandles.lookup().defineClass(bytes);
 
-            // Resolve every handler field NOW, and keep a handle so every future registry mutation
-            // can re-resolve them (see this class's own doc — the whole staleness story).
+            // Register for future refreshes BEFORE the initial resolve, not after. A mutation landing
+            // between the two would otherwise be missed by this class — it isn't in the list yet, so
+            // onRegistryMutation skips it, and it keeps the handlers this resolve captured until some
+            // unrelated later mutation happens to clear them. Refreshing early is harmless: refresh()
+            // only assigns static fields and is idempotent, so a concurrent one just does the same
+            // work twice.
             MethodHandle refresher = MethodHandles.lookup()
                     .findStatic(defined, "refresh", MethodType.methodType(void.class));
-            refresher.invokeExact();
             LIVE_REFRESHERS.add(refresher);
+            refresher.invokeExact();
 
             LOG.log(Level.FINE, () -> "[CEPolyfills] [JIT] generated PolyClass " + className + " for " + typeName
                     + " (" + typedRefs.size() + " typed, " + untypedRefs.size() + " untyped, "

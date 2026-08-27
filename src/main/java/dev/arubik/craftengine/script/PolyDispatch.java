@@ -66,6 +66,21 @@ public final class PolyDispatch {
      *  site holding it) whenever anything in the registry changes. */
     private static volatile SwitchPoint switchPoint = new SwitchPoint();
 
+    // Observability. The whole value of an inline cache is that it links a FEW times and then stops;
+    // a site that relinks on every call is strictly worse than the memberCall it replaced. These
+    // make that measurable (and testable) rather than assumed — a monomorphic site should show
+    // exactly one link no matter how many times it runs.
+    private static final java.util.concurrent.atomic.AtomicLong LINKS = new java.util.concurrent.atomic.AtomicLong();
+    private static final java.util.concurrent.atomic.AtomicLong MEGAMORPHIC = new java.util.concurrent.atomic.AtomicLong();
+
+    /** Total guarded fast paths installed across all call sites since startup. */
+    public static long linkCount() { return LINKS.get(); }
+
+    /** Call sites that saw more than {@link #MAX_CHAIN_DEPTH} receiver types and pinned the generic
+     *  path. A high number here means scripts are calling genuinely polymorphic members, and the
+     *  cache is correctly declining to guess. */
+    public static long megamorphicCount() { return MEGAMORPHIC.get(); }
+
     static {
         PolyTypeRegistry.addMutationListener(PolyDispatch::invalidateAll);
     }
@@ -138,6 +153,12 @@ public final class PolyDispatch {
     public static ScriptValue fallbackCall(CallIC site, ScriptValue sv, List<ScriptValue> args, ScriptContext ctx) {
         String typeName = cacheableTypeName(sv);
         if (typeName != null && site.depth < MAX_CHAIN_DEPTH) {
+            // Capture the SwitchPoint BEFORE resolving. If a mutation lands between the resolve and
+            // the setTarget, the point captured here is the one that gets invalidated, so the cache
+            // we are about to install is dropped immediately. Reading it afterwards instead would
+            // pair an already-stale handler with a fresh, still-valid guard — leaving it live until
+            // some unrelated later mutation happened to clear it.
+            SwitchPoint sp = switchPoint;
             PolyType type = PolyTypeRegistry.get(typeName);
             PolyType.MethodHandler handler = type != null ? type.resolveMethod(site.methodName) : null;
             if (handler != null) {
@@ -148,12 +169,16 @@ public final class PolyDispatch {
                         site.type().parameterList().subList(1, site.type().parameterCount()));
                 MethodHandle guarded = MethodHandles.guardWithTest(test, target, site.getTarget());
                 site.depth++;
-                site.setTarget(switchPoint.guardWithTest(guarded, FALLBACK_CALL.bindTo(site).asType(site.type())));
+
+                LINKS.incrementAndGet();
+                site.setTarget(sp.guardWithTest(guarded, FALLBACK_CALL.bindTo(site).asType(site.type())));
                 return invokeMethod(handler, sv, args, ctx);
             }
         }
         if (site.depth >= MAX_CHAIN_DEPTH) {
             // Megamorphic: stop growing the chain and pin the generic path for good.
+
+            MEGAMORPHIC.incrementAndGet();
             site.setTarget(MethodHandles.insertArguments(MEMBER_CALL, 1, site.methodName).asType(site.type()));
         }
         return ScriptFormula.memberCall(sv, site.methodName, args, ctx);
@@ -162,6 +187,7 @@ public final class PolyDispatch {
     public static ScriptValue fallbackGet(GetIC site, ScriptValue sv, ScriptContext ctx) {
         String typeName = cacheableTypeName(sv);
         if (typeName != null && site.depth < MAX_CHAIN_DEPTH) {
+            SwitchPoint sp = switchPoint; // captured before resolving — see fallbackCall
             PolyType type = PolyTypeRegistry.get(typeName);
             PolyType.PropertyHandler handler = type != null ? type.resolveProperty(site.propName) : null;
             if (handler != null) {
@@ -172,11 +198,15 @@ public final class PolyDispatch {
                         site.type().parameterList().subList(1, site.type().parameterCount()));
                 MethodHandle guarded = MethodHandles.guardWithTest(test, target, site.getTarget());
                 site.depth++;
-                site.setTarget(switchPoint.guardWithTest(guarded, FALLBACK_GET.bindTo(site).asType(site.type())));
+
+                LINKS.incrementAndGet();
+                site.setTarget(sp.guardWithTest(guarded, FALLBACK_GET.bindTo(site).asType(site.type())));
                 return invokeProperty(handler, sv, ctx);
             }
         }
         if (site.depth >= MAX_CHAIN_DEPTH) {
+            MEGAMORPHIC.incrementAndGet();
+
             site.setTarget(MethodHandles.insertArguments(MEMBER_GET, 1, site.propName).asType(site.type()));
         }
         return ScriptFormula.memberGet(sv, site.propName, ctx);
