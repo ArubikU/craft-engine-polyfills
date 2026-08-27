@@ -168,15 +168,16 @@ final class ScriptBytecodeCompiler {
             Class<?> defined = MethodHandles.lookup().defineHiddenClass(bytes, true).lookupClass();
             ScriptFormula.Node node = (ScriptFormula.Node) defined.getDeclaredConstructor().newInstance();
             if (LOGGED_COMPILE.add(expr)) {
-                LOG.log(Level.FINE, "[CEPolyfills] JIT compiled + registered " + className
-                        + " for: " + expr);
+                LOG.log(Level.INFO, "[CEPolyfills] [JIT] registered class " + className
+                        + " (hidden, in-JVM) for: " + expr);
             }
             return node;
         } catch (Throwable t) {
             if (LOGGED_FAIL.add(expr)) {
-                LOG.log(Level.FINE, "[CEPolyfills] JIT bailed on '" + expr
-                        + "' (falls back to the interpreter, this is not a script failure): "
-                        + t.getClass().getSimpleName() + (t.getMessage() != null ? ": " + t.getMessage() : ""));
+                LOG.log(Level.INFO, "[CEPolyfills] [JIT] bailed to the interpreter on '" + expr
+                        + "' — " + t.getClass().getSimpleName()
+                        + (t.getMessage() != null ? ": " + t.getMessage() : "")
+                        + " (not a script failure by itself; the interpreter runs it instead)");
             }
             // Anything at all — an unsupported construct that slipped past a bail check, a real
             // bug in the generator, a verifier rejection — degrades to the interpreter, never a
