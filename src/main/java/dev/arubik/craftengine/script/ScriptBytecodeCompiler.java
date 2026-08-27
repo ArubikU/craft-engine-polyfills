@@ -133,6 +133,10 @@ final class ScriptBytecodeCompiler {
             Expr root = p.parseTernary();
             p.skipSpaces();
             if (root == null || p.pos != expr.length()) return null;
+            // A bare literal needs no bytecode at all — see Literal's own doc for why generating
+            // a whole hidden class here was pure waste. Falls to the interpreter, which handles a
+            // literal with one trivial lambda anyway — identical cost, zero class overhead.
+            if (root instanceof Literal) return null;
 
             // MUST be in the exact same package as this class — MethodHandles.lookup().
             // defineHiddenClass requires the generated class's package to match the lookup
@@ -210,6 +214,18 @@ final class ScriptBytecodeCompiler {
         final Type type;
         BaseExpr(Type type) { this.type = type; }
         @Override public Type type() { return type; }
+    }
+
+    /** A bare literal (a numeric/boolean constant, no computation at all — {@code numLit}/{@code
+     *  boolLit}'s own product). {@link #tryCompile} checks for this BEFORE doing any classfile
+     *  work: a whole hidden JVM class generated just to push one constant is real, permanent
+     *  metaspace overhead (the compiled Node lives forever in ScriptFormula's cache) for something
+     *  the plain interpreter already does with a single trivial capturing lambda — every {@code
+     *  .pf} file is FULL of bare-literal sub-expressions (array/range bounds, plain numeric
+     *  constants used as-is), so this was generating one throwaway class per distinct literal
+     *  value used ANYWHERE in the whole script set. */
+    private abstract static class Literal extends BaseExpr {
+        Literal(Type type) { super(type); }
     }
 
     // ---- Coercions — mirror ScriptValue#asNum()/#asBool() exactly ----
@@ -697,13 +713,13 @@ final class ScriptBytecodeCompiler {
         }
 
         private static Expr numLit(double v) {
-            return new BaseExpr(Type.NUM) {
+            return new Literal(Type.NUM) {
                 @Override public void emit(MethodVisitor mv, Ctx c) { mv.visitLdcInsn(v); }
             };
         }
 
         private static Expr boolLit(boolean v) {
-            return new BaseExpr(Type.BOOL) {
+            return new Literal(Type.BOOL) {
                 @Override public void emit(MethodVisitor mv, Ctx c) { mv.visitInsn(v ? ICONST_1 : ICONST_0); }
             };
         }

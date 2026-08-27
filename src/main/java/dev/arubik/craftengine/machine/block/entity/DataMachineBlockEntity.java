@@ -149,6 +149,22 @@ dev.arubik.craftengine.rotation.KineticMember {
     public static volatile boolean SCRIPT_DEBUG = false;
     private static final Set<DataMachineBlockEntity> INSTANCES = Collections.newSetFromMap(new WeakHashMap());
 
+    /** Every distinct machine id whose renderer tick has already logged a thrown exception —
+     *  renderers tick every frame-ish interval for every instance, so without this ONE broken
+     *  machine type would spam a log entry constantly instead of once. This used to be a bare
+     *  empty catch block, which is exactly why a broken renderer produced zero trace anywhere —
+     *  see the call site in {@code tick()}. */
+    private static final java.util.Set<String> LOGGED_RENDERER_FAIL = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    private static void logRendererFailureOnce(String machineId, Throwable t) {
+        if (LOGGED_RENDERER_FAIL.add(machineId)) {
+            dev.arubik.craftengine.CraftEnginePolyfills.instance().getLogger().log(
+                java.util.logging.Level.WARNING,
+                "[Cep] renderer tick for machine '" + machineId + "' threw (further occurrences for"
+                    + " this machine id are suppressed)", t);
+        }
+    }
+
     // Global class singleton bindings (Server, SQL, Redis, Plugins, Menu, Dialog, ...) now live
     // in ScriptBootstrap.globalSingletons() — computed ONCE for the whole plugin, shared by every
     // script-firing entry point instead of each one (this hot per-tick-per-machine path included)
@@ -308,29 +324,16 @@ dev.arubik.craftengine.rotation.KineticMember {
     }
 
     /** True when this machine declares an rpm INPUT face, i.e. it relays rather than originates. */
-    /** 0=X, 1=Y, 2=Z — the axis index RpmPropagation's gearbox rule expects. */
-    private static int axisIndex(Direction d) {
-        return switch (d.getAxis()) {
-            case X -> 0;
-            case Y -> 1;
-            case Z -> 2;
-        };
-    }
-
-    /** +1 for EAST/UP/SOUTH, -1 for WEST/DOWN/NORTH — Direction.getAxisDirection() as a sign. */
-    private static int axisSign(Direction d) {
-        return d.getAxisDirection() == Direction.AxisDirection.POSITIVE ? 1 : -1;
-    }
-
     /**
      * The RPM this machine actually delivers through {@code face}, sign included, or 0 when that
      * face is not a declared rpm output.
      *
      * <p>This is the single place that answers "what comes out of this side?". It folds together
-     * the three things that decide it — whether {@code io.rpm} allows the face at all, the
-     * gearbox-style relative sign, and any static {@code output_inverted} list — so a script
+     * the two things that decide it — whether {@code io.rpm} allows the face at all, and whether
+     * the static {@code output_inverted}/{@code output_same_inverted} lists name it — so a script
      * asking {@code Machine.rpm_out("front")} gets exactly what the neighbouring block would
-     * read when it pulls, rather than having to reconstruct the rule itself.
+     * read when it pulls, rather than having to reconstruct the rule itself. The sign depends
+     * entirely on the io config; nothing is derived from block geometry.
      */
     public float rpmThrough(Direction face) {
         if (face == null || this.definition == null) return 0f;
@@ -341,13 +344,6 @@ dev.arubik.craftengine.rotation.KineticMember {
 
         float raw = this.getRpm();
         if (raw == 0f) return 0f;
-
-        if (this.definition.rpmOutputRelative()) {
-            Direction in = this.rpmInputFace;
-            if (in == null) return 0f;   // an undriven gearbox has no direction to hand on
-            return raw * dev.arubik.craftengine.rotation.RpmPropagation.gearboxModifier(
-                    axisIndex(face), axisSign(face), axisIndex(in), axisSign(in));
-        }
 
         boolean flip = this.isInvertedOutputFace(face, level);
         return dev.arubik.craftengine.rotation.RpmPropagation.applyInversion(raw, flip);
@@ -1246,7 +1242,7 @@ dev.arubik.craftengine.rotation.KineticMember {
                 this.tickSpecDisplays((ServerLevel)level, pos);
             }
             catch (Throwable throwable) {
-                // empty catch block
+                logRendererFailureOnce(this.definition != null ? String.valueOf(this.definition.id()) : "?", throwable);
             }
         }
         if (this.definition != null && this.definition.scripts() && this.definition.actionScript() != null && ++this.actionTickCounter >= this.definition.actionInterval()) {
@@ -1628,20 +1624,8 @@ dev.arubik.craftengine.rotation.KineticMember {
             float raw = p.getRpm();
             if (p instanceof DataMachineBlockEntity) {
                 DataMachineBlockEntity dm2 = (DataMachineBlockEntity)p;
-                if (dm2.definition != null && dm2.definition.rpmOutputRelative()) {
-                    // Gearbox: the sign follows which face is actually driven, exactly as Create's
-                    // RotationPropagator.getAxisModifier does. See RpmPropagation#gearboxModifier.
-                    Direction providerIn = dm2.rpmInputFace();
-                    Direction outFace = d.getOpposite();
-                    if (providerIn != null) {
-                        raw *= dev.arubik.craftengine.rotation.RpmPropagation.gearboxModifier(
-                                axisIndex(outFace), axisSign(outFace),
-                                axisIndex(providerIn), axisSign(providerIn));
-                    }
-                } else {
-                    if (dm2.isInvertedOutputFace(d.getOpposite(), level)) {
-                        raw = dev.arubik.craftengine.rotation.RpmPropagation.applyInversion(raw, true);
-                    }
+                if (dm2.isInvertedOutputFace(d.getOpposite(), level)) {
+                    raw = dev.arubik.craftengine.rotation.RpmPropagation.applyInversion(raw, true);
                 }
             }
             // Two independent sources fighting over one shaft is a build error worth breaking.
