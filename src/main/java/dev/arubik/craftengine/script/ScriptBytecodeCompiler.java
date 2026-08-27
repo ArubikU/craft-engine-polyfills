@@ -816,28 +816,94 @@ final class ScriptBytecodeCompiler {
             return parsePrimary();
         }
 
-        /** {@code primary} followed by zero or more {@code [index]} subscript suffixes — mirrors
-         *  {@code ScriptFormula.Parser#parseSuffixChain}'s own {@code '['} case (its {@code '.'}
-         *  case is NOT replicated generally here: dot-access stays scoped to a bare-identifier
-         *  primary only, see that branch's own doc — chaining dot-access off an ARBITRARY
-         *  expression is a bigger grammar generalization, out of scope for now; subscripting is
-         *  narrower and common enough on its own — {@code v[0]}, {@code behind_vec[1]} — to be
-         *  worth supporting without it). */
+        /** {@code primary} followed by zero or more {@code [index]}/{@code .member}/{@code
+         *  .method(args)} suffixes — mirrors {@code ScriptFormula.Parser#parseSuffixChain} in
+         *  full now: a bare-identifier primary's OWN {@code Name.member}/{@code Name.method(args)}
+         *  handling (in {@link #parsePrimaryCore}) still does the classInstance-then-var
+         *  resolution and the interpreter's real null-guard for that FIRST hop (see that branch's
+         *  own doc for why), but every hop AFTER that — {@code foo().bar()}, {@code warp_row(name)
+         *  .get("id")}, {@code a[0].b} — chains here via {@link #chainedPropertyGet}/{@link
+         *  #chainedMethodCall}, which do NOT null-guard, exactly matching {@code
+         *  parseSuffixChain}'s own real behavior (it calls {@code memberGet}/{@code memberCall}
+         *  unconditionally on whatever the base evaluated to, null or not). */
         Expr parsePrimary() {
             Expr base = parsePrimaryCore();
             if (base == null) return null;
             while (true) {
                 skipSpaces();
-                if (pos >= src.length() || src.charAt(pos) != '[') break;
-                pos++;
-                Expr idx = parseTernary();
-                if (idx == null) return null;
-                skipSpaces();
-                if (pos >= src.length() || src.charAt(pos) != ']') return null;
-                pos++;
-                base = subscriptExpr(base, idx);
+                if (pos < src.length() && src.charAt(pos) == '[') {
+                    pos++;
+                    Expr idx = parseTernary();
+                    if (idx == null) return null;
+                    skipSpaces();
+                    if (pos >= src.length() || src.charAt(pos) != ']') return null;
+                    pos++;
+                    base = subscriptExpr(base, idx);
+                    continue;
+                }
+                if (pos < src.length() && src.charAt(pos) == '.') {
+                    int save = pos;
+                    pos++;
+                    skipSpaces();
+                    int mStart = pos;
+                    while (pos < src.length() && (Character.isLetterOrDigit(src.charAt(pos)) || src.charAt(pos) == '_')) pos++;
+                    if (pos == mStart) { pos = save; break; } // not actually a member access — leave it unconsumed
+                    String member = src.substring(mStart, pos);
+                    skipSpaces();
+                    if (pos < src.length() && src.charAt(pos) == '(') {
+                        pos++;
+                        List<Expr> args = parseArgList();
+                        if (args == null) return null;
+                        base = chainedMethodCall(base, member, args);
+                    } else {
+                        base = chainedPropertyGet(base, member);
+                    }
+                    continue;
+                }
+                break;
             }
             return base;
+        }
+
+        /** {@code base.prop} where {@code base} is an ALREADY-RESOLVED value (not a name to look
+         *  up) — the generic suffix-chain hop, unlike {@link #dotPropertyGet}'s bare-identifier
+         *  FIRST hop. No null-guard: matches {@code ScriptFormula.Parser#parseSuffixChain}'s own
+         *  {@code base = ctx -> memberGet(obj.eval(ctx), p, ctx);} exactly — it calls {@code
+         *  memberGet} unconditionally, null receiver or not (that's how a chain like {@code
+         *  Machine.contraption.blah} already behaved even before this compiler existed). */
+        private static Expr chainedPropertyGet(Expr base0, String prop) {
+            Expr base = toAny(base0);
+            return new BaseExpr(Type.ANY) {
+                @Override public void emit(MethodVisitor mv, Ctx c) {
+                    base.emit(mv, c);
+                    mv.visitLdcInsn(prop);
+                    mv.visitVarInsn(ALOAD, c.ctxSlot);
+                    mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberGet",
+                            "(L" + VALUE + ";Ljava/lang/String;L" + CTX + ";)L" + VALUE + ";", false);
+                }
+            };
+        }
+
+        /** {@code base.method(args)} — chained hop counterpart to {@link #chainedPropertyGet}, via
+         *  {@code memberCall} with an evaluated arg list. No compile-time {@link PolyType}
+         *  specialization here (unlike {@link #dotMethodCall}) — {@code base} is an arbitrary
+         *  expression, not a name {@code PolyTypeRegistry} can be consulted by; that specialization
+         *  is deliberately scoped to the bare-identifier FIRST hop only. */
+        private static Expr chainedMethodCall(Expr base0, String method, List<Expr> rawArgs) {
+            Expr base = toAny(base0);
+            List<Expr> args = rawArgs.stream().map(ScriptBytecodeCompiler::toAny).toList();
+            return new BaseExpr(Type.ANY) {
+                @Override public void emit(MethodVisitor mv, Ctx c) {
+                    base.emit(mv, c);
+                    mv.visitLdcInsn(method);
+                    int listSlot = c.allocRef();
+                    emitBuildArgsList(mv, c, args, listSlot);
+                    mv.visitVarInsn(ALOAD, listSlot);
+                    mv.visitVarInsn(ALOAD, c.ctxSlot);
+                    mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberCall",
+                            "(L" + VALUE + ";Ljava/lang/String;L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", false);
+                }
+            };
         }
 
         Expr parsePrimaryCore() {
