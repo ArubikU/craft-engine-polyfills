@@ -167,4 +167,99 @@ class PolyTypeSpecializationTest {
         ScriptContext ctx = ScriptContext.builder().typed("SpecPartialType", new Object()).build();
         assertEquals(ScriptValue.NULL, node.eval(ctx));
     }
+
+    // --- Typed (methodTypedN) direct-dispatch tier ---------------------------------------------
+    //
+    // These target dotMethodCall's EXTRA fastest tier, tried before the untyped MethodHandler fast
+    // path: when a methodTypedN registration's arity matches the call site and every arg/return
+    // TypeCodec is one of the four known TypeCodecs singletons, the resolved TypedMethodHandlerN is
+    // invoked directly, with each arg decoded inline instead of through a MethodHandler wrapper.
+
+    @Test
+    void typedDispatchCallsTheTypedHandlerDirectlyWithCorrectResult() {
+        record Holder(double base) {}
+        PolyTypeRegistry.define("SpecTypedHappyType")
+                .methodTyped3("combine", TypeCodecs.DOUBLE, TypeCodecs.STRING, TypeCodecs.BOOL,
+                        TypeCodecs.DOUBLE, 0.0,
+                        (Holder h, Double num, String s, Boolean flag) ->
+                                h.base() + num + s.length() + (flag ? 100.0 : 0.0));
+
+        ScriptFormula.Node node = ScriptBytecodeCompiler.tryCompile(
+                "SpecTypedHappyType.combine(2, \"abcd\", true)");
+        assertNotNull(node);
+
+        ScriptContext ctx = ScriptContext.builder()
+                .typed("SpecTypedHappyType", new Holder(1.0))
+                .build();
+        // 1 (base) + 2 (num) + 4 (strlen) + 100 (flag) = 107
+        assertEquals(107.0, node.eval(ctx).asNum());
+    }
+
+    @Test
+    void typedDispatchGuardStillCatchesRuntimeTypeMismatch() {
+        // Same hazard as mismatchedRuntimeTypeFallsBackCorrectly, but through the typed tier: the
+        // guard (shared with the untyped tier) must still reject a receiver whose real typeName
+        // doesn't match, before ever reaching the typed handler.
+        PolyTypeRegistry.define("SpecTypedMismatchType")
+                .methodTyped1("greet", TypeCodecs.STRING, TypeCodecs.STRING, "",
+                        (Object o, String s) -> "SHOULD NOT RUN:" + s);
+        PolyTypeRegistry.define("SpecTypedOtherType")
+                .method("greet", (o, a) -> ScriptValue.of("other type's greet"));
+
+        ScriptFormula.Node node = ScriptBytecodeCompiler.tryCompile("SpecTypedMismatchType.greet(\"x\")");
+        assertNotNull(node);
+
+        ScriptContext ctx = ScriptContext.builder()
+                .val("SpecTypedMismatchType", ScriptValue.ofObj("SpecTypedOtherType", new Object()))
+                .build();
+        assertEquals("other type's greet", node.eval(ctx).asStr());
+    }
+
+    @Test
+    void callSiteArityBelowRegisteredArityDoesNotSpecializeButStillMatchesOnMissingArgs() {
+        // Calling with FEWER args than the typed registration's arity must NOT take the typed
+        // tier (it has no notion of onMissingArgs) — it should fall through to the untyped
+        // MethodHandler tier, which methodTypedN itself installs, and which DOES honor
+        // onMissingArgs correctly.
+        PolyTypeRegistry.define("SpecArityType")
+                .methodTyped2("needs_two", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, -1.0,
+                        (Object o, Double a, Double b) -> a + b);
+
+        ScriptFormula.Node node = ScriptBytecodeCompiler.tryCompile("SpecArityType.needs_two(5)");
+        assertNotNull(node);
+
+        ScriptContext ctx = ScriptContext.builder().typed("SpecArityType", new Object()).build();
+        assertEquals(-1.0, node.eval(ctx).asNum(), "should hit onMissingArgs via the untyped tier, not crash/misfire");
+    }
+
+    @Test
+    void typedDispatchBytecodeActuallyInvokesTheTypedHandlerBeforeTheUntypedTierAndMemberCall() throws Exception {
+        PolyTypeRegistry.define("SpecTypedDisasmType")
+                .methodTyped1("greet", TypeCodecs.STRING, TypeCodecs.STRING, "",
+                        (Object o, String s) -> "hi " + s);
+
+        String src = "def test_typed_spec():\n    return SpecTypedDisasmType.greet(\"world\")\nend\n";
+        ScriptProgram prog = ScriptProgram.parse("spec-typed-disasm", src, Logger.getLogger("test"));
+        ScriptClassCompiler.Compiled compiled =
+                ScriptClassCompiler.tryCompile("spec/typed-disasm-" + System.identityHashCode(new Object()),
+                        prog.statementsForCompiler());
+        assertNotNull(compiled);
+
+        ClassReader cr = new ClassReader(compiled.classBytes());
+        StringWriter sw = new StringWriter();
+        cr.accept(new TraceClassVisitor(new PrintWriter(sw)), 0);
+        String disassembly = sw.toString();
+
+        int resolveTypedIdx = disassembly.indexOf("resolveTypedMethod");
+        int resolveMethodIdx = disassembly.indexOf("resolveMethod");
+        int memberCallIdx = disassembly.indexOf("memberCall");
+        assertTrue(resolveTypedIdx >= 0, "should call PolyType.resolveTypedMethod directly:\n" + disassembly);
+        assertTrue(resolveMethodIdx >= 0, "the untyped fallback tier should still exist");
+        assertTrue(memberCallIdx >= 0, "the narrow memberCall fallback should still exist");
+        assertTrue(resolveTypedIdx < resolveMethodIdx && resolveMethodIdx < memberCallIdx,
+                "typed tier must be reachable before the untyped tier, which must be reachable before memberCall:\n"
+                        + disassembly);
+        assertTrue(disassembly.contains("TypedMethodHandler1"),
+                "should CHECKCAST/INVOKEINTERFACE against the specific arity-1 typed handler interface:\n" + disassembly);
+    }
 }

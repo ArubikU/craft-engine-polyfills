@@ -165,6 +165,36 @@ final class ScriptBytecodeCompiler {
     private static final String POLY_TYPE = "dev/arubik/craftengine/script/PolyType";
     private static final String METHOD_HANDLER = "dev/arubik/craftengine/script/PolyType$MethodHandler";
     private static final String PROPERTY_HANDLER = "dev/arubik/craftengine/script/PolyType$PropertyHandler";
+    private static final String TYPED_METHOD_DESCRIPTOR = "dev/arubik/craftengine/script/PolyType$TypedMethodDescriptor";
+    /** {@code TypedMethodHandlerN}'s internal name, indexed by arity (0..7) — every arity is a
+     *  DISTINCT interface (generics erase to the same {@code (Object...)Object} shape, but the JVM
+     *  still needs the real interface name for {@code INVOKEINTERFACE}/{@code CHECKCAST}). */
+    private static final String[] TYPED_HANDLER_IFACE = {
+            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler0",
+            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler1",
+            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler2",
+            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler3",
+            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler4",
+            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler5",
+            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler6",
+            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler7",
+    };
+
+    /** The only {@link PolyType.TypeCodec} shapes the JIT knows how to decode/encode WITHOUT an
+     *  interface dispatch through {@code codec.decode}/{@code codec.encode} — matched by identity
+     *  against the singletons in {@link TypeCodecs}, since a {@code methodTypedN} registration
+     *  always passes one of those four (see the "hand-ported builtins" precedent: specialize only
+     *  what's provably known at compile time, fall back to the untyped path for everything else,
+     *  same discipline as {@code STRING_UNARY}/{@code ScriptBuiltins.get(name) != null} below). */
+    private enum CodecKind { DOUBLE, BOOL, STRING, RAW, UNKNOWN }
+
+    private static CodecKind codecKind(PolyType.TypeCodec<?> codec) {
+        if (codec == TypeCodecs.DOUBLE) return CodecKind.DOUBLE;
+        if (codec == TypeCodecs.BOOL) return CodecKind.BOOL;
+        if (codec == TypeCodecs.STRING) return CodecKind.STRING;
+        if (codec == TypeCodecs.RAW) return CodecKind.RAW;
+        return CodecKind.UNKNOWN;
+    }
 
     /** name -> java.lang.Math method of the same (double)->double shape. Only pure, total (no
      *  exceptions) single-argument math functions — everything else falls through to {@code
@@ -1494,11 +1524,48 @@ final class ScriptBytecodeCompiler {
          *  #dotPropertyGet}, but via {@code memberCall} with an evaluated arg list; args are only
          *  evaluated once {@code sv} is confirmed non-null, matching the interpreter's own
          *  short-circuit order. Same compile-time {@link PolyType} specialization as {@link
-         *  #dotPropertyGet} — see that method's own doc. */
+         *  #dotPropertyGet} — see that method's own doc.
+         *
+         *  <p>When the resolved method ALSO has a {@code methodTypedN} registration (a {@link
+         *  PolyType.TypedMethodDescriptor} via {@code resolveTypedMethod}) whose arity matches this
+         *  call site and whose argument/return {@link PolyType.TypeCodec}s are all one of the four
+         *  known {@link TypeCodecs} singletons, an EVEN faster tier is tried first: the typed
+         *  handler is invoked directly ({@code INVOKEINTERFACE} on the specific
+         *  {@code TypedMethodHandlerN}), with each arg decoded inline ({@code asNum}/{@code asBool}/
+         *  {@code asStr}, or left as-is for {@code RAW}) instead of going through the untyped
+         *  {@code MethodHandler} lambda that {@code methodTypedN} itself installs into {@code
+         *  methods} — which would otherwise re-decode every arg through one interface dispatch per
+         *  {@code TypeCodec.decode} call, plus its own {@code MethodHandler.call} dispatch, plus one
+         *  {@code TypeCodec.encode} dispatch on the way out. The arg list is still built unconditionally
+         *  up front (never re-evaluate the arg expressions on a second path — a real side-effect
+         *  hazard if an arg is itself a call) and read back via {@code List.get(i)}, so this tier is
+         *  purely about skipping dispatch layers, not about skipping the list allocation. Falls back
+         *  to the untyped fast tier (and from there to {@code memberCall}) if {@code
+         *  resolveTypedMethod} unexpectedly misses at runtime — structurally unreachable today (no
+         *  API removes a {@code typedMethods} entry once registered) but kept as a real fallback,
+         *  not a silent wrong-value shortcut. */
         private static Expr dotMethodCall(String name, String method, List<Expr> rawArgs) {
             List<Expr> args = rawArgs.stream().map(ScriptBytecodeCompiler::toAny).toList();
             PolyType type = PolyTypeRegistry.get(name);
             PolyType.MethodHandler resolved = type != null ? type.resolveMethod(method) : null;
+            PolyType.TypedMethodDescriptor typedResolved = type != null ? type.resolveTypedMethod(method) : null;
+            int arity = args.size();
+            CodecKind[] argKinds = null;
+            CodecKind retKind = CodecKind.UNKNOWN;
+            if (typedResolved != null && typedResolved.arity() == arity) {
+                argKinds = new CodecKind[arity];
+                boolean allKnown = true;
+                for (int i = 0; i < arity; i++) {
+                    argKinds[i] = codecKind(typedResolved.argTypes().get(i));
+                    if (argKinds[i] == CodecKind.UNKNOWN) { allKnown = false; break; }
+                }
+                retKind = allKnown ? codecKind(typedResolved.returnType()) : CodecKind.UNKNOWN;
+            }
+            boolean specializeTyped = argKinds != null && retKind != CodecKind.UNKNOWN;
+            CodecKind[] finalArgKinds = argKinds;
+            CodecKind finalRetKind = retKind;
+            String handlerIface = specializeTyped ? TYPED_HANDLER_IFACE[arity] : null;
+
             return new BaseExpr(Type.ANY) {
                 @Override public void emit(MethodVisitor mv, Ctx c) {
                     int svSlot = c.allocRef();
@@ -1522,6 +1589,42 @@ final class ScriptBytecodeCompiler {
                         mv.visitVarInsn(ASTORE, typeSlot);
                         mv.visitVarInsn(ALOAD, typeSlot);
                         mv.visitJumpInsn(IFNULL, fallbackL);
+
+                        if (specializeTyped) {
+                            Label typedMissL = new Label();
+                            mv.visitVarInsn(ALOAD, typeSlot);
+                            mv.visitLdcInsn(method);
+                            mv.visitMethodInsn(INVOKEVIRTUAL, POLY_TYPE, "resolveTypedMethod",
+                                    "(Ljava/lang/String;)L" + TYPED_METHOD_DESCRIPTOR + ";", false);
+                            int descSlot = c.allocRef();
+                            mv.visitVarInsn(ASTORE, descSlot);
+                            mv.visitVarInsn(ALOAD, descSlot);
+                            mv.visitJumpInsn(IFNULL, typedMissL);
+                            mv.visitVarInsn(ALOAD, descSlot);
+                            mv.visitMethodInsn(INVOKEVIRTUAL, TYPED_METHOD_DESCRIPTOR, "handler",
+                                    "()Ljava/lang/Object;", false);
+                            mv.visitTypeInsn(CHECKCAST, handlerIface);
+                            int typedHandlerSlot = c.allocRef();
+                            mv.visitVarInsn(ASTORE, typedHandlerSlot);
+
+                            mv.visitVarInsn(ALOAD, typedHandlerSlot);
+                            mv.visitVarInsn(ALOAD, instSlot);
+                            for (int i = 0; i < arity; i++) {
+                                mv.visitVarInsn(ALOAD, listSlot);
+                                emitPushInt(mv, i);
+                                mv.visitMethodInsn(INVOKEINTERFACE, LIST, "get", "(I)Ljava/lang/Object;", true);
+                                mv.visitTypeInsn(CHECKCAST, VALUE);
+                                emitCodecDecodeInline(mv, finalArgKinds[i]);
+                            }
+                            StringBuilder desc = new StringBuilder("(");
+                            desc.append("Ljava/lang/Object;".repeat(arity + 1));
+                            desc.append(")Ljava/lang/Object;");
+                            mv.visitMethodInsn(INVOKEINTERFACE, handlerIface, "call", desc.toString(), true);
+                            emitCodecEncodeInline(mv, finalRetKind);
+                            mv.visitJumpInsn(GOTO, fastL);
+                            mv.visitLabel(typedMissL);
+                        }
+
                         mv.visitVarInsn(ALOAD, typeSlot);
                         mv.visitLdcInsn(method);
                         mv.visitMethodInsn(INVOKEVIRTUAL, POLY_TYPE, "resolveMethod",
@@ -1559,6 +1662,65 @@ final class ScriptBytecodeCompiler {
                     mv.visitLabel(endL);
                 }
             };
+        }
+
+        /** Pushes an {@code int} constant using the cheapest opcode ASM would pick anyway — only
+         *  ever called with a call-site arg index, so the range is tiny (arity is capped at 7). */
+        private static void emitPushInt(MethodVisitor mv, int i) {
+            switch (i) {
+                case 0 -> mv.visitInsn(ICONST_0);
+                case 1 -> mv.visitInsn(ICONST_1);
+                case 2 -> mv.visitInsn(ICONST_2);
+                case 3 -> mv.visitInsn(ICONST_3);
+                case 4 -> mv.visitInsn(ICONST_4);
+                case 5 -> mv.visitInsn(ICONST_5);
+                default -> mv.visitIntInsn(BIPUSH, i);
+            }
+        }
+
+        /** Stack: {@code ..., ScriptValue} -&gt; {@code ..., <boxed native>} — mirrors exactly what
+         *  {@link TypeCodecs}' DOUBLE/BOOL/STRING/RAW {@code decode(...)} does, inlined so the JIT
+         *  never pays for the {@code TypeCodec.decode} interface dispatch itself. The boxing
+         *  (Double/Boolean) is required because {@code TypedMethodHandlerN.call}'s parameters erase
+         *  to {@code Object} — a raw primitive can't be passed there directly. */
+        private static void emitCodecDecodeInline(MethodVisitor mv, CodecKind kind) {
+            switch (kind) {
+                case DOUBLE -> {
+                    mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asNum", "()D", true);
+                    mv.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", false);
+                }
+                case BOOL -> {
+                    mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asBool", "()Z", true);
+                    mv.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", false);
+                }
+                case STRING -> mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asStr", "()Ljava/lang/String;", true);
+                case RAW -> { /* already a ScriptValue reference, pass through untouched */ }
+                case UNKNOWN -> throw new IllegalStateException("emitCodecDecodeInline called with UNKNOWN");
+            }
+        }
+
+        /** Stack: {@code ..., Object} (the typed handler's raw, erased return) -&gt;
+         *  {@code ..., ScriptValue} — mirrors {@link TypeCodecs}' {@code encode(...)}, inlined for
+         *  the same reason as {@link #emitCodecDecodeInline}. */
+        private static void emitCodecEncodeInline(MethodVisitor mv, CodecKind kind) {
+            switch (kind) {
+                case DOUBLE -> {
+                    mv.visitTypeInsn(CHECKCAST, "java/lang/Double");
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Double", "doubleValue", "()D", false);
+                    mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(D)L" + VALUE + ";", true);
+                }
+                case BOOL -> {
+                    mv.visitTypeInsn(CHECKCAST, "java/lang/Boolean");
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Boolean", "booleanValue", "()Z", false);
+                    mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Z)L" + VALUE + ";", true);
+                }
+                case STRING -> {
+                    mv.visitTypeInsn(CHECKCAST, "java/lang/String");
+                    mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Ljava/lang/String;)L" + VALUE + ";", true);
+                }
+                case RAW -> mv.visitTypeInsn(CHECKCAST, VALUE);
+                case UNKNOWN -> throw new IllegalStateException("emitCodecEncodeInline called with UNKNOWN");
+            }
         }
 
         /** Emits: {@code sv instanceof ScriptValue.Obj o && o.instance() != null &&
