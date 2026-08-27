@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine
+ *  dev.arubik.craftengine.script.PolyClassMachine_v4
  *  dev.arubik.craftengine.script.PolyClassPlayer
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script.gen.redstone;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine;
+import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyClassPlayer;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -48,8 +48,8 @@ public final class WirelessRedstoneInteract {
                 String string = "_wr_mode";
                 String string2 = "int";
                 if (scriptValue2 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine polyClassMachine = new PolyClassMachine(object2);
-                    object = polyClassMachine.tm$34_get_typed(string, string2);
+                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object2);
+                    object = polyClassMachine_v4.tm$34_get_typed(string, string2);
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));
@@ -72,8 +72,8 @@ public final class WirelessRedstoneInteract {
                 String string3 = "int";
                 ScriptValue scriptValue6 = ScriptValue.of((double)d);
                 if (scriptValue5 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine polyClassMachine = new PolyClassMachine(object3);
-                    v2 = ScriptValue.of((boolean)polyClassMachine.tm$82_set_typed(string, string3, scriptValue6));
+                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object3);
+                    v2 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string3, scriptValue6));
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));
@@ -128,8 +128,8 @@ public final class WirelessRedstoneInteract {
                 String string = "_wr_ch";
                 String string4 = "int";
                 if (scriptValue9 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine polyClassMachine = new PolyClassMachine(object6);
-                    object = polyClassMachine.tm$34_get_typed(string, string4);
+                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object6);
+                    object = polyClassMachine_v4.tm$34_get_typed(string, string4);
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));
@@ -153,8 +153,8 @@ public final class WirelessRedstoneInteract {
                 String string5 = "int";
                 ScriptValue scriptValue13 = ScriptValue.of((double)d2);
                 if (scriptValue12 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine polyClassMachine = new PolyClassMachine(object7);
-                    v6 = ScriptValue.of((boolean)polyClassMachine.tm$82_set_typed(string, string5, scriptValue13));
+                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object7);
+                    v6 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string5, scriptValue13));
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));

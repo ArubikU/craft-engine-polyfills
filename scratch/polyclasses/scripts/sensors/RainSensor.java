@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine
+ *  dev.arubik.craftengine.script.PolyClassMachine_v4
  *  dev.arubik.craftengine.script.PolyClassWorld
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -14,7 +14,7 @@
 package dev.arubik.craftengine.script.gen.sensors;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine;
+import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyClassWorld;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -54,7 +54,7 @@ public final class RainSensor {
             if (var6_6 != ScriptValue.NULL) {
                 var7_7 = 15.0;
                 if (var6_6 instanceof ScriptValue.Obj && (var10_9 = (var9_8 = (ScriptValue.Obj)var6_6).instance()) != null && !(var10_9 instanceof PolyClass) && var9_8.typeName().equals("Machine")) {
-                    var11_10 = new PolyClassMachine(var10_9);
+                    var11_10 = new PolyClassMachine_v4(var10_9);
                     v1 /* !! */  = ScriptValue.of((boolean)var11_10.tm$108_emit_redstone(var7_7));
                 } else {
                     var12_11 = new ArrayList<ScriptValue>();
@@ -69,7 +69,7 @@ public final class RainSensor {
             if (var13_12 != ScriptValue.NULL) {
                 var14_13 = 0.0;
                 if (var13_12 instanceof ScriptValue.Obj && (var17_15 = (var16_14 = (ScriptValue.Obj)var13_12).instance()) != null && !(var17_15 instanceof PolyClass) && var16_14.typeName().equals("Machine")) {
-                    var18_16 = new PolyClassMachine(var17_15);
+                    var18_16 = new PolyClassMachine_v4(var17_15);
                     v2 /* !! */  = ScriptValue.of((boolean)var18_16.tm$108_emit_redstone(var14_13));
                 } else {
                     var19_17 = new ArrayList<ScriptValue>();

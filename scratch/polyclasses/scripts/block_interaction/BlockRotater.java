@@ -2,7 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  dev.arubik.craftengine.script.PolyClassMachine
+ *  dev.arubik.craftengine.script.PolyClassMachine_v4
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -10,7 +10,7 @@
  */
 package dev.arubik.craftengine.script.gen.block_interaction;
 
-import dev.arubik.craftengine.script.PolyClassMachine;
+import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
@@ -28,10 +28,10 @@ public final class BlockRotater {
     }
 
     public static void run(ScriptContext.Builder builder) {
-        PolyClassMachine polyClassMachine;
+        PolyClassMachine_v4 polyClassMachine_v4;
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? ((polyClassMachine = PolyClassMachine.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine.pg$137_facing_block() : PolyDispatch.bootstrapGet("memberGet", "facing_block", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? ((polyClassMachine_v4 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v4.pg$137_facing_block() : PolyDispatch.bootstrapGet("memberGet", "facing_block", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         builder.val("block", scriptValue2);
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("block");
         if ((scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_air", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL).asBool() ^ true) {

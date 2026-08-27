@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine
+ *  dev.arubik.craftengine.script.PolyClassMachine_v4
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -14,7 +14,7 @@
 package dev.arubik.craftengine.script.gen.redstone;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine;
+import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -43,8 +43,8 @@ public final class SignalModifierInteract {
             String string = "level";
             String string2 = "int";
             if (scriptValue2 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine polyClassMachine = new PolyClassMachine(object2);
-                object = polyClassMachine.tm$34_get_typed(string, string2);
+                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object2);
+                object = polyClassMachine_v4.tm$34_get_typed(string, string2);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
@@ -68,8 +68,8 @@ public final class SignalModifierInteract {
             String string3 = "int";
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("level");
             if (scriptValue instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine polyClassMachine = new PolyClassMachine(object3);
-                v1 = ScriptValue.of((boolean)polyClassMachine.tm$82_set_typed(string, string3, scriptValue5));
+                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object3);
+                v1 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string3, scriptValue5));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));

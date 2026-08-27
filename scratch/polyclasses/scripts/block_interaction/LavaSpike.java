@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine
+ *  dev.arubik.craftengine.script.PolyClassMachine_v4
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script.gen.block_interaction;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine;
+import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -48,7 +48,7 @@ public final class LavaSpike {
                         var3_3 = "atk_cd";
                         var4_4 = "int";
                         if (var2_2 instanceof ScriptValue.Obj && (var6_6 = (var5_5 = (ScriptValue.Obj)var2_2).instance()) != null && !(var6_6 instanceof PolyClass) && var5_5.typeName().equals("Machine")) {
-                            var7_7 = new PolyClassMachine(var6_6);
+                            var7_7 = new PolyClassMachine_v4(var6_6);
                             v0 /* !! */  = var7_7.tm$34_get_typed(var3_3, var4_4);
                         } else {
                             var8_8 = new ArrayList<ScriptValue>();
@@ -68,7 +68,7 @@ public final class LavaSpike {
                         var12_12 = "int";
                         var13_13 = ScriptValue.of((double)(var9_9.asNum() - 1.0));
                         if (var10_10 instanceof ScriptValue.Obj && (var15_15 = (var14_14 = (ScriptValue.Obj)var10_10).instance()) != null && !(var15_15 instanceof PolyClass) && var14_14.typeName().equals("Machine")) {
-                            var16_16 = new PolyClassMachine(var15_15);
+                            var16_16 = new PolyClassMachine_v4(var15_15);
                             v1 /* !! */  = ScriptValue.of((boolean)var16_16.tm$82_set_typed(var11_11, var12_12, var13_13));
                         } else {
                             var17_17 = new ArrayList<ScriptValue>();
@@ -83,13 +83,13 @@ public final class LavaSpike {
                     break block25;
                 }
                 var18_18 = var1_1.getClassOrVar("Machine");
-                var20_20 = var18_18 != ScriptValue.NULL ? ((var19_19 = PolyClassMachine.ofGuarded((ScriptValue)var18_18)) != null ? var19_19.pg$209_owner_uuid() : PolyDispatch.bootstrapGet("memberGet", "owner_uuid", (ScriptValue)var18_18, (ScriptContext)var1_1)) : ScriptValue.NULL;
+                var20_20 = var18_18 != ScriptValue.NULL ? ((var19_19 = PolyClassMachine_v4.ofGuarded((ScriptValue)var18_18)) != null ? var19_19.pg$209_owner_uuid() : PolyDispatch.bootstrapGet("memberGet", "owner_uuid", (ScriptValue)var18_18, (ScriptContext)var1_1)) : ScriptValue.NULL;
                 var0.val("owner_id", var20_20);
                 var21_21 = var1_1.getClassOrVar("Machine");
                 if (var21_21 != ScriptValue.NULL) {
                     var22_22 = 0.8;
                     if (var21_21 instanceof ScriptValue.Obj && (var25_24 = (var24_23 = (ScriptValue.Obj)var21_21).instance()) != null && !(var25_24 instanceof PolyClass) && var24_23.typeName().equals("Machine")) {
-                        var26_25 = new PolyClassMachine(var25_24);
+                        var26_25 = new PolyClassMachine_v4(var25_24);
                         v2 /* !! */  = var26_25.tm$94_nearby_entities(var22_22);
                     } else {
                         var27_26 = new ArrayList<ScriptValue>();
@@ -153,7 +153,7 @@ public final class LavaSpike {
                     var47_45 = "int";
                     var48_46 = ScriptValue.of((double)15.0);
                     if (var45_43 instanceof ScriptValue.Obj && (var50_48 = (var49_47 = (ScriptValue.Obj)var45_43).instance()) != null && !(var50_48 instanceof PolyClass) && var49_47.typeName().equals("Machine")) {
-                        var51_49 = new PolyClassMachine(var50_48);
+                        var51_49 = new PolyClassMachine_v4(var50_48);
                         v6 /* !! */  = ScriptValue.of((boolean)var51_49.tm$82_set_typed(var46_44, var47_45, var48_46));
                     } else {
                         var52_50 = new ArrayList<ScriptValue>();

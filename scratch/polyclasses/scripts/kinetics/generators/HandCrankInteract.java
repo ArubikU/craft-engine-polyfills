@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine
+ *  dev.arubik.craftengine.script.PolyClassMachine_v4
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -14,7 +14,7 @@
 package dev.arubik.craftengine.script.gen.kinetics.generators;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine;
+import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -42,8 +42,8 @@ public final class HandCrankInteract {
             String string = "crank_energy";
             String string2 = "int";
             if (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine polyClassMachine = new PolyClassMachine(object2);
-                object = polyClassMachine.tm$34_get_typed(string, string2);
+                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object2);
+                object = polyClassMachine_v4.tm$34_get_typed(string, string2);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
@@ -63,8 +63,8 @@ public final class HandCrankInteract {
             String string3 = "int";
             ScriptValue scriptValue4 = ScriptValue.of((double)Math.min(ScriptFormula.addPolymorphic((ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((double)20.0)).asNum(), 100.0));
             if (scriptValue3 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine polyClassMachine = new PolyClassMachine(object3);
-                v1 = ScriptValue.of((boolean)polyClassMachine.tm$82_set_typed(string, string3, scriptValue4));
+                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object3);
+                v1 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string3, scriptValue4));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
@@ -83,8 +83,8 @@ public final class HandCrankInteract {
             double d = 0.5;
             double d2 = 1.5;
             if (scriptValue5 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine polyClassMachine = new PolyClassMachine(object4);
-                v2 = ScriptValue.of((boolean)polyClassMachine.tm$14_play_sound(string, d, d2));
+                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object4);
+                v2 = ScriptValue.of((boolean)polyClassMachine_v4.tm$14_play_sound(string, d, d2));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));

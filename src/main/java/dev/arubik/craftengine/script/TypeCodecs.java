@@ -115,6 +115,22 @@ public final class TypeCodecs {
         return new PolyCodec<>(polyTypeName, instanceType);
     }
 
+    /**
+     * The name of the PolyType a codec produces ONE instance of, or null for every other codec.
+     *
+     * <p>This is what makes a chained member access compilable: {@code Machine.contraption.mass}
+     * has, at its second hop, an arbitrary expression as its receiver — nothing a name lookup can
+     * resolve. But if {@code contraption}'s registered return codec is {@code polyType("Contraption",
+     * …)}, the receiver's PolyType IS known at compile time, so the hop can be specialized exactly
+     * like a first hop.
+     *
+     * <p>Deliberately null for {@link ListCodec}: a list of Contraptions is not a Contraption, and
+     * the element type only becomes a receiver after a subscript or a loop binding.
+     */
+    public static String singlePolyTypeNameOf(PolyType.TypeCodec<?> codec) {
+        return codec instanceof PolyCodec<?> p ? p.polyTypeName : null;
+    }
+
     public static final class ListCodec<T> implements PolyType.TypeCodec<List<T>>, WrappedCodec {
         private final String polyTypeName;
         private final Class<T> elementType;

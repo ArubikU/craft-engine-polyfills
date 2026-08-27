@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine
+ *  dev.arubik.craftengine.script.PolyClassMachine_v4
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -13,7 +13,7 @@
 package dev.arubik.craftengine.script.gen.redstone;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine;
+import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
@@ -37,13 +37,13 @@ public final class SignalInverter {
             ScriptValue.Obj obj;
             Object object;
             double d;
-            PolyClassMachine polyClassMachine;
+            PolyClassMachine_v4 polyClassMachine_v4;
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("Machine");
-            Object object2 = scriptValue2 != ScriptValue.NULL ? ((polyClassMachine = PolyClassMachine.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassMachine.pg$170_redstone() : PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+            Object object2 = scriptValue2 != ScriptValue.NULL ? ((polyClassMachine_v4 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassMachine_v4.pg$170_redstone() : PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL;
             double d2 = d = object2.asNum() > 0.0 ? 0.0 : 15.0;
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine polyClassMachine2 = new PolyClassMachine(object);
-                v2 = ScriptValue.of((boolean)polyClassMachine2.tm$108_emit_redstone(d));
+                PolyClassMachine_v4 polyClassMachine_v42 = new PolyClassMachine_v4(object);
+                v2 = ScriptValue.of((boolean)polyClassMachine_v42.tm$108_emit_redstone(d));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((double)d));

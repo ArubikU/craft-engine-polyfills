@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine
+ *  dev.arubik.craftengine.script.PolyClassMachine_v4
  *  dev.arubik.craftengine.script.PolyClassWorld
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -17,7 +17,7 @@
 package dev.arubik.craftengine.script.gen.kinetics;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine;
+import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyClassWorld;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -434,8 +434,8 @@ public final class TreeUtils {
                     ScriptValue scriptValue11 = scriptValue9;
                     ScriptValue scriptValue12 = scriptContext.getClassOrVar("speed");
                     if (scriptValue10 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                        PolyClassMachine polyClassMachine = new PolyClassMachine(object2);
-                        object = polyClassMachine.tm$2_tick_break(scriptValue11, scriptValue12.asNum());
+                        PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object2);
+                        object = polyClassMachine_v4.tm$2_tick_break(scriptValue11, scriptValue12.asNum());
                     } else {
                         ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
                         arrayList6.add(scriptValue11);

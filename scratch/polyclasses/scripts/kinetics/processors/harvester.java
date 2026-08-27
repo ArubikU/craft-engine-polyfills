@@ -2,7 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  dev.arubik.craftengine.script.PolyClassMachine
+ *  dev.arubik.craftengine.script.PolyClassMachine_v4
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -13,7 +13,7 @@
  */
 package dev.arubik.craftengine.script.gen.kinetics.processors;
 
-import dev.arubik.craftengine.script.PolyClassMachine;
+import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -239,7 +239,7 @@ public final class Harvester {
     }
 
     public static void run(ScriptContext.Builder builder) {
-        PolyClassMachine polyClassMachine;
+        PolyClassMachine_v4 polyClassMachine_v4;
         ScriptContext scriptContext = builder.peek();
         ArrayList<String> arrayList = new ArrayList<String>();
         arrayList.add("_deposit");
@@ -272,7 +272,7 @@ public final class Harvester {
         ScriptValue scriptValue2 = ScriptFormula.callBuiltin((String)"make_map", arrayList3, (ScriptContext)scriptContext);
         builder.val("COLUMN_PLANTS", scriptValue2);
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue4 = scriptValue3 != ScriptValue.NULL ? ((polyClassMachine = PolyClassMachine.ofGuarded((ScriptValue)scriptValue3)) != null ? polyClassMachine.pg$190_contraption() : PolyDispatch.bootstrapGet("memberGet", "contraption", (ScriptValue)scriptValue3, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        ScriptValue scriptValue4 = scriptValue3 != ScriptValue.NULL ? ((polyClassMachine_v4 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue3)) != null ? polyClassMachine_v4.pg$190_contraption() : PolyDispatch.bootstrapGet("memberGet", "contraption", (ScriptValue)scriptValue3, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         builder.val("contraption", scriptValue4);
         double d = 0.0;
         ScriptValue scriptValue5 = ScriptValue.of((double)0.0);
@@ -296,22 +296,22 @@ public final class Harvester {
             ScriptValue scriptValue10 = ScriptValue.of((double)d2);
             builder.val("is_now", scriptValue10);
             if (d2 > 0.0) {
-                PolyClassMachine polyClassMachine2;
-                PolyClassMachine polyClassMachine3;
-                PolyClassMachine polyClassMachine4;
-                PolyClassMachine polyClassMachine5;
-                PolyClassMachine polyClassMachine6;
-                PolyClassMachine polyClassMachine7;
+                PolyClassMachine_v4 polyClassMachine_v42;
+                PolyClassMachine_v4 polyClassMachine_v43;
+                PolyClassMachine_v4 polyClassMachine_v44;
+                PolyClassMachine_v4 polyClassMachine_v45;
+                PolyClassMachine_v4 polyClassMachine_v46;
+                PolyClassMachine_v4 polyClassMachine_v47;
                 ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
                 ScriptValue scriptValue11 = scriptContext.getClassOrVar("Machine");
                 ScriptValue scriptValue12 = scriptContext.getClassOrVar("Machine");
-                arrayList5.add(ScriptFormula.addPolymorphic((ScriptValue)(scriptValue12 != ScriptValue.NULL ? ((polyClassMachine7 = PolyClassMachine.ofGuarded((ScriptValue)scriptValue12)) != null ? polyClassMachine7.pg$199_x() : PolyDispatch.bootstrapGet("memberGet", "x", (ScriptValue)scriptValue12, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)(scriptValue11 != ScriptValue.NULL ? ((polyClassMachine6 = PolyClassMachine.ofGuarded((ScriptValue)scriptValue11)) != null ? polyClassMachine6.pg$133_facing_dx() : PolyDispatch.bootstrapGet("memberGet", "facing_dx", (ScriptValue)scriptValue11, (ScriptContext)scriptContext)) : ScriptValue.NULL)));
+                arrayList5.add(ScriptFormula.addPolymorphic((ScriptValue)(scriptValue12 != ScriptValue.NULL ? ((polyClassMachine_v47 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue12)) != null ? polyClassMachine_v47.pg$199_x() : PolyDispatch.bootstrapGet("memberGet", "x", (ScriptValue)scriptValue12, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)(scriptValue11 != ScriptValue.NULL ? ((polyClassMachine_v46 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue11)) != null ? polyClassMachine_v46.pg$133_facing_dx() : PolyDispatch.bootstrapGet("memberGet", "facing_dx", (ScriptValue)scriptValue11, (ScriptContext)scriptContext)) : ScriptValue.NULL)));
                 ScriptValue scriptValue13 = scriptContext.getClassOrVar("Machine");
                 ScriptValue scriptValue14 = scriptContext.getClassOrVar("Machine");
-                arrayList5.add(ScriptFormula.addPolymorphic((ScriptValue)(scriptValue13 != ScriptValue.NULL ? ((polyClassMachine5 = PolyClassMachine.ofGuarded((ScriptValue)scriptValue13)) != null ? polyClassMachine5.pg$201_y() : PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)scriptValue13, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)(scriptValue14 != ScriptValue.NULL ? ((polyClassMachine4 = PolyClassMachine.ofGuarded((ScriptValue)scriptValue14)) != null ? polyClassMachine4.pg$129_facing_dy() : PolyDispatch.bootstrapGet("memberGet", "facing_dy", (ScriptValue)scriptValue14, (ScriptContext)scriptContext)) : ScriptValue.NULL)));
+                arrayList5.add(ScriptFormula.addPolymorphic((ScriptValue)(scriptValue13 != ScriptValue.NULL ? ((polyClassMachine_v45 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue13)) != null ? polyClassMachine_v45.pg$201_y() : PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)scriptValue13, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)(scriptValue14 != ScriptValue.NULL ? ((polyClassMachine_v44 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue14)) != null ? polyClassMachine_v44.pg$129_facing_dy() : PolyDispatch.bootstrapGet("memberGet", "facing_dy", (ScriptValue)scriptValue14, (ScriptContext)scriptContext)) : ScriptValue.NULL)));
                 ScriptValue scriptValue15 = scriptContext.getClassOrVar("Machine");
                 ScriptValue scriptValue16 = scriptContext.getClassOrVar("Machine");
-                arrayList5.add(ScriptFormula.addPolymorphic((ScriptValue)(scriptValue15 != ScriptValue.NULL ? ((polyClassMachine3 = PolyClassMachine.ofGuarded((ScriptValue)scriptValue15)) != null ? polyClassMachine3.pg$205_z() : PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)scriptValue15, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)(scriptValue16 != ScriptValue.NULL ? ((polyClassMachine2 = PolyClassMachine.ofGuarded((ScriptValue)scriptValue16)) != null ? polyClassMachine2.pg$131_facing_dz() : PolyDispatch.bootstrapGet("memberGet", "facing_dz", (ScriptValue)scriptValue16, (ScriptContext)scriptContext)) : ScriptValue.NULL)));
+                arrayList5.add(ScriptFormula.addPolymorphic((ScriptValue)(scriptValue15 != ScriptValue.NULL ? ((polyClassMachine_v43 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue15)) != null ? polyClassMachine_v43.pg$205_z() : PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)scriptValue15, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)(scriptValue16 != ScriptValue.NULL ? ((polyClassMachine_v42 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue16)) != null ? polyClassMachine_v42.pg$131_facing_dz() : PolyDispatch.bootstrapGet("memberGet", "facing_dz", (ScriptValue)scriptValue16, (ScriptContext)scriptContext)) : ScriptValue.NULL)));
                 ScriptValue scriptValue17 = scriptContext.getClassOrVar("contraption");
                 CallSite callSite = PolyDispatch.bootstrapCall("memberCall", "real_block", (ScriptValue)(scriptValue17 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "contraption_world", (ScriptValue)scriptValue17, (ScriptContext)scriptContext) : ScriptValue.NULL), arrayList5, (ScriptContext)scriptContext);
                 builder.val("target", (ScriptValue)callSite);
@@ -320,10 +320,10 @@ public final class Harvester {
                 Harvester._tryHarvest(builder2);
             }
         } else if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("rpm"), (ScriptValue)ScriptValue.of((double)0.0)) ^ true) {
-            PolyClassMachine polyClassMachine8;
+            PolyClassMachine_v4 polyClassMachine_v48;
             ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
             ScriptValue scriptValue18 = scriptContext.getClassOrVar("Machine");
-            builder3.val("block", (ScriptValue)(scriptValue18 != ScriptValue.NULL ? ((polyClassMachine8 = PolyClassMachine.ofGuarded((ScriptValue)scriptValue18)) != null ? polyClassMachine8.pg$137_facing_block() : PolyDispatch.bootstrapGet("memberGet", "facing_block", (ScriptValue)scriptValue18, (ScriptContext)scriptContext)) : ScriptValue.NULL));
+            builder3.val("block", (ScriptValue)(scriptValue18 != ScriptValue.NULL ? ((polyClassMachine_v48 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue18)) != null ? polyClassMachine_v48.pg$137_facing_block() : PolyDispatch.bootstrapGet("memberGet", "facing_block", (ScriptValue)scriptValue18, (ScriptContext)scriptContext)) : ScriptValue.NULL));
             Harvester._tryHarvest(builder3);
             double d3 = 1.0;
             ScriptValue scriptValue19 = ScriptValue.of((double)1.0);

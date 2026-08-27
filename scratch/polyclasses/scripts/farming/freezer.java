@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine
+ *  dev.arubik.craftengine.script.PolyClassMachine_v4
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script.gen.farming;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine;
+import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -51,7 +51,7 @@ public final class Freezer {
             if (var4_4 != ScriptValue.NULL) {
                 var5_5 = 4.0;
                 if (var4_4 instanceof ScriptValue.Obj && (var8_7 = (var7_6 = (ScriptValue.Obj)var4_4).instance()) != null && !(var8_7 instanceof PolyClass) && var7_6.typeName().equals("Machine")) {
-                    var9_8 = new PolyClassMachine(var8_7);
+                    var9_8 = new PolyClassMachine_v4(var8_7);
                     v0 /* !! */  = var9_8.tm$86_blocks_in_range(var5_5);
                 } else {
                     var10_9 = new ArrayList<ScriptValue>();
@@ -95,7 +95,7 @@ public final class Freezer {
             if ((var24_23 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL) {
                 var25_24 = 4.0;
                 if (var24_23 instanceof ScriptValue.Obj && (var28_26 = (var27_25 = (ScriptValue.Obj)var24_23).instance()) != null && !(var28_26 instanceof PolyClass) && var27_25.typeName().equals("Machine")) {
-                    var29_27 = new PolyClassMachine(var28_26);
+                    var29_27 = new PolyClassMachine_v4(var28_26);
                     v2 /* !! */  = var29_27.tm$94_nearby_entities(var25_24);
                 } else {
                     var30_28 = new ArrayList<ScriptValue>();

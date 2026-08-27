@@ -451,15 +451,41 @@ final class ScriptBytecodeCompiler {
         private final String wrapperName, propJavaName;
         /** The native accessor, or null when this property has no scalar typed registration. */
         final PolyClassGenerator.TypedMemberRef nativeRef;
+        /** The PolyType this read PRODUCES, when its codec says so — see {@link #polyTypeOf}. */
+        final String resultPolyType;
+        /** Non-null for a CHAINED hop, whose receiver is this expression rather than a name. */
+        private final Expr base;
+
+        /**
+         * A chained hop {@code base.prop} whose receiver PolyType is known at compile time — because
+         * {@code base} is itself a member read whose codec is {@code polyType(receiverType, …)}.
+         * Compiles to the same guarded PolyClass dispatch a first hop gets, instead of the generic
+         * {@code memberGet} that every chained hop used to fall back to.
+         */
+        static PropRead chained(Expr base, String receiverType, String prop) {
+            PolyClassGenerator.GeneratedPolyClass g = PolyClassGenerator.getOrGenerate(receiverType);
+            String propJavaName = g != null ? g.properties().get(prop) : null;
+            return new PropRead(base, receiverType, prop,
+                    propJavaName != null ? g.internalName() : null, propJavaName,
+                    g != null ? g.typedProperties().get(prop) : null,
+                    propertyResultPolyType(receiverType, prop));
+        }
 
         PropRead(String name, String prop, String wrapperName, String propJavaName,
-                 PolyClassGenerator.TypedMemberRef nativeRef) {
+                 PolyClassGenerator.TypedMemberRef nativeRef, String resultPolyType) {
+            this(null, name, prop, wrapperName, propJavaName, nativeRef, resultPolyType);
+        }
+
+        private PropRead(Expr base, String name, String prop, String wrapperName, String propJavaName,
+                         PolyClassGenerator.TypedMemberRef nativeRef, String resultPolyType) {
             super(Type.ANY);
+            this.base = base;
             this.name = name;
             this.prop = prop;
             this.wrapperName = wrapperName;
             this.propJavaName = propJavaName;
             this.nativeRef = nativeRef;
+            this.resultPolyType = resultPolyType;
         }
 
         @Override public void emit(MethodVisitor mv, Ctx c) { emitAs(mv, c, null, null, null); }
@@ -473,11 +499,19 @@ final class ScriptBytecodeCompiler {
         private void emitAs(MethodVisitor mv, Ctx c, String javaName, String accessor, String returnDesc) {
             String desc = returnDesc != null ? returnDesc : "L" + VALUE + ";";
             int svSlot = c.allocRef();
-            P.emitResolveInstanceOrVar(mv, c, name, svSlot);
-            mv.visitVarInsn(ALOAD, svSlot);
-            P.emitGetNull(mv);
+            // A FIRST hop resolves a name and guards a NULL receiver, returning NULL for it. A
+            // CHAINED hop evaluates its base expression and does NOT guard — that difference is the
+            // interpreter's, not an oversight: parseSuffixChain calls memberGet unconditionally.
             Label isNullL = new Label(), endL = new Label();
-            mv.visitJumpInsn(IF_ACMPEQ, isNullL);
+            if (base == null) {
+                P.emitResolveInstanceOrVar(mv, c, name, svSlot);
+                mv.visitVarInsn(ALOAD, svSlot);
+                P.emitGetNull(mv);
+                mv.visitJumpInsn(IF_ACMPEQ, isNullL);
+            } else {
+                base.emit(mv, c);
+                mv.visitVarInsn(ASTORE, svSlot);
+            }
 
             if (propJavaName != null) {
                 Label fallbackL = new Label(), fastL = new Label();
@@ -509,11 +543,13 @@ final class ScriptBytecodeCompiler {
                 if (accessor != null) mv.visitMethodInsn(INVOKEINTERFACE, VALUE, accessor, "()" + desc, true);
             }
 
-            mv.visitJumpInsn(GOTO, endL);
-            mv.visitLabel(isNullL);
-            P.emitGetNull(mv);
-            if (accessor != null) mv.visitMethodInsn(INVOKEINTERFACE, VALUE, accessor, "()" + desc, true);
-            mv.visitLabel(endL);
+            if (base == null) {
+                mv.visitJumpInsn(GOTO, endL);
+                mv.visitLabel(isNullL);
+                P.emitGetNull(mv);
+                if (accessor != null) mv.visitMethodInsn(INVOKEINTERFACE, VALUE, accessor, "()" + desc, true);
+                mv.visitLabel(endL);
+            }
         }
     }
 
@@ -585,6 +621,54 @@ final class ScriptBytecodeCompiler {
             toAny(part).emit(mv, c);
             mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asStr", "()Ljava/lang/String;", true);
         }
+    }
+
+    /**
+     * The PolyType an expression is statically known to evaluate to, or null.
+     *
+     * <p>Only a member whose registered codec is {@code polyType(name, …)} qualifies — that codec is
+     * a promise that the slot always holds one instance of exactly that type, which is precisely the
+     * promise a compile-time specialization needs. Everything else (a RAW slot, a list, an untyped
+     * member, a variable) returns null and keeps the generic path.
+     *
+     * <p>Being wrong here would still be SAFE — every specialized site guards with {@code ofGuarded},
+     * which returns null for a receiver that is not that type and falls back — but it would be
+     * pointless, so the promise is taken from the registration rather than guessed.
+     */
+    static String polyTypeOf(Expr e) {
+        if (e instanceof PropRead p) return p.resultPolyType;
+        if (e instanceof TypedResult t) return t.resultPolyType;
+        return null;
+    }
+
+    /** An expression that evaluates exactly as {@code inner} does, but additionally carries the
+     *  PolyType its value is known to be — the shape a method call needs, since its emission is
+     *  built from a dozen captured locals and is not worth restructuring just to hold one field. */
+    static final class TypedResult extends BaseExpr {
+        private final Expr inner;
+        final String resultPolyType;
+        TypedResult(Expr inner, String resultPolyType) {
+            super(Type.ANY);
+            this.inner = inner;
+            this.resultPolyType = resultPolyType;
+        }
+        @Override public void emit(MethodVisitor mv, Ctx c) { inner.emit(mv, c); }
+    }
+
+    /** The declared return codec of {@code type.prop}, resolved through the same registry the rest
+     *  of this compiler consults at compile time. */
+    static String methodResultPolyType(String typeName, String method) {
+        PolyType t = typeName == null ? null : PolyTypeRegistry.get(typeName);
+        if (t == null) return null;
+        PolyType.TypedMethodDescriptor d = t.resolveTypedMethod(method);
+        return d == null ? null : TypeCodecs.singlePolyTypeNameOf(d.returnType());
+    }
+
+    static String propertyResultPolyType(String typeName, String prop) {
+        PolyType t = typeName == null ? null : PolyTypeRegistry.get(typeName);
+        if (t == null) return null;
+        PolyType.TypedPropertyDescriptor d = t.resolveTypedProperty(prop);
+        return d == null ? null : TypeCodecs.singlePolyTypeNameOf(d.returnType());
     }
 
     static Expr toNum(Expr e) {
@@ -1269,6 +1353,11 @@ final class ScriptBytecodeCompiler {
          *  memberGet} unconditionally, null receiver or not (that's how a chain like {@code
          *  Machine.contraption.blah} already behaved even before this compiler existed). */
         private static Expr chainedPropertyGet(Expr base0, String prop) {
+            // When the base's own registration promises one PolyType, this hop is no longer
+            // "arbitrary expression, must dispatch generically" — it is exactly a first hop with a
+            // different way of producing the receiver.
+            String receiverType = polyTypeOf(base0);
+            if (receiverType != null) return PropRead.chained(toAny(base0), receiverType, prop);
             Expr base = toAny(base0);
             return new BaseExpr(Type.ANY) {
                 @Override public void emit(MethodVisitor mv, Ctx c) {
@@ -1285,6 +1374,10 @@ final class ScriptBytecodeCompiler {
          *  expression, not a name {@code PolyTypeRegistry} can be consulted by; that specialization
          *  is deliberately scoped to the bare-identifier FIRST hop only. */
         private static Expr chainedMethodCall(Expr base0, String method, List<Expr> rawArgs) {
+            String receiverType = polyTypeOf(base0);
+            if (receiverType != null) {
+                return dotMethodCall(toAny(base0), receiverType, method, rawArgs);
+            }
             Expr base = toAny(base0);
             List<Expr> args = rawArgs.stream().map(ScriptBytecodeCompiler::toAny).toList();
             return new BaseExpr(Type.ANY) {
@@ -1799,7 +1892,8 @@ final class ScriptBytecodeCompiler {
             // toNum/toBool/toStr fuse into it, which is where the boxing actually disappears.
             PolyClassGenerator.TypedMemberRef nativeRef =
                     generated != null ? generated.typedProperties().get(prop) : null;
-            return new PropRead(name, prop, wrapperName, propJavaName, nativeRef);
+            return new PropRead(name, prop, wrapperName, propJavaName, nativeRef,
+                    propertyResultPolyType(name, prop));
         }
 
         /** {@code Name.method(args)} — same resolve-then-null-guard shape as {@link
@@ -1826,7 +1920,17 @@ final class ScriptBytecodeCompiler {
          *  resolveTypedMethod} unexpectedly misses at runtime — structurally unreachable today (no
          *  API removes a {@code typedMethods} entry once registered) but kept as a real fallback,
          *  not a silent wrong-value shortcut. */
+        /**
+         * A chained hop {@code base.method(args)} whose receiver PolyType is known at compile time.
+         * See {@link PropRead#chained} — same idea, and the payoff is bigger here: a specialized
+         * call passes its arguments as native JVM values, so the {@code ArrayList} the generic path
+         * builds for every call disappears along with one {@code ScriptValue} per argument.
+         */
         private static Expr dotMethodCall(String name, String method, List<Expr> rawArgs) {
+            return dotMethodCall(null, name, method, rawArgs);
+        }
+
+        private static Expr dotMethodCall(Expr base, String name, String method, List<Expr> rawArgs) {
             List<Expr> args = rawArgs.stream().map(ScriptBytecodeCompiler::toAny).toList();
             int arity = args.size();
 
@@ -1881,14 +1985,21 @@ final class ScriptBytecodeCompiler {
             }
             ArgSlotKind[] finalArgSlotKinds = argSlotKinds;
 
-            return new BaseExpr(Type.ANY) {
+            Expr call = new BaseExpr(Type.ANY) {
                 @Override public void emit(MethodVisitor mv, Ctx c) {
                     int svSlot = c.allocRef();
-                    emitResolveInstanceOrVar(mv, c, name, svSlot);
-                    mv.visitVarInsn(ALOAD, svSlot);
-                    emitGetNull(mv);
+                    // First hop: resolve the name, and return NULL for a NULL receiver. Chained
+                    // hop: evaluate the base, no guard — see PropRead#emitAs for why they differ.
                     Label isNullL = new Label(), endL = new Label();
-                    mv.visitJumpInsn(IF_ACMPEQ, isNullL);
+                    if (base == null) {
+                        emitResolveInstanceOrVar(mv, c, name, svSlot);
+                        mv.visitVarInsn(ALOAD, svSlot);
+                        emitGetNull(mv);
+                        mv.visitJumpInsn(IF_ACMPEQ, isNullL);
+                    } else {
+                        base.emit(mv, c);
+                        mv.visitVarInsn(ASTORE, svSlot);
+                    }
 
                     if (specializeTyped) {
                         // Evaluate each arg EXACTLY ONCE into its own local — never re-run an arg
@@ -1992,12 +2103,19 @@ final class ScriptBytecodeCompiler {
                         emitDynamicCall(mv, method);
                     }
 
-                    mv.visitJumpInsn(GOTO, endL);
-                    mv.visitLabel(isNullL);
-                    emitGetNull(mv);
-                    mv.visitLabel(endL);
+                    if (base == null) {
+                        mv.visitJumpInsn(GOTO, endL);
+                        mv.visitLabel(isNullL);
+                        emitGetNull(mv);
+                        mv.visitLabel(endL);
+                    }
                 }
             };
+            // A method whose return codec names one PolyType lets the NEXT hop specialize too, so
+            // `Machine.contraption.origin.x` stays typed the whole way down instead of falling back
+            // to generic dispatch at the first link.
+            String resultType = methodResultPolyType(name, method);
+            return resultType == null ? call : new TypedResult(call, resultType);
         }
 
         /** Builds a fresh {@code ArrayList<ScriptValue>} from already-evaluated arg locals (see
