@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v3
+ *  dev.arubik.craftengine.script.PolyClassMachine_v2
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -14,7 +14,7 @@
 package dev.arubik.craftengine.script.gen.redstone;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v3;
+import dev.arubik.craftengine.script.PolyClassMachine_v2;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -38,7 +38,7 @@ public final class PulseTrigger {
     public static void run(ScriptContext.Builder builder) {
         Object object;
         ScriptValue scriptValue;
-        PolyClassMachine_v3 polyClassMachine_v3;
+        PolyClassMachine_v2 polyClassMachine_v2;
         Object object2;
         Object object3;
         ScriptContext scriptContext = builder.peek();
@@ -49,8 +49,8 @@ public final class PulseTrigger {
             String string = "edge_mode";
             String string2 = "int";
             if (scriptValue2 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v32 = new PolyClassMachine_v3(object4);
-                object3 = polyClassMachine_v32.tm$34_get_typed(string, string2);
+                PolyClassMachine_v2 polyClassMachine_v22 = new PolyClassMachine_v2(object4);
+                object3 = polyClassMachine_v22.tm$34_get_typed(string, string2);
             } else {
                 object3 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
             }
@@ -66,8 +66,8 @@ public final class PulseTrigger {
             String string = "prev_power";
             String string3 = "int";
             if (scriptValue4 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v33 = new PolyClassMachine_v3(object5);
-                object2 = polyClassMachine_v33.tm$34_get_typed(string, string3);
+                PolyClassMachine_v2 polyClassMachine_v23 = new PolyClassMachine_v2(object5);
+                object2 = polyClassMachine_v23.tm$34_get_typed(string, string3);
             } else {
                 object2 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptContext)scriptContext);
             }
@@ -77,7 +77,7 @@ public final class PulseTrigger {
         ScriptValue scriptValue5 = object2;
         builder.val("prev", scriptValue5);
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("Machine");
-        Object object6 = scriptValue6 != ScriptValue.NULL ? ((polyClassMachine_v3 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue6)) != null ? polyClassMachine_v3.pg$170_redstone() : PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue6, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        Object object6 = scriptValue6 != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue6)) != null ? polyClassMachine_v2.pg$171_redstone() : PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue6, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         double d = object6.asNum() > 0.0 ? 1.0 : 0.0;
         ScriptValue scriptValue7 = ScriptValue.of((double)d);
         builder.val("cur", scriptValue7);
@@ -108,8 +108,8 @@ public final class PulseTrigger {
                 String string4 = "int";
                 ScriptValue scriptValue13 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PulseTrigger.class, 2.0);
                 if (scriptValue12 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v34 = new PolyClassMachine_v3(object7);
-                    v3 = ScriptValue.of((boolean)polyClassMachine_v34.tm$82_set_typed(string, string4, scriptValue13));
+                    PolyClassMachine_v2 polyClassMachine_v24 = new PolyClassMachine_v2(object7);
+                    v3 = ScriptValue.of((boolean)polyClassMachine_v24.tm$82_set_typed(string, string4, scriptValue13));
                 } else {
                     v3 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue12, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string4), (ScriptValue)scriptValue13, (ScriptContext)scriptContext);
                 }
@@ -123,8 +123,8 @@ public final class PulseTrigger {
             String string = "pulse_t";
             String string5 = "int";
             if (scriptValue instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v35 = new PolyClassMachine_v3(object8);
-                object = polyClassMachine_v35.tm$34_get_typed(string, string5);
+                PolyClassMachine_v2 polyClassMachine_v25 = new PolyClassMachine_v2(object8);
+                object = polyClassMachine_v25.tm$34_get_typed(string, string5);
             } else {
                 object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string5), (ScriptContext)scriptContext);
             }
@@ -140,8 +140,8 @@ public final class PulseTrigger {
                 Object object9;
                 double d6 = 15.0;
                 if (scriptValue15 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue15).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v36 = new PolyClassMachine_v3(object9);
-                    v5 = ScriptValue.of((boolean)polyClassMachine_v36.tm$108_emit_redstone(d6));
+                    PolyClassMachine_v2 polyClassMachine_v26 = new PolyClassMachine_v2(object9);
+                    v5 = ScriptValue.of((boolean)polyClassMachine_v26.tm$108_emit_redstone(d6));
                 } else {
                     v5 = PolyDispatch.bootstrapCall("memberCall", "emit_redstone", (ScriptValue)scriptValue15, (ScriptValue)ScriptValue.of((double)d6), (ScriptContext)scriptContext);
                 }
@@ -156,8 +156,8 @@ public final class PulseTrigger {
                 String string6 = "int";
                 ScriptValue scriptValue17 = ScriptValue.of((double)(scriptValue14.asNum() - 1.0));
                 if (scriptValue16 instanceof ScriptValue.Obj && (object10 = (obj = (ScriptValue.Obj)scriptValue16).instance()) != null && !(object10 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v37 = new PolyClassMachine_v3(object10);
-                    v6 = ScriptValue.of((boolean)polyClassMachine_v37.tm$82_set_typed(string, string6, scriptValue17));
+                    PolyClassMachine_v2 polyClassMachine_v27 = new PolyClassMachine_v2(object10);
+                    v6 = ScriptValue.of((boolean)polyClassMachine_v27.tm$82_set_typed(string, string6, scriptValue17));
                 } else {
                     v6 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue16, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string6), (ScriptValue)scriptValue17, (ScriptContext)scriptContext);
                 }
@@ -171,8 +171,8 @@ public final class PulseTrigger {
                 Object object11;
                 double d7 = 0.0;
                 if (scriptValue18 instanceof ScriptValue.Obj && (object11 = (obj = (ScriptValue.Obj)scriptValue18).instance()) != null && !(object11 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v38 = new PolyClassMachine_v3(object11);
-                    v7 = ScriptValue.of((boolean)polyClassMachine_v38.tm$108_emit_redstone(d7));
+                    PolyClassMachine_v2 polyClassMachine_v28 = new PolyClassMachine_v2(object11);
+                    v7 = ScriptValue.of((boolean)polyClassMachine_v28.tm$108_emit_redstone(d7));
                 } else {
                     v7 = PolyDispatch.bootstrapCall("memberCall", "emit_redstone", (ScriptValue)scriptValue18, (ScriptValue)ScriptValue.of((double)d7), (ScriptContext)scriptContext);
                 }
@@ -188,8 +188,8 @@ public final class PulseTrigger {
             String string7 = "int";
             ScriptValue scriptValue20 = ScriptValue.of((double)d);
             if (scriptValue19 instanceof ScriptValue.Obj && (object12 = (obj = (ScriptValue.Obj)scriptValue19).instance()) != null && !(object12 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v39 = new PolyClassMachine_v3(object12);
-                v8 = ScriptValue.of((boolean)polyClassMachine_v39.tm$82_set_typed(string, string7, scriptValue20));
+                PolyClassMachine_v2 polyClassMachine_v29 = new PolyClassMachine_v2(object12);
+                v8 = ScriptValue.of((boolean)polyClassMachine_v29.tm$82_set_typed(string, string7, scriptValue20));
             } else {
                 v8 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue19, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string7), (ScriptValue)scriptValue20, (ScriptContext)scriptContext);
             }

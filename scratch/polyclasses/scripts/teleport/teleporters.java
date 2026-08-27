@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassPlayer
+ *  dev.arubik.craftengine.script.PolyClassPlayer_v2
  *  dev.arubik.craftengine.script.PolyClassServer
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -17,7 +17,7 @@
 package dev.arubik.craftengine.script.gen.teleport;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassPlayer;
+import dev.arubik.craftengine.script.PolyClassPlayer_v2;
 import dev.arubik.craftengine.script.PolyClassServer;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -121,8 +121,8 @@ public final class Teleporters {
             String string = "teleporters_freq";
             String string2 = "string";
             if (scriptValue4 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object3);
-                object = polyClassPlayer.tm$12_get_typed(string, string2);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object3);
+                object = polyClassPlayer_v2.tm$12_get_typed(string, string2);
             } else {
                 object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
             }
@@ -142,8 +142,8 @@ public final class Teleporters {
                 Object object;
                 String string = "<red>\u2718 <white>You must enter a frequency.";
                 if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                    v0 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+                    PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                    v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
                 } else {
                     v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }
@@ -160,8 +160,8 @@ public final class Teleporters {
             String string2 = "string";
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("freq");
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                v1 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string2, scriptValue2));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                v1 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string2, scriptValue2));
             } else {
                 v1 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
             }
@@ -185,8 +185,8 @@ public final class Teleporters {
             String string = "teleporters_freq";
             String string2 = "string";
             if (scriptValue2 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object3);
-                object2 = polyClassPlayer.tm$12_get_typed(string, string2);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object3);
+                object2 = polyClassPlayer_v2.tm$12_get_typed(string, string2);
             } else {
                 object2 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
             }
@@ -312,7 +312,7 @@ public final class Teleporters {
             var3_3 = "teleporters_freq";
             var4_4 = "string";
             if (var2_2 instanceof ScriptValue.Obj && (var6_6 = (var5_5 = (ScriptValue.Obj)var2_2).instance()) != null && !(var6_6 instanceof PolyClass) && var5_5.typeName().equals("Player")) {
-                var7_7 = new PolyClassPlayer(var6_6);
+                var7_7 = new PolyClassPlayer_v2(var6_6);
                 v0 /* !! */  = var7_7.tm$12_get_typed(var3_3, var4_4);
             } else {
                 v0 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)var2_2, (ScriptValue)ScriptValue.of((String)var3_3), (ScriptValue)ScriptValue.of((String)var4_4), (ScriptContext)var1_1);
@@ -378,7 +378,7 @@ public final class Teleporters {
             if (var28_28 != ScriptValue.NULL) {
                 var29_29 = "<red>\u2718 <white>That destination is no longer available.";
                 if (var28_28 instanceof ScriptValue.Obj && (var31_31 = (var30_30 = (ScriptValue.Obj)var28_28).instance()) != null && !(var31_31 instanceof PolyClass) && var30_30.typeName().equals("Player")) {
-                    var32_32 = new PolyClassPlayer(var31_31);
+                    var32_32 = new PolyClassPlayer_v2(var31_31);
                     v4 /* !! */  = ScriptValue.of((boolean)var32_32.tm$42_send_message(var29_29));
                 } else {
                     v4 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)var28_28, (ScriptValue)ScriptValue.of((String)var29_29), (ScriptContext)var1_1);
@@ -393,7 +393,7 @@ public final class Teleporters {
             var34_34 = var1_1.getClassOrVar("TELEPORT_ITEM");
             var35_35 = 1.0;
             if (var33_33 instanceof ScriptValue.Obj && (var38_37 = (var37_36 = (ScriptValue.Obj)var33_33).instance()) != null && !(var38_37 instanceof PolyClass) && var37_36.typeName().equals("Player")) {
-                var39_38 = new PolyClassPlayer(var38_37);
+                var39_38 = new PolyClassPlayer_v2(var38_37);
                 v5 /* !! */  = ScriptValue.of((boolean)var39_38.tm$40_has_item(var34_34.asStr(), var35_35));
             } else {
                 v5 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "has_item", (ScriptValue)var33_33, (ScriptValue)var34_34, (ScriptValue)ScriptValue.of((double)var35_35), (ScriptContext)var1_1);
@@ -406,7 +406,7 @@ public final class Teleporters {
             if (var40_39 != ScriptValue.NULL) {
                 var41_40 = "<red>\u2718 <white>You need a Nether Star to use a teleporter this way.";
                 if (var40_39 instanceof ScriptValue.Obj && (var43_42 = (var42_41 = (ScriptValue.Obj)var40_39).instance()) != null && !(var43_42 instanceof PolyClass) && var42_41.typeName().equals("Player")) {
-                    var44_43 = new PolyClassPlayer(var43_42);
+                    var44_43 = new PolyClassPlayer_v2(var43_42);
                     v6 /* !! */  = ScriptValue.of((boolean)var44_43.tm$42_send_message(var41_40));
                 } else {
                     v6 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)var40_39, (ScriptValue)ScriptValue.of((String)var41_40), (ScriptContext)var1_1);
@@ -434,7 +434,7 @@ public final class Teleporters {
             if (var52_51 != ScriptValue.NULL) {
                 var53_52 = "<red>\u2718 <white>That destination's world is not currently loaded.";
                 if (var52_51 instanceof ScriptValue.Obj && (var55_54 = (var54_53 = (ScriptValue.Obj)var52_51).instance()) != null && !(var55_54 instanceof PolyClass) && var54_53.typeName().equals("Player")) {
-                    var56_55 = new PolyClassPlayer(var55_54);
+                    var56_55 = new PolyClassPlayer_v2(var55_54);
                     v7 /* !! */  = ScriptValue.of((boolean)var56_55.tm$42_send_message(var53_52));
                 } else {
                     v7 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)var52_51, (ScriptValue)ScriptValue.of((String)var53_52), (ScriptContext)var1_1);
@@ -468,7 +468,7 @@ public final class Teleporters {
             var66_65 = var1_1.getClassOrVar("TELEPORT_ITEM");
             var67_66 = 1.0;
             if (var65_64 instanceof ScriptValue.Obj && (var70_68 = (var69_67 = (ScriptValue.Obj)var65_64).instance()) != null && !(var70_68 instanceof PolyClass) && var69_67.typeName().equals("Player")) {
-                var71_69 = new PolyClassPlayer(var70_68);
+                var71_69 = new PolyClassPlayer_v2(var70_68);
                 v11 /* !! */  = ScriptValue.of((boolean)var71_69.tm$16_consume_item(var66_65.asStr(), var67_66));
             } else {
                 v11 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "consume_item", (ScriptValue)var65_64, (ScriptValue)var66_65, (ScriptValue)ScriptValue.of((double)var67_66), (ScriptContext)var1_1);
@@ -481,7 +481,7 @@ public final class Teleporters {
             if (var72_70 != ScriptValue.NULL) {
                 var73_71 = "<red>\u2718 <white>You need a Nether Star to use a teleporter this way.";
                 if (var72_70 instanceof ScriptValue.Obj && (var75_73 = (var74_72 = (ScriptValue.Obj)var72_70).instance()) != null && !(var75_73 instanceof PolyClass) && var74_72.typeName().equals("Player")) {
-                    var76_74 = new PolyClassPlayer(var75_73);
+                    var76_74 = new PolyClassPlayer_v2(var75_73);
                     v12 /* !! */  = ScriptValue.of((boolean)var76_74.tm$42_send_message(var73_71));
                 } else {
                     v12 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)var72_70, (ScriptValue)ScriptValue.of((String)var73_71), (ScriptContext)var1_1);
@@ -495,7 +495,7 @@ public final class Teleporters {
         if (var77_75 != ScriptValue.NULL) {
             var78_76 = var64_63;
             if (var77_75 instanceof ScriptValue.Obj && (var80_78 = (var79_77 = (ScriptValue.Obj)var77_75).instance()) != null && !(var80_78 instanceof PolyClass) && var79_77.typeName().equals("Player")) {
-                var81_79 = new PolyClassPlayer(var80_78);
+                var81_79 = new PolyClassPlayer_v2(var80_78);
                 v13 /* !! */  = ScriptValue.of((boolean)var81_79.tm$24_teleport_to(var78_76));
             } else {
                 v13 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "teleport_to", (ScriptValue)var77_75, (ScriptValue)var78_76, (ScriptContext)var1_1);
@@ -507,7 +507,7 @@ public final class Teleporters {
         if (var82_80 != ScriptValue.NULL) {
             var83_81 = "<green>\u2714 <white>Teleported using a Nether Star.";
             if (var82_80 instanceof ScriptValue.Obj && (var85_83 = (var84_82 = (ScriptValue.Obj)var82_80).instance()) != null && !(var85_83 instanceof PolyClass) && var84_82.typeName().equals("Player")) {
-                var86_84 = new PolyClassPlayer(var85_83);
+                var86_84 = new PolyClassPlayer_v2(var85_83);
                 v14 /* !! */  = ScriptValue.of((boolean)var86_84.tm$42_send_message(var83_81));
             } else {
                 v14 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)var82_80, (ScriptValue)ScriptValue.of((String)var83_81), (ScriptContext)var1_1);

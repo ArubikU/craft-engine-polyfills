@@ -164,10 +164,22 @@ public final class TypeCodecs {
         }
 
         @Override public ScriptValue encode(List<T> value) {
-            if (value == null || value.isEmpty()) return new ScriptValue.Array(List.of());
+            return new ScriptValue.Array(encodeElements(value));
+        }
+
+        /**
+         * {@link #encode}'s elements, without the {@link ScriptValue.Array} around them.
+         *
+         * <p>A {@code for} loop over a list-typed member wants exactly this: it iterates elements, so
+         * wrapping them in an Array only for {@code ScriptProgram.elementsOf} to unwrap it again is
+         * one allocation and one call of pure round trip, per execution of the loop. {@code encode}
+         * delegates here so the two cannot drift.
+         */
+        public List<ScriptValue> encodeElements(List<T> value) {
+            if (value == null || value.isEmpty()) return List.of();
             List<ScriptValue> out = new ArrayList<>(value.size());
             for (T element : value) out.add(ScriptValue.ofObj(polyTypeName, element));
-            return new ScriptValue.Array(out);
+            return out;
         }
     }
 

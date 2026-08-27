@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassPlayer
+ *  dev.arubik.craftengine.script.PolyClassPlayer_v2
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -14,7 +14,7 @@
 package dev.arubik.craftengine.script.gen.conveyor;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassPlayer;
+import dev.arubik.craftengine.script.PolyClassPlayer_v2;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -38,9 +38,9 @@ public final class FunnelPlace {
 
     public static ScriptValue onRightClick(ScriptContext.Builder builder) {
         ScriptValue scriptValue;
-        PolyClassPlayer polyClassPlayer;
+        PolyClassPlayer_v2 polyClassPlayer_v2;
         ScriptValue scriptValue2;
-        PolyClassPlayer polyClassPlayer2;
+        PolyClassPlayer_v2 polyClassPlayer_v22;
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("event");
         ScriptValue scriptValue4 = scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "clicked_block", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL;
@@ -52,7 +52,7 @@ public final class FunnelPlace {
             return ScriptValue.NULL;
         }
         ScriptValue scriptValue7 = scriptContext.getClassOrVar("Player");
-        boolean bl = scriptValue7 != ScriptValue.NULL ? ((polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue7)) != null ? polyClassPlayer2.tg$49_is_sneaking() : PolyDispatch.bootstrapGet("memberGet", "is_sneaking", (ScriptValue)scriptValue7, (ScriptContext)scriptContext).asBool()) : ScriptValue.NULL.asBool();
+        boolean bl = scriptValue7 != ScriptValue.NULL ? ((polyClassPlayer_v22 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue7)) != null ? polyClassPlayer_v22.tg$49_is_sneaking() : PolyDispatch.bootstrapGet("memberGet", "is_sneaking", (ScriptValue)scriptValue7, (ScriptContext)scriptContext).asBool()) : ScriptValue.NULL.asBool();
         if (bl ^ true && ((scriptValue2 = scriptContext.getClassOrVar("clicked")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_container", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL).asBool()) {
             return ScriptValue.NULL;
         }
@@ -89,7 +89,7 @@ public final class FunnelPlace {
             return ScriptValue.NULL;
         }
         ScriptValue scriptValue19 = scriptContext.getClassOrVar("Player");
-        boolean bl2 = scriptValue19 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue19)) != null ? polyClassPlayer.tg$52_is_creative() : PolyDispatch.bootstrapGet("memberGet", "is_creative", (ScriptValue)scriptValue19, (ScriptContext)scriptContext).asBool()) : ScriptValue.NULL.asBool();
+        boolean bl2 = scriptValue19 != ScriptValue.NULL ? ((polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue19)) != null ? polyClassPlayer_v2.tg$52_is_creative() : PolyDispatch.bootstrapGet("memberGet", "is_creative", (ScriptValue)scriptValue19, (ScriptContext)scriptContext).asBool()) : ScriptValue.NULL.asBool();
         if (bl2 ^ true) {
             ScriptValue scriptValue20 = scriptContext.getClassOrVar("Player");
             if (scriptValue20 != ScriptValue.NULL) {
@@ -98,8 +98,8 @@ public final class FunnelPlace {
                 String string = "main_hand";
                 double d = 1.0;
                 if (scriptValue20 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue20).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer polyClassPlayer3 = new PolyClassPlayer(object2);
-                    v3 = ScriptValue.of((boolean)polyClassPlayer3.tm$34_remove_item(string, d));
+                    PolyClassPlayer_v2 polyClassPlayer_v23 = new PolyClassPlayer_v2(object2);
+                    v3 = ScriptValue.of((boolean)polyClassPlayer_v23.tm$34_remove_item(string, d));
                 } else {
                     v3 = PolyDispatch.bootstrapCall("memberCall", "remove_item", (ScriptValue)scriptValue20, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
                 }

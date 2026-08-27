@@ -4,7 +4,7 @@
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassItem
- *  dev.arubik.craftengine.script.PolyClassPlayer
+ *  dev.arubik.craftengine.script.PolyClassPlayer_v2
  *  dev.arubik.craftengine.script.PolyClassServer
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -18,7 +18,7 @@ package dev.arubik.craftengine.script.gen.teleport;
 
 import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassItem;
-import dev.arubik.craftengine.script.PolyClassPlayer;
+import dev.arubik.craftengine.script.PolyClassPlayer_v2;
 import dev.arubik.craftengine.script.PolyClassServer;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -43,11 +43,11 @@ public final class Tpa {
     }
 
     public static ScriptValue onRequest(ScriptContext.Builder builder) {
-        PolyClassPlayer polyClassPlayer;
+        PolyClassPlayer_v2 polyClassPlayer_v2;
         ScriptValue scriptValue;
-        PolyClassPlayer polyClassPlayer2;
+        PolyClassPlayer_v2 polyClassPlayer_v22;
         ScriptValue scriptValue2;
-        PolyClassPlayer polyClassPlayer3;
+        PolyClassPlayer_v2 polyClassPlayer_v23;
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("Cmd");
         ScriptValue scriptValue4 = scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "target")), (ScriptContext)scriptContext) : ScriptValue.NULL;
@@ -61,8 +61,8 @@ public final class Tpa {
                 Object object;
                 String string = "<red>\u2718 <white>Player not found or offline.";
                 if (scriptValue5 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer polyClassPlayer4 = new PolyClassPlayer(object);
-                    v0 = ScriptValue.of((boolean)polyClassPlayer4.tm$42_send_message(string));
+                    PolyClassPlayer_v2 polyClassPlayer_v24 = new PolyClassPlayer_v2(object);
+                    v0 = ScriptValue.of((boolean)polyClassPlayer_v24.tm$42_send_message(string));
                 } else {
                     v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }
@@ -74,7 +74,7 @@ public final class Tpa {
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("target");
         Object object = scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL;
         ScriptValue scriptValue7 = scriptContext.getClassOrVar("Player");
-        Object object2 = scriptValue7 != ScriptValue.NULL ? ((polyClassPlayer3 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue7)) != null ? polyClassPlayer3.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue7, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        Object object2 = scriptValue7 != ScriptValue.NULL ? ((polyClassPlayer_v23 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue7)) != null ? polyClassPlayer_v23.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue7, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         if (ScriptFormula.valuesEqual((ScriptValue)object, (ScriptValue)object2)) {
             ScriptValue scriptValue8 = scriptContext.getClassOrVar("Player");
             if (scriptValue8 != ScriptValue.NULL) {
@@ -82,8 +82,8 @@ public final class Tpa {
                 Object object3;
                 String string = "<red>\u2718 <white>You can't teleport to yourself.";
                 if (scriptValue8 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue8).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer polyClassPlayer5 = new PolyClassPlayer(object3);
-                    v3 = ScriptValue.of((boolean)polyClassPlayer5.tm$42_send_message(string));
+                    PolyClassPlayer_v2 polyClassPlayer_v25 = new PolyClassPlayer_v2(object3);
+                    v3 = ScriptValue.of((boolean)polyClassPlayer_v25.tm$42_send_message(string));
                 } else {
                     v3 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }
@@ -93,7 +93,7 @@ public final class Tpa {
             return ScriptValue.NULL;
         }
         ScriptValue scriptValue9 = scriptContext.getClassOrVar("target");
-        Object object4 = scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue9, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "tpa_from")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "string")), (ScriptValue)((scriptValue2 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassPlayer2.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object4 = scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue9, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "tpa_from")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "string")), (ScriptValue)((scriptValue2 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer_v22 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassPlayer_v22.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptContext)scriptContext) : ScriptValue.NULL;
         ScriptValue scriptValue10 = scriptContext.getClassOrVar("target");
         if (scriptValue10 != ScriptValue.NULL) {
             PolyClassServer polyClassServer;
@@ -107,7 +107,7 @@ public final class Tpa {
             v7 = ScriptValue.NULL;
         }
         ScriptValue scriptValue14 = scriptContext.getClassOrVar("target");
-        Object object5 = scriptValue14 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue14, (ScriptValue)ScriptValue.of((String)("<gold>\u2691 <yellow>" + ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassPlayer.tg$68_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext).asStr()) : ScriptValue.NULL.asStr()) + " <white>wants to teleport to you.")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object5 = scriptValue14 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue14, (ScriptValue)ScriptValue.of((String)("<gold>\u2691 <yellow>" + ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassPlayer_v2.tg$68_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext).asStr()) : ScriptValue.NULL.asStr()) + " <white>wants to teleport to you.")), (ScriptContext)scriptContext) : ScriptValue.NULL;
         ScriptValue scriptValue15 = scriptContext.getClassOrVar("target");
         Object object6 = scriptValue15 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue15, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "<gray> \u00bb <green><click:run_command:'/tpa accept'>[Accept]</click> <gray>or <red><click:run_command:'/tpa deny'>[Deny]</click>")), (ScriptContext)scriptContext) : ScriptValue.NULL;
         ScriptValue scriptValue16 = scriptContext.getClassOrVar("Player");
@@ -117,8 +117,8 @@ public final class Tpa {
             ScriptValue scriptValue17;
             ScriptValue scriptValue18 = ScriptValue.of((String)("<green>\u2714 <white>Teleport request sent to <yellow>" + ((scriptValue17 = scriptContext.getClassOrVar("target")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue17, (ScriptContext)scriptContext) : ScriptValue.NULL).asStr() + "<white>."));
             if (scriptValue16 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue16).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer6 = new PolyClassPlayer(object7);
-                v10 = ScriptValue.of((boolean)polyClassPlayer6.tm$42_send_message(scriptValue18.asStr()));
+                PolyClassPlayer_v2 polyClassPlayer_v26 = new PolyClassPlayer_v2(object7);
+                v10 = ScriptValue.of((boolean)polyClassPlayer_v26.tm$42_send_message(scriptValue18.asStr()));
             } else {
                 v10 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue16, (ScriptValue)scriptValue18, (ScriptContext)scriptContext);
             }
@@ -129,7 +129,7 @@ public final class Tpa {
     }
 
     public static ScriptValue onAccept(ScriptContext.Builder builder) {
-        PolyClassPlayer polyClassPlayer;
+        PolyClassPlayer_v2 polyClassPlayer_v2;
         ScriptValue scriptValue;
         Object object;
         PolyClassServer polyClassServer;
@@ -143,8 +143,8 @@ public final class Tpa {
             String string = "tpa_from";
             String string2 = "string";
             if (scriptValue2 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer2 = new PolyClassPlayer(object4);
-                object3 = polyClassPlayer2.tm$12_get_typed(string, string2);
+                PolyClassPlayer_v2 polyClassPlayer_v22 = new PolyClassPlayer_v2(object4);
+                object3 = polyClassPlayer_v22.tm$12_get_typed(string, string2);
             } else {
                 object3 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
             }
@@ -160,8 +160,8 @@ public final class Tpa {
                 Object object5;
                 String string = "<red>\u2718 <white>No pending teleport request.";
                 if (scriptValue4 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer polyClassPlayer3 = new PolyClassPlayer(object5);
-                    v1 = ScriptValue.of((boolean)polyClassPlayer3.tm$42_send_message(string));
+                    PolyClassPlayer_v2 polyClassPlayer_v23 = new PolyClassPlayer_v2(object5);
+                    v1 = ScriptValue.of((boolean)polyClassPlayer_v23.tm$42_send_message(string));
                 } else {
                     v1 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }
@@ -177,8 +177,8 @@ public final class Tpa {
             String string = "tpa_requested_at";
             String string3 = "int";
             if (scriptValue5 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer4 = new PolyClassPlayer(object6);
-                object2 = polyClassPlayer4.tm$12_get_typed(string, string3);
+                PolyClassPlayer_v2 polyClassPlayer_v24 = new PolyClassPlayer_v2(object6);
+                object2 = polyClassPlayer_v24.tm$12_get_typed(string, string3);
             } else {
                 object2 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptContext)scriptContext);
             }
@@ -195,8 +195,8 @@ public final class Tpa {
             String string4 = "string";
             ScriptValue scriptValue8 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "");
             if (scriptValue7 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer5 = new PolyClassPlayer(object7);
-                v3 = ScriptValue.of((boolean)polyClassPlayer5.tm$30_set_typed(string, string4, scriptValue8));
+                PolyClassPlayer_v2 polyClassPlayer_v25 = new PolyClassPlayer_v2(object7);
+                v3 = ScriptValue.of((boolean)polyClassPlayer_v25.tm$30_set_typed(string, string4, scriptValue8));
             } else {
                 v3 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string4), (ScriptValue)scriptValue8, (ScriptContext)scriptContext);
             }
@@ -213,8 +213,8 @@ public final class Tpa {
                 Object object8;
                 String string = "<red>\u2718 <white>That request expired.";
                 if (scriptValue10 instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer polyClassPlayer6 = new PolyClassPlayer(object8);
-                    v4 = ScriptValue.of((boolean)polyClassPlayer6.tm$42_send_message(string));
+                    PolyClassPlayer_v2 polyClassPlayer_v26 = new PolyClassPlayer_v2(object8);
+                    v4 = ScriptValue.of((boolean)polyClassPlayer_v26.tm$42_send_message(string));
                 } else {
                     v4 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue10, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }
@@ -248,8 +248,8 @@ public final class Tpa {
                 Object object10;
                 ScriptValue scriptValue15 = ScriptValue.of((String)("<red>\u2718 <white>" + scriptValue3.asStr() + " is no longer online."));
                 if (scriptValue14 instanceof ScriptValue.Obj && (object10 = (obj = (ScriptValue.Obj)scriptValue14).instance()) != null && !(object10 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer polyClassPlayer7 = new PolyClassPlayer(object10);
-                    v6 = ScriptValue.of((boolean)polyClassPlayer7.tm$42_send_message(scriptValue15.asStr()));
+                    PolyClassPlayer_v2 polyClassPlayer_v27 = new PolyClassPlayer_v2(object10);
+                    v6 = ScriptValue.of((boolean)polyClassPlayer_v27.tm$42_send_message(scriptValue15.asStr()));
                 } else {
                     v6 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue14, (ScriptValue)scriptValue15, (ScriptContext)scriptContext);
                 }
@@ -259,7 +259,7 @@ public final class Tpa {
             return ScriptValue.NULL;
         }
         ScriptValue scriptValue16 = scriptContext.getClassOrVar("requester");
-        Object object11 = scriptValue16 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue16, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "tpa_target")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "string")), (ScriptValue)((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassPlayer.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object11 = scriptValue16 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue16, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "tpa_target")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "string")), (ScriptValue)((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassPlayer_v2.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptContext)scriptContext) : ScriptValue.NULL;
         ScriptValue scriptValue17 = scriptContext.getClassOrVar("requester");
         Object object12 = scriptValue17 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue17, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "tpa_moved")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "int")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Tpa.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
         ScriptValue scriptValue18 = scriptContext.getClassOrVar("EventManager");
@@ -275,8 +275,8 @@ public final class Tpa {
             Object object15;
             ScriptValue scriptValue23 = ScriptValue.of((String)("<green>\u2714 <white>Teleporting <yellow>" + scriptValue3.asStr() + "<white> to you in 3 seconds."));
             if (scriptValue22 instanceof ScriptValue.Obj && (object15 = (obj = (ScriptValue.Obj)scriptValue22).instance()) != null && !(object15 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer8 = new PolyClassPlayer(object15);
-                v11 = ScriptValue.of((boolean)polyClassPlayer8.tm$42_send_message(scriptValue23.asStr()));
+                PolyClassPlayer_v2 polyClassPlayer_v28 = new PolyClassPlayer_v2(object15);
+                v11 = ScriptValue.of((boolean)polyClassPlayer_v28.tm$42_send_message(scriptValue23.asStr()));
             } else {
                 v11 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue22, (ScriptValue)scriptValue23, (ScriptContext)scriptContext);
             }
@@ -300,8 +300,8 @@ public final class Tpa {
             String string = "tpa_from";
             String string2 = "string";
             if (scriptValue2 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object3);
-                object2 = polyClassPlayer.tm$12_get_typed(string, string2);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object3);
+                object2 = polyClassPlayer_v2.tm$12_get_typed(string, string2);
             } else {
                 object2 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
             }
@@ -317,8 +317,8 @@ public final class Tpa {
                 Object object4;
                 String string = "<red>\u2718 <white>No pending teleport request.";
                 if (scriptValue4 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object4);
-                    v1 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+                    PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object4);
+                    v1 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
                 } else {
                     v1 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }
@@ -335,8 +335,8 @@ public final class Tpa {
             String string3 = "string";
             ScriptValue scriptValue6 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "");
             if (scriptValue5 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object5);
-                v2 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue6));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object5);
+                v2 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue6));
             } else {
                 v2 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue6, (ScriptContext)scriptContext);
             }
@@ -362,18 +362,18 @@ public final class Tpa {
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         arrayList.add(scriptValue9);
         if (ScriptFormula.callBuiltin((String)"is_empty", arrayList, (ScriptContext)scriptContext).asBool() ^ true) {
-            PolyClassPlayer polyClassPlayer;
+            PolyClassPlayer_v2 polyClassPlayer_v2;
             ScriptValue scriptValue10;
             ScriptValue scriptValue11 = scriptContext.getClassOrVar("requester");
-            Object object7 = scriptValue11 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue11, (ScriptValue)ScriptValue.of((String)("<red>\u2718 <white>" + ((scriptValue10 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue10)) != null ? polyClassPlayer.tg$68_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue10, (ScriptContext)scriptContext).asStr()) : ScriptValue.NULL.asStr()) + " denied your teleport request.")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+            Object object7 = scriptValue11 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue11, (ScriptValue)ScriptValue.of((String)("<red>\u2718 <white>" + ((scriptValue10 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue10)) != null ? polyClassPlayer_v2.tg$68_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue10, (ScriptContext)scriptContext).asStr()) : ScriptValue.NULL.asStr()) + " denied your teleport request.")), (ScriptContext)scriptContext) : ScriptValue.NULL;
         }
         if ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL) {
             ScriptValue.Obj obj;
             Object object8;
             String string = "<yellow>Teleport request denied.";
             if (scriptValue instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object8);
-                v5 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object8);
+                v5 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
             } else {
                 v5 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
@@ -395,7 +395,7 @@ public final class Tpa {
                 var3_3 = "tpa_target";
                 var4_4 = "string";
                 if (var2_2 instanceof ScriptValue.Obj && (var6_6 = (var5_5 = (ScriptValue.Obj)var2_2).instance()) != null && !(var6_6 instanceof PolyClass) && var5_5.typeName().equals("Player")) {
-                    var7_7 = new PolyClassPlayer(var6_6);
+                    var7_7 = new PolyClassPlayer_v2(var6_6);
                     v0 /* !! */  = var7_7.tm$12_get_typed(var3_3, var4_4);
                 } else {
                     v0 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)var2_2, (ScriptValue)ScriptValue.of((String)var3_3), (ScriptValue)ScriptValue.of((String)var4_4), (ScriptContext)var1_1);
@@ -409,7 +409,7 @@ public final class Tpa {
                 var9_9 = "tpa_moved";
                 var10_10 = "int";
                 if (var8_8 instanceof ScriptValue.Obj && (var12_12 = (var11_11 = (ScriptValue.Obj)var8_8).instance()) != null && !(var12_12 instanceof PolyClass) && var11_11.typeName().equals("Player")) {
-                    var13_13 = new PolyClassPlayer(var12_12);
+                    var13_13 = new PolyClassPlayer_v2(var12_12);
                     v1 /* !! */  = var13_13.tm$12_get_typed(var9_9, var10_10);
                 } else {
                     v1 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)var8_8, (ScriptValue)ScriptValue.of((String)var9_9), (ScriptValue)ScriptValue.of((String)var10_10), (ScriptContext)var1_1);
@@ -432,7 +432,7 @@ public final class Tpa {
                 var16_16 = "int";
                 var17_17 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Tpa.class, 1.0);
                 if (var14_14 instanceof ScriptValue.Obj && (var19_19 = (var18_18 = (ScriptValue.Obj)var14_14).instance()) != null && !(var19_19 instanceof PolyClass) && var18_18.typeName().equals("Player")) {
-                    var20_20 = new PolyClassPlayer(var19_19);
+                    var20_20 = new PolyClassPlayer_v2(var19_19);
                     v3 /* !! */  = ScriptValue.of((boolean)var20_20.tm$30_set_typed(var15_15, var16_16, var17_17));
                 } else {
                     v3 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)var14_14, (ScriptValue)ScriptValue.of((String)var15_15), (ScriptValue)ScriptValue.of((String)var16_16), (ScriptValue)var17_17, (ScriptContext)var1_1);
@@ -446,7 +446,7 @@ public final class Tpa {
                 var23_23 = "string";
                 var24_24 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "");
                 if (var21_21 instanceof ScriptValue.Obj && (var26_26 = (var25_25 = (ScriptValue.Obj)var21_21).instance()) != null && !(var26_26 instanceof PolyClass) && var25_25.typeName().equals("Player")) {
-                    var27_27 = new PolyClassPlayer(var26_26);
+                    var27_27 = new PolyClassPlayer_v2(var26_26);
                     v4 /* !! */  = ScriptValue.of((boolean)var27_27.tm$30_set_typed(var22_22, var23_23, var24_24));
                 } else {
                     v4 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)var21_21, (ScriptValue)ScriptValue.of((String)var22_22), (ScriptValue)ScriptValue.of((String)var23_23), (ScriptValue)var24_24, (ScriptContext)var1_1);
@@ -458,7 +458,7 @@ public final class Tpa {
             if (var28_28 != ScriptValue.NULL) {
                 var29_29 = "<red>\u2718 <white>Teleport cancelled - you moved.";
                 if (var28_28 instanceof ScriptValue.Obj && (var31_31 = (var30_30 = (ScriptValue.Obj)var28_28).instance()) != null && !(var31_31 instanceof PolyClass) && var30_30.typeName().equals("Player")) {
-                    var32_32 = new PolyClassPlayer(var31_31);
+                    var32_32 = new PolyClassPlayer_v2(var31_31);
                     v5 /* !! */  = ScriptValue.of((boolean)var32_32.tm$42_send_message(var29_29));
                 } else {
                     v5 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)var28_28, (ScriptValue)ScriptValue.of((String)var29_29), (ScriptContext)var1_1);
@@ -563,8 +563,8 @@ public final class Tpa {
             String string = "tpa_from";
             String string2 = "string";
             if (scriptValue4 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object2);
-                object = polyClassPlayer.tm$12_get_typed(string, string2);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object2);
+                object = polyClassPlayer_v2.tm$12_get_typed(string, string2);
             } else {
                 object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
             }

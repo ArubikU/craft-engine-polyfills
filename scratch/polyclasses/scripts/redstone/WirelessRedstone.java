@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v3
+ *  dev.arubik.craftengine.script.PolyClassMachine_v2
  *  dev.arubik.craftengine.script.PolyClassNetwork
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script.gen.redstone;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v3;
+import dev.arubik.craftengine.script.PolyClassMachine_v2;
 import dev.arubik.craftengine.script.PolyClassNetwork;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -49,8 +49,8 @@ public final class WirelessRedstone {
             String string = "_wr_mode";
             String string2 = "int";
             if (scriptValue instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object3);
-                object2 = polyClassMachine_v3.tm$34_get_typed(string, string2);
+                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object3);
+                object2 = polyClassMachine_v2.tm$34_get_typed(string, string2);
             } else {
                 object2 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
             }
@@ -66,8 +66,8 @@ public final class WirelessRedstone {
             String string = "_wr_ch";
             String string3 = "int";
             if (scriptValue3 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object4);
-                object = polyClassMachine_v3.tm$34_get_typed(string, string3);
+                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object4);
+                object = polyClassMachine_v2.tm$34_get_typed(string, string3);
             } else {
                 object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptContext)scriptContext);
             }
@@ -77,7 +77,7 @@ public final class WirelessRedstone {
         ScriptValue scriptValue4 = object;
         builder.val("ch", scriptValue4);
         if (ScriptFormula.valuesEqual((ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", WirelessRedstone.class, 0.0)))) {
-            PolyClassMachine_v3 polyClassMachine_v3;
+            PolyClassMachine_v2 polyClassMachine_v2;
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("Network");
             if (scriptValue5 != ScriptValue.NULL) {
                 ScriptValue.Obj obj;
@@ -89,7 +89,7 @@ public final class WirelessRedstone {
                 v2 = ScriptValue.NULL;
             }
             ScriptValue scriptValue6 = scriptContext.getClassOrVar("Machine");
-            ScriptValue scriptValue7 = scriptValue6 != ScriptValue.NULL ? ((polyClassMachine_v3 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue6)) != null ? polyClassMachine_v3.pg$170_redstone() : PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue6, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+            ScriptValue scriptValue7 = scriptValue6 != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue6)) != null ? polyClassMachine_v2.pg$171_redstone() : PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue6, (ScriptContext)scriptContext)) : ScriptValue.NULL;
             builder.val("power", scriptValue7);
             ScriptValue scriptValue8 = scriptContext.getClassOrVar("Network");
             if (scriptValue8 != ScriptValue.NULL) {
@@ -108,8 +108,8 @@ public final class WirelessRedstone {
                 Object object7;
                 double d = 0.0;
                 if (scriptValue9 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v32 = new PolyClassMachine_v3(object7);
-                    v4 = ScriptValue.of((boolean)polyClassMachine_v32.tm$108_emit_redstone(d));
+                    PolyClassMachine_v2 polyClassMachine_v22 = new PolyClassMachine_v2(object7);
+                    v4 = ScriptValue.of((boolean)polyClassMachine_v22.tm$108_emit_redstone(d));
                 } else {
                     v4 = PolyDispatch.bootstrapCall("memberCall", "emit_redstone", (ScriptValue)scriptValue9, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
                 }
@@ -140,8 +140,8 @@ public final class WirelessRedstone {
                 arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", WirelessRedstone.class, 15.0));
                 double d = Math.floor(ScriptFormula.callBuiltin((String)"clamp", arrayList, (ScriptContext)scriptContext).asNum());
                 if (scriptValue12 instanceof ScriptValue.Obj && (object10 = (obj = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object10 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object10);
-                    v6 = ScriptValue.of((boolean)polyClassMachine_v3.tm$108_emit_redstone(d));
+                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object10);
+                    v6 = ScriptValue.of((boolean)polyClassMachine_v2.tm$108_emit_redstone(d));
                 } else {
                     v6 = PolyDispatch.bootstrapCall("memberCall", "emit_redstone", (ScriptValue)scriptValue12, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
                 }

@@ -6,6 +6,7 @@
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.PolyType$TypeCodec
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler0
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler2
@@ -40,8 +41,10 @@ public class PolyClassContraptionManager {
     private static volatile PolyType.TypedMethodHandler1 h$12;
     private static volatile PolyType.MethodHandler m$13;
     private static volatile PolyType.PropertyHandler p$14;
-    private static volatile PolyType.PropertyHandler p$15;
-    private static volatile PolyType.TypedPropertyHandler tp$16;
+    private static volatile PolyType.TypedPropertyHandler tp$15;
+    private static volatile PolyType.TypeCodec tc$15;
+    private static volatile PolyType.PropertyHandler p$16;
+    private static volatile PolyType.TypedPropertyHandler tp$17;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler3)PolyClassRuntime.resolveTypedHandler((String)"ContraptionManager", (String)"create_bearing", (String)"RRS:R");
@@ -59,8 +62,10 @@ public class PolyClassContraptionManager {
         h$12 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"ContraptionManager", (String)"kill", (String)"R:Z");
         m$13 = PolyClassRuntime.resolveMethodHandler((String)"ContraptionManager", (String)"kill");
         p$14 = PolyClassRuntime.resolvePropertyHandler((String)"ContraptionManager", (String)"all_contraptions");
-        p$15 = PolyClassRuntime.resolvePropertyHandler((String)"ContraptionManager", (String)"count");
-        tp$16 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"ContraptionManager", (String)"count", (String)"D");
+        tp$15 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"ContraptionManager", (String)"all_contraptions", (String)"L");
+        tc$15 = PolyClassRuntime.resolveTypedPropertyCodec((String)"ContraptionManager", (String)"all_contraptions");
+        p$16 = PolyClassRuntime.resolvePropertyHandler((String)"ContraptionManager", (String)"count");
+        tp$17 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"ContraptionManager", (String)"count", (String)"D");
     }
 
     public ScriptValue tm$0_create_bearing(ScriptValue scriptValue, ScriptValue scriptValue2, String string) {
@@ -168,16 +173,23 @@ public class PolyClassContraptionManager {
         return PolyClassRuntime.genericProperty((String)"ContraptionManager", (String)"all_contraptions", (Object)this.instance);
     }
 
-    public ScriptValue pg$15_count() {
-        if (p$15 != null) {
-            return p$15.get(this.instance);
+    public List tl$15_all_contraptions() {
+        if (tp$15 != null && tc$15 != null) {
+            return PolyClassRuntime.encodeElements((PolyType.TypeCodec)tc$15, (Object)tp$15.get(this.instance));
+        }
+        return PolyClassRuntime.elementsOfValue((ScriptValue)PolyClassRuntime.genericProperty((String)"ContraptionManager", (String)"all_contraptions", (Object)this.instance));
+    }
+
+    public ScriptValue pg$16_count() {
+        if (p$16 != null) {
+            return p$16.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"ContraptionManager", (String)"count", (Object)this.instance);
     }
 
-    public double tg$16_count() {
-        if (tp$16 != null) {
-            return (Double)tp$16.get(this.instance);
+    public double tg$17_count() {
+        if (tp$17 != null) {
+            return (Double)tp$17.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"ContraptionManager", (String)"count", (Object)this.instance).asNum();
     }

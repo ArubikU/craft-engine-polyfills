@@ -237,6 +237,7 @@ final class PolyClassGenerator {
     record GeneratedPolyClass(String internalName, Map<String, TypedMemberRef> typedMethods,
                                Map<String, String> untypedMethods, Map<String, String> properties,
                                Map<String, TypedMemberRef> typedProperties,
+                               Map<String, String> listProperties,
                                java.util.Set<String> memberSet, String instanceOwner) {}
 
     /**
@@ -324,11 +325,13 @@ final class PolyClassGenerator {
             Map<String, String> untypedRefs = new LinkedHashMap<>();
             Map<String, String> propRefs = new LinkedHashMap<>();
             Map<String, TypedMemberRef> typedPropRefs = new LinkedHashMap<>();
+            Map<String, String> listPropRefs = new LinkedHashMap<>();
             if (parent != null) {
                 typedRefs.putAll(parent.typedMethods());
                 untypedRefs.putAll(parent.untypedMethods());
                 propRefs.putAll(parent.properties());
                 typedPropRefs.putAll(parent.typedProperties());
+                listPropRefs.putAll(parent.listProperties());
             }
             int[] counter = {0};
 
@@ -446,10 +449,44 @@ final class PolyClassGenerator {
                     String tdesc = emitTypedPropertyMethod(cw, className, instanceOwner, tjavaName,
                             typeName, propName, tfield, pKind);
                     typedPropRefs.put(propName, new TypedMemberRef(tjavaName, tdesc, NO_ARGS, pKind));
+                } else if (pKind == Kind.LIST && tpd.returnType() instanceof TypeCodecs.ListCodec<?>) {
+                    // A LIST property gets a List-returning accessor instead of a scalar one: what
+                    // reads a list is a `for` loop, and a loop wants the elements. Going through the
+                    // erased accessor would build a ScriptValue.Array only for
+                    // ScriptProgram.elementsOf to take it apart again, on every execution.
+                    int tidx = counter[0]++;
+                    String tfield = "tp$" + tidx;
+                    String cfield = "tc$" + tidx;
+                    cw.visitField(ACC_PRIVATE | ACC_STATIC | ACC_VOLATILE, tfield,
+                            "L" + TYPED_PROPERTY_HANDLER + ";", null, null).visitEnd();
+                    refresh.visitLdcInsn(typeName);
+                    refresh.visitLdcInsn(propName);
+                    refresh.visitLdcInsn(String.valueOf(PolyClassRuntime.kindChar(pKind)));
+                    refresh.visitMethodInsn(INVOKESTATIC, RUNTIME, "resolveTypedPropertyHandler",
+                            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;", false);
+                    refresh.visitTypeInsn(CHECKCAST, TYPED_PROPERTY_HANDLER);
+                    refresh.visitFieldInsn(PUTSTATIC, className, tfield, "L" + TYPED_PROPERTY_HANDLER + ";");
+
+                    // The codec is re-resolved by name on every refresh for the same reason a
+                    // method's LIST codec is: 'L' does not distinguish List<Recipe> from
+                    // List<Player>, so a re-registration must not leave the old element type behind.
+                    cw.visitField(ACC_PRIVATE | ACC_STATIC | ACC_VOLATILE, cfield,
+                            "L" + TYPE_CODEC + ";", null, null).visitEnd();
+                    refresh.visitLdcInsn(typeName);
+                    refresh.visitLdcInsn(propName);
+                    refresh.visitMethodInsn(INVOKESTATIC, RUNTIME, "resolveTypedPropertyCodec",
+                            "(Ljava/lang/String;Ljava/lang/String;)L" + TYPE_CODEC + ";", false);
+                    refresh.visitFieldInsn(PUTSTATIC, className, cfield, "L" + TYPE_CODEC + ";");
+
+                    String tjavaName = "tl$" + tidx + "_" + sanitize(propName);
+                    emitListPropertyMethod(cw, className, instanceOwner, tjavaName, typeName, propName,
+                            tfield, cfield);
+                    listPropRefs.put(propName, tjavaName);
                 } else {
                     // An override that dropped the typed form must not leave the parent's native
                     // accessor visible for this type — same shape-override rule the methods follow.
                     typedPropRefs.remove(propName);
+                    listPropRefs.remove(propName);
                 }
             }
 
@@ -546,7 +583,8 @@ final class PolyClassGenerator {
                     + " (" + typedRefs.size() + " typed, " + untypedRefs.size() + " untyped, "
                     + propRefs.size() + " properties)");
             return new GeneratedPolyClass(className, Map.copyOf(typedRefs), Map.copyOf(untypedRefs),
-                    Map.copyOf(propRefs), Map.copyOf(typedPropRefs), memberSetOf(type), instanceOwner);
+                    Map.copyOf(propRefs), Map.copyOf(typedPropRefs), Map.copyOf(listPropRefs),
+                    memberSetOf(type), instanceOwner);
         } catch (Throwable t) {
             LOG.log(Level.WARNING, t, () -> "[CEPolyfills] [JIT] failed to generate PolyClass for " + typeName
                     + " — falling back to generic dispatch");
@@ -825,6 +863,50 @@ final class PolyClassGenerator {
         mv.visitMaxs(0, 0);
         mv.visitEnd();
         return desc;
+    }
+
+    /**
+     * {@code java.util.List name()} — a list-valued property read that hands back the encoded
+     * ELEMENTS, skipping the {@link ScriptValue.Array} the erased accessor would build and the
+     * {@code ScriptProgram.elementsOf} the caller would then use to take it apart again.
+     *
+     * <p>Guards both the handler and the codec, and falls back to the generic read plus
+     * {@link PolyClassRuntime#elementsOfValue} — which yields null for a non-Array exactly as
+     * {@code elementsOf} did, so a loop over it still skips rather than failing.
+     */
+    private static void emitListPropertyMethod(ClassWriter cw, String className, String instanceOwner,
+                                                String javaName, String typeName, String scriptName,
+                                                String field, String codecField) {
+        MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, javaName, "()Ljava/util/List;", null, null);
+        mv.visitCode();
+        Label slow = new Label();
+        mv.visitFieldInsn(GETSTATIC, className, field, "L" + TYPED_PROPERTY_HANDLER + ";");
+        mv.visitJumpInsn(IFNULL, slow);
+        mv.visitFieldInsn(GETSTATIC, className, codecField, "L" + TYPE_CODEC + ";");
+        mv.visitJumpInsn(IFNULL, slow);
+
+        mv.visitFieldInsn(GETSTATIC, className, codecField, "L" + TYPE_CODEC + ";");
+        mv.visitFieldInsn(GETSTATIC, className, field, "L" + TYPED_PROPERTY_HANDLER + ";");
+        mv.visitVarInsn(ALOAD, 0);
+        mv.visitFieldInsn(GETFIELD, instanceOwner, "instance", "Ljava/lang/Object;");
+        mv.visitMethodInsn(INVOKEINTERFACE, TYPED_PROPERTY_HANDLER, "get",
+                "(Ljava/lang/Object;)Ljava/lang/Object;", true);
+        mv.visitMethodInsn(INVOKESTATIC, RUNTIME, "encodeElements",
+                "(L" + TYPE_CODEC + ";Ljava/lang/Object;)Ljava/util/List;", false);
+        mv.visitInsn(ARETURN);
+
+        mv.visitLabel(slow);
+        mv.visitLdcInsn(typeName);
+        mv.visitLdcInsn(scriptName);
+        mv.visitVarInsn(ALOAD, 0);
+        mv.visitFieldInsn(GETFIELD, instanceOwner, "instance", "Ljava/lang/Object;");
+        mv.visitMethodInsn(INVOKESTATIC, RUNTIME, "genericProperty",
+                "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)L" + VALUE + ";", false);
+        mv.visitMethodInsn(INVOKESTATIC, RUNTIME, "elementsOfValue",
+                "(L" + VALUE + ";)Ljava/util/List;", false);
+        mv.visitInsn(ARETURN);
+        mv.visitMaxs(0, 0);
+        mv.visitEnd();
     }
 
     /** Debug aid: with {@code -Dcraftengine.polyclass.dump=<dir>}, writes every generated class to

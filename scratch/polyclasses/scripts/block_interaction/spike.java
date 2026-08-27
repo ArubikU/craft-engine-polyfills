@@ -4,7 +4,7 @@
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassContainer
- *  dev.arubik.craftengine.script.PolyClassMachine_v3
+ *  dev.arubik.craftengine.script.PolyClassMachine_v2
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -17,7 +17,7 @@ package dev.arubik.craftengine.script.gen.block_interaction;
 
 import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassContainer;
-import dev.arubik.craftengine.script.PolyClassMachine_v3;
+import dev.arubik.craftengine.script.PolyClassMachine_v2;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -55,7 +55,7 @@ public final class Spike {
                         var3_3 = "atk_cd";
                         var4_4 = "int";
                         if (var2_2 instanceof ScriptValue.Obj && (var6_6 = (var5_5 = (ScriptValue.Obj)var2_2).instance()) != null && !(var6_6 instanceof PolyClass) && var5_5.typeName().equals("Machine")) {
-                            var7_7 = new PolyClassMachine_v3(var6_6);
+                            var7_7 = new PolyClassMachine_v2(var6_6);
                             v0 /* !! */  = var7_7.tm$34_get_typed(var3_3, var4_4);
                         } else {
                             v0 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)var2_2, (ScriptValue)ScriptValue.of((String)var3_3), (ScriptValue)ScriptValue.of((String)var4_4), (ScriptContext)var1_1);
@@ -72,7 +72,7 @@ public final class Spike {
                         var11_11 = "int";
                         var12_12 = ScriptValue.of((double)(var8_8.asNum() - 1.0));
                         if (var9_9 instanceof ScriptValue.Obj && (var14_14 = (var13_13 = (ScriptValue.Obj)var9_9).instance()) != null && !(var14_14 instanceof PolyClass) && var13_13.typeName().equals("Machine")) {
-                            var15_15 = new PolyClassMachine_v3(var14_14);
+                            var15_15 = new PolyClassMachine_v2(var14_14);
                             v1 /* !! */  = ScriptValue.of((boolean)var15_15.tm$82_set_typed(var10_10, var11_11, var12_12));
                         } else {
                             v1 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)var9_9, (ScriptValue)ScriptValue.of((String)var10_10), (ScriptValue)ScriptValue.of((String)var11_11), (ScriptValue)var12_12, (ScriptContext)var1_1);
@@ -83,7 +83,7 @@ public final class Spike {
                     break block23;
                 }
                 var17_16 = var1_1.getClassOrVar("Machine");
-                var16_18 = var17_16 != ScriptValue.NULL ? ((var18_17 = PolyClassMachine_v3.ofGuarded((ScriptValue)var17_16)) != null ? var18_17.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var17_16, (ScriptContext)var1_1)) : ScriptValue.NULL;
+                var16_18 = var17_16 != ScriptValue.NULL ? ((var18_17 = PolyClassMachine_v2.ofGuarded((ScriptValue)var17_16)) != null ? var18_17.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var17_16, (ScriptContext)var1_1)) : ScriptValue.NULL;
                 var19_19 = 0.0;
                 if (var16_18 instanceof ScriptValue.Obj && (var22_21 = (var21_20 = (ScriptValue.Obj)var16_18).instance()) != null && !(var22_21 instanceof PolyClass) && var21_20.typeName().equals("Container")) {
                     var23_22 = new PolyClassContainer(var22_21);
@@ -98,13 +98,13 @@ public final class Spike {
                 var27_26 = ScriptFormula.callBuiltin((String)"is_empty", var25_24, (ScriptContext)var1_1).asBool() != false ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Spike.class, 2.0)) : ((var26_25 = var1_1.getClassOrVar("weapon")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "attack_damage", (ScriptValue)var26_25, (ScriptContext)var1_1) : ScriptValue.NULL);
                 var0.val("base_dmg", var27_26);
                 var28_27 = var1_1.getClassOrVar("Machine");
-                var30_29 = var28_27 != ScriptValue.NULL ? ((var29_28 = PolyClassMachine_v3.ofGuarded((ScriptValue)var28_27)) != null ? var29_28.pg$209_owner_uuid() : PolyDispatch.bootstrapGet("memberGet", "owner_uuid", (ScriptValue)var28_27, (ScriptContext)var1_1)) : ScriptValue.NULL;
+                var30_29 = var28_27 != ScriptValue.NULL ? ((var29_28 = PolyClassMachine_v2.ofGuarded((ScriptValue)var28_27)) != null ? var29_28.pg$210_owner_uuid() : PolyDispatch.bootstrapGet("memberGet", "owner_uuid", (ScriptValue)var28_27, (ScriptContext)var1_1)) : ScriptValue.NULL;
                 var0.val("owner_id", var30_29);
                 var31_30 = var1_1.getClassOrVar("Machine");
                 if (var31_30 != ScriptValue.NULL) {
                     var32_31 = 0.8;
                     if (var31_30 instanceof ScriptValue.Obj && (var35_33 = (var34_32 = (ScriptValue.Obj)var31_30).instance()) != null && !(var35_33 instanceof PolyClass) && var34_32.typeName().equals("Machine")) {
-                        var36_34 = new PolyClassMachine_v3(var35_33);
+                        var36_34 = new PolyClassMachine_v2(var35_33);
                         v3 /* !! */  = var36_34.tm$94_nearby_entities(var32_31);
                     } else {
                         v3 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "nearby_entities", (ScriptValue)var31_30, (ScriptValue)ScriptValue.of((double)var32_31), (ScriptContext)var1_1);
@@ -152,7 +152,7 @@ public final class Spike {
                     var53_50 = "int";
                     var54_51 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Spike.class, 10.0);
                     if (var51_48 instanceof ScriptValue.Obj && (var56_53 = (var55_52 = (ScriptValue.Obj)var51_48).instance()) != null && !(var56_53 instanceof PolyClass) && var55_52.typeName().equals("Machine")) {
-                        var57_54 = new PolyClassMachine_v3(var56_53);
+                        var57_54 = new PolyClassMachine_v2(var56_53);
                         v6 /* !! */  = ScriptValue.of((boolean)var57_54.tm$82_set_typed(var52_49, var53_50, var54_51));
                     } else {
                         v6 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)var51_48, (ScriptValue)ScriptValue.of((String)var52_49), (ScriptValue)ScriptValue.of((String)var53_50), (ScriptValue)var54_51, (ScriptContext)var1_1);

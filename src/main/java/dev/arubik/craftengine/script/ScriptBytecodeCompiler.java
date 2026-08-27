@@ -498,6 +498,9 @@ final class ScriptBytecodeCompiler {
         final String resultPolyType;
         /** Non-null for a CHAINED hop, whose receiver is this expression rather than a name. */
         private final Expr base;
+        /** The List-returning accessor for a list-typed property, or null. Only a `for` loop uses
+         *  it — see {@link #emitAsList}. */
+        final String listJavaName;
 
         /**
          * A chained hop {@code base.prop} whose receiver PolyType is known at compile time — because
@@ -511,18 +514,21 @@ final class ScriptBytecodeCompiler {
             return new PropRead(base, receiverType, prop,
                     propJavaName != null ? g.internalName() : null, propJavaName,
                     g != null ? g.typedProperties().get(prop) : null,
-                    propertyResultPolyType(receiverType, prop));
+                    propertyResultPolyType(receiverType, prop),
+                    g != null ? g.listProperties().get(prop) : null);
         }
 
         PropRead(String name, String prop, String wrapperName, String propJavaName,
-                 PolyClassGenerator.TypedMemberRef nativeRef, String resultPolyType) {
-            this(null, name, prop, wrapperName, propJavaName, nativeRef, resultPolyType);
+                 PolyClassGenerator.TypedMemberRef nativeRef, String resultPolyType, String listJavaName) {
+            this(null, name, prop, wrapperName, propJavaName, nativeRef, resultPolyType, listJavaName);
         }
 
         private PropRead(Expr base, String name, String prop, String wrapperName, String propJavaName,
-                         PolyClassGenerator.TypedMemberRef nativeRef, String resultPolyType) {
+                         PolyClassGenerator.TypedMemberRef nativeRef, String resultPolyType,
+                         String listJavaName) {
             super(Type.ANY);
             this.base = base;
+            this.listJavaName = listJavaName;
             this.name = name;
             this.prop = prop;
             this.wrapperName = wrapperName;
@@ -537,6 +543,18 @@ final class ScriptBytecodeCompiler {
          *  arms with {@code accessor} (one of {@code asNum}/{@code asBool}/{@code asStr}). */
         void emitFused(MethodVisitor mv, Ctx c, String accessor, String returnDesc) {
             emitAs(mv, c, nativeRef.javaName(), accessor, returnDesc);
+        }
+
+        /**
+         * Leaves a {@code java.util.List} of the property's elements on the stack — the shape a
+         * {@code for} loop actually consumes.
+         *
+         * <p>The slow arms use {@code ScriptProgram.elementsOf}, which is precisely what the loop
+         * used to apply to this read's boxed result, so the three arms agree. The fast arm never
+         * builds the {@link ScriptValue.Array} at all.
+         */
+        void emitAsList(MethodVisitor mv, Ctx c) {
+            emitAs(mv, c, listJavaName, "elementsOf", "Ljava/util/List;");
         }
 
         private void emitAs(MethodVisitor mv, Ctx c, String javaName, String accessor, String returnDesc) {
@@ -577,22 +595,35 @@ final class ScriptBytecodeCompiler {
                 mv.visitVarInsn(ALOAD, svSlot);
                 mv.visitVarInsn(ALOAD, c.ctxSlot);
                 P.emitDynamicGet(mv, prop);
-                if (accessor != null) mv.visitMethodInsn(INVOKEINTERFACE, VALUE, accessor, "()" + desc, true);
+                emitCoerce(mv, accessor, desc);
                 mv.visitLabel(fastL);
             } else {
                 mv.visitVarInsn(ALOAD, svSlot);
                 mv.visitVarInsn(ALOAD, c.ctxSlot);
                 P.emitDynamicGet(mv, prop);
-                if (accessor != null) mv.visitMethodInsn(INVOKEINTERFACE, VALUE, accessor, "()" + desc, true);
+                emitCoerce(mv, accessor, desc);
             }
 
             if (base == null) {
                 mv.visitJumpInsn(GOTO, endL);
                 mv.visitLabel(isNullL);
                 P.emitGetNull(mv);
-                if (accessor != null) mv.visitMethodInsn(INVOKEINTERFACE, VALUE, accessor, "()" + desc, true);
+                emitCoerce(mv, accessor, desc);
                 mv.visitLabel(endL);
             }
+        }
+
+        /** Converts a boxed slow-arm result to whatever the fast arm returns. "elementsOf" is the
+         *  one that is not a ScriptValue method — a list read converges on ScriptProgram.elementsOf,
+         *  exactly the call the `for` loop used to make on this read's result. */
+        private static void emitCoerce(MethodVisitor mv, String accessor, String desc) {
+            if (accessor == null) return;
+            if ("elementsOf".equals(accessor)) {
+                mv.visitMethodInsn(INVOKESTATIC, "dev/arubik/craftengine/script/ScriptProgram",
+                        "elementsOf", "(L" + VALUE + ";)Ljava/util/List;", false);
+                return;
+            }
+            mv.visitMethodInsn(INVOKEINTERFACE, VALUE, accessor, "()" + desc, true);
         }
     }
 
@@ -1949,7 +1980,8 @@ final class ScriptBytecodeCompiler {
             PolyClassGenerator.TypedMemberRef nativeRef =
                     generated != null ? generated.typedProperties().get(prop) : null;
             return new PropRead(name, prop, wrapperName, propJavaName, nativeRef,
-                    propertyResultPolyType(name, prop));
+                    propertyResultPolyType(name, prop),
+                    generated != null ? generated.listProperties().get(prop) : null);
         }
 
         /** {@code Name.method(args)} — same resolve-then-null-guard shape as {@link

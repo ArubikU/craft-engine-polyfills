@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v3
+ *  dev.arubik.craftengine.script.PolyClassMachine_v2
  *  dev.arubik.craftengine.script.PolyClassWorld
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -17,7 +17,7 @@
 package dev.arubik.craftengine.script.gen.kinetics;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v3;
+import dev.arubik.craftengine.script.PolyClassMachine_v2;
 import dev.arubik.craftengine.script.PolyClassWorld;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -416,8 +416,8 @@ public final class TreeUtils {
                     ScriptValue scriptValue11 = scriptValue9;
                     ScriptValue scriptValue12 = scriptContext.getClassOrVar("speed");
                     if (scriptValue10 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                        PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object2);
-                        object = polyClassMachine_v3.tm$2_tick_break(scriptValue11, scriptValue12.asNum());
+                        PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object2);
+                        object = polyClassMachine_v2.tm$2_tick_break(scriptValue11, scriptValue12.asNum());
                     } else {
                         object = PolyDispatch.bootstrapCall("memberCall", "tick_break", (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptValue)scriptValue12, (ScriptContext)scriptContext);
                     }

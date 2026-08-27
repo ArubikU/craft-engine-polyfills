@@ -732,17 +732,28 @@ final class ScriptClassCompiler {
         boolean elementsDirect = singleVar && iter != null;
         if (iter != null) {
             ScriptBytecodeCompiler.Ctx ic = new ScriptBytecodeCompiler.Ctx(mc.sharedCtxSlot, mc.nextSlot);
-            ScriptBytecodeCompiler.toAny(iter).emit(mv, ic);
-            mc.nextSlot = ic.next;
-            if (singleVar) {
-                // One loop variable: iterate the elements directly. rowsOf would wrap each one in
-                // a throwaway ScriptValue[] — an array allocation per element per tick.
-                mv.visitMethodInsn(INVOKESTATIC, PROGRAM, "elementsOf",
-                        "(L" + VALUE + ";)L" + LIST + ";", false);
+            // A property registered with a listOf(...) codec has a List-returning accessor on its
+            // PolyClass. Reading through it makes the whole iterable ONE typed call — the elements
+            // come out directly, instead of the handler's real List<T> being wrapped in a
+            // ScriptValue.Array that elementsOf immediately takes apart again on every execution.
+            boolean listDirect = singleVar
+                    && iter instanceof ScriptBytecodeCompiler.PropRead pr && pr.listJavaName != null;
+            if (listDirect) {
+                ((ScriptBytecodeCompiler.PropRead) iter).emitAsList(mv, ic);
+                mc.nextSlot = ic.next;
             } else {
-                emitIntConst(mv, vars.size());
-                mv.visitMethodInsn(INVOKESTATIC, PROGRAM, "rowsOf",
-                        "(L" + VALUE + ";I)L" + LIST + ";", false);
+                ScriptBytecodeCompiler.toAny(iter).emit(mv, ic);
+                mc.nextSlot = ic.next;
+                if (singleVar) {
+                    // One loop variable: iterate the elements directly. rowsOf would wrap each one
+                    // in a throwaway ScriptValue[] — an array allocation per element per tick.
+                    mv.visitMethodInsn(INVOKESTATIC, PROGRAM, "elementsOf",
+                            "(L" + VALUE + ";)L" + LIST + ";", false);
+                } else {
+                    emitIntConst(mv, vars.size());
+                    mv.visitMethodInsn(INVOKESTATIC, PROGRAM, "rowsOf",
+                            "(L" + VALUE + ";I)L" + LIST + ";", false);
+                }
             }
         } else {
             // The compiler can't represent this iterable expression — hand the source text to the

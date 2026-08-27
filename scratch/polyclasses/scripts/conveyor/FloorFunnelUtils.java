@@ -5,8 +5,8 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassContainer
  *  dev.arubik.craftengine.script.PolyClassItem
- *  dev.arubik.craftengine.script.PolyClassMachine_v3
- *  dev.arubik.craftengine.script.PolyClassPlayer
+ *  dev.arubik.craftengine.script.PolyClassMachine_v2
+ *  dev.arubik.craftengine.script.PolyClassPlayer_v2
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -20,8 +20,8 @@ package dev.arubik.craftengine.script.gen.conveyor;
 import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassContainer;
 import dev.arubik.craftengine.script.PolyClassItem;
-import dev.arubik.craftengine.script.PolyClassMachine_v3;
-import dev.arubik.craftengine.script.PolyClassPlayer;
+import dev.arubik.craftengine.script.PolyClassMachine_v2;
+import dev.arubik.craftengine.script.PolyClassPlayer_v2;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -57,7 +57,7 @@ public final class FloorFunnelUtils {
             if (var5_2 != ScriptValue.NULL) {
                 var6_3 = 0.7;
                 if (var5_2 instanceof ScriptValue.Obj && (var9_5 = (var8_4 = (ScriptValue.Obj)var5_2).instance()) != null && !(var9_5 instanceof PolyClass) && var8_4.typeName().equals("Machine")) {
-                    var10_6 = new PolyClassMachine_v3(var9_5);
+                    var10_6 = new PolyClassMachine_v2(var9_5);
                     v0 /* !! */  = var10_6.tm$94_nearby_entities(var6_3);
                 } else {
                     v0 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "nearby_entities", (ScriptValue)var5_2, (ScriptValue)ScriptValue.of((double)var6_3), (ScriptContext)var1_1);
@@ -75,7 +75,7 @@ public final class FloorFunnelUtils {
                 var12_11 = var1_1.getClassOrVar("entity");
                 v1 = PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)(var12_11 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)var12_11, (ScriptContext)var1_1) : ScriptValue.NULL), (ScriptContext)var1_1).asNum();
                 var13_12 = var1_1.getClassOrVar("Machine");
-                v2 = var13_12 != ScriptValue.NULL ? ((var14_13 = PolyClassMachine_v3.ofGuarded((ScriptValue)var13_12)) != null ? var14_13.tg$202_y() : PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)var13_12, (ScriptContext)var1_1).asNum()) : ScriptValue.NULL.asNum();
+                v2 = var13_12 != ScriptValue.NULL ? ((var14_13 = PolyClassMachine_v2.ofGuarded((ScriptValue)var13_12)) != null ? var14_13.tg$203_y() : PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)var13_12, (ScriptContext)var1_1).asNum()) : ScriptValue.NULL.asNum();
                 if (v1 >= v2) {
                     v3 = true;
                 } else lbl-1000:
@@ -106,20 +106,20 @@ public final class FloorFunnelUtils {
     public static ScriptValue _floorFunnelTick(ScriptContext.Builder builder) {
         ScriptValue.Obj obj;
         Object object;
-        PolyClassMachine_v3 polyClassMachine_v3;
+        PolyClassMachine_v2 polyClassMachine_v2;
         Object object2;
         CallSite callSite;
         ScriptValue.Obj obj2;
         Object object3;
-        PolyClassMachine_v3 polyClassMachine_v32;
+        PolyClassMachine_v2 polyClassMachine_v22;
         ScriptValue scriptValue;
         CallSite callSite2;
         ScriptValue.Obj obj3;
         Object object4;
-        PolyClassMachine_v3 polyClassMachine_v33;
+        PolyClassMachine_v2 polyClassMachine_v23;
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue3 = scriptValue2 != ScriptValue.NULL ? ((polyClassMachine_v33 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassMachine_v33.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        ScriptValue scriptValue3 = scriptValue2 != ScriptValue.NULL ? ((polyClassMachine_v23 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassMachine_v23.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         double d = 0.0;
         if (scriptValue3 instanceof ScriptValue.Obj && (object4 = (obj3 = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object4 instanceof PolyClass) && obj3.typeName().equals("Container")) {
             PolyClassContainer polyClassContainer = new PolyClassContainer(object4);
@@ -147,8 +147,8 @@ public final class FloorFunnelUtils {
                     double d3 = 1.0;
                     double d4 = 0.0;
                     if (scriptValue5 instanceof ScriptValue.Obj && (object6 = (obj4 = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object6 instanceof PolyClass) && obj4.typeName().equals("Machine")) {
-                        PolyClassMachine_v3 polyClassMachine_v34 = new PolyClassMachine_v3(object6);
-                        object5 = polyClassMachine_v34.tm$17_container_at(d2, d3, d4);
+                        PolyClassMachine_v2 polyClassMachine_v24 = new PolyClassMachine_v2(object6);
+                        object5 = polyClassMachine_v24.tm$17_container_at(d2, d3, d4);
                     } else {
                         object5 = PolyDispatch.bootstrapCall("memberCall", "container_at", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((double)d2), (ScriptValue)ScriptValue.of((double)d3), (ScriptValue)ScriptValue.of((double)d4), (ScriptContext)scriptContext);
                     }
@@ -168,9 +168,9 @@ public final class FloorFunnelUtils {
             if (ScriptFormula.callBuiltin((String)"is_empty", arrayList3, (ScriptContext)scriptContext).asBool() ^ true) {
                 ScriptValue.Obj obj5;
                 Object object7;
-                PolyClassMachine_v3 polyClassMachine_v35;
+                PolyClassMachine_v2 polyClassMachine_v25;
                 ScriptValue scriptValue9 = scriptContext.getClassOrVar("Machine");
-                ScriptValue scriptValue10 = scriptValue9 != ScriptValue.NULL ? ((polyClassMachine_v35 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue9)) != null ? polyClassMachine_v35.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue9, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+                ScriptValue scriptValue10 = scriptValue9 != ScriptValue.NULL ? ((polyClassMachine_v25 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue9)) != null ? polyClassMachine_v25.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue9, (ScriptContext)scriptContext)) : ScriptValue.NULL;
                 double d5 = 0.0;
                 ScriptValue scriptValue11 = scriptContext.getClassOrVar("held");
                 if (scriptValue10 instanceof ScriptValue.Obj && (object7 = (obj5 = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object7 instanceof PolyClass) && obj5.typeName().equals("Container")) {
@@ -181,7 +181,7 @@ public final class FloorFunnelUtils {
                 }
             }
         }
-        ScriptValue scriptValue12 = (scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? ((polyClassMachine_v32 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v32.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        ScriptValue scriptValue12 = (scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? ((polyClassMachine_v22 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v22.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         double d6 = 0.0;
         if (scriptValue12 instanceof ScriptValue.Obj && (object3 = (obj2 = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object3 instanceof PolyClass) && obj2.typeName().equals("Container")) {
             PolyClassContainer polyClassContainer = new PolyClassContainer(object3);
@@ -199,7 +199,7 @@ public final class FloorFunnelUtils {
         if (scriptContext.getBool("pull_above")) {
             ScriptValue.Obj obj6;
             Object object8;
-            PolyClassMachine_v3 polyClassMachine_v36;
+            PolyClassMachine_v2 polyClassMachine_v26;
             ScriptValue scriptValue13 = scriptContext.getClassOrVar("Machine");
             if (scriptValue13 != ScriptValue.NULL) {
                 ScriptValue.Obj obj7;
@@ -209,8 +209,8 @@ public final class FloorFunnelUtils {
                 double d8 = -1.0;
                 double d9 = 0.0;
                 if (scriptValue13 instanceof ScriptValue.Obj && (object9 = (obj7 = (ScriptValue.Obj)scriptValue13).instance()) != null && !(object9 instanceof PolyClass) && obj7.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v37 = new PolyClassMachine_v3(object9);
-                    v4 = ScriptValue.of((boolean)polyClassMachine_v37.tm$50_drop_item_at((ScriptValue)callSite5, d7, d8, d9));
+                    PolyClassMachine_v2 polyClassMachine_v27 = new PolyClassMachine_v2(object9);
+                    v4 = ScriptValue.of((boolean)polyClassMachine_v27.tm$50_drop_item_at((ScriptValue)callSite5, d7, d8, d9));
                 } else {
                     v4 = PolyDispatch.bootstrapCall("memberCall", "drop_item_at", (ScriptValue)scriptValue13, (ScriptValue)callSite5, (ScriptValue)ScriptValue.of((double)d7), (ScriptValue)ScriptValue.of((double)d8), (ScriptValue)ScriptValue.of((double)d9), (ScriptContext)scriptContext);
                 }
@@ -218,7 +218,7 @@ public final class FloorFunnelUtils {
                 v4 = ScriptValue.NULL;
             }
             ScriptValue scriptValue14 = scriptContext.getClassOrVar("Machine");
-            ScriptValue scriptValue15 = scriptValue14 != ScriptValue.NULL ? ((polyClassMachine_v36 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue14)) != null ? polyClassMachine_v36.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue14, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+            ScriptValue scriptValue15 = scriptValue14 != ScriptValue.NULL ? ((polyClassMachine_v26 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue14)) != null ? polyClassMachine_v26.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue14, (ScriptContext)scriptContext)) : ScriptValue.NULL;
             double d10 = 0.0;
             ScriptValue scriptValue16 = scriptContext.getClassOrVar("null");
             if (scriptValue15 instanceof ScriptValue.Obj && (object8 = (obj6 = (ScriptValue.Obj)scriptValue15).instance()) != null && !(object8 instanceof PolyClass) && obj6.typeName().equals("Container")) {
@@ -237,8 +237,8 @@ public final class FloorFunnelUtils {
             double d12 = -1.0;
             double d13 = 0.0;
             if (scriptValue17 instanceof ScriptValue.Obj && (object10 = (obj8 = (ScriptValue.Obj)scriptValue17).instance()) != null && !(object10 instanceof PolyClass) && obj8.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v38 = new PolyClassMachine_v3(object10);
-                object2 = polyClassMachine_v38.tm$17_container_at(d11, d12, d13);
+                PolyClassMachine_v2 polyClassMachine_v28 = new PolyClassMachine_v2(object10);
+                object2 = polyClassMachine_v28.tm$17_container_at(d11, d12, d13);
             } else {
                 object2 = PolyDispatch.bootstrapCall("memberCall", "container_at", (ScriptValue)scriptValue17, (ScriptValue)ScriptValue.of((double)d11), (ScriptValue)ScriptValue.of((double)d12), (ScriptValue)ScriptValue.of((double)d13), (ScriptContext)scriptContext);
             }
@@ -256,9 +256,9 @@ public final class FloorFunnelUtils {
             if (ScriptFormula.callBuiltin((String)"is_empty", arrayList5, (ScriptContext)scriptContext).asBool()) {
                 ScriptValue.Obj obj9;
                 Object object11;
-                PolyClassMachine_v3 polyClassMachine_v39;
+                PolyClassMachine_v2 polyClassMachine_v29;
                 ScriptValue scriptValue21 = scriptContext.getClassOrVar("Machine");
-                ScriptValue scriptValue22 = scriptValue21 != ScriptValue.NULL ? ((polyClassMachine_v39 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue21)) != null ? polyClassMachine_v39.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue21, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+                ScriptValue scriptValue22 = scriptValue21 != ScriptValue.NULL ? ((polyClassMachine_v29 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue21)) != null ? polyClassMachine_v29.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue21, (ScriptContext)scriptContext)) : ScriptValue.NULL;
                 double d14 = 0.0;
                 ScriptValue scriptValue23 = scriptContext.getClassOrVar("null");
                 if (scriptValue22 instanceof ScriptValue.Obj && (object11 = (obj9 = (ScriptValue.Obj)scriptValue22).instance()) != null && !(object11 instanceof PolyClass) && obj9.typeName().equals("Container")) {
@@ -276,9 +276,9 @@ public final class FloorFunnelUtils {
                 if (d15 < ScriptFormula.callBuiltin((String)"item_count", arrayList7, (ScriptContext)scriptContext).asNum()) {
                     ScriptValue.Obj obj10;
                     Object object12;
-                    PolyClassMachine_v3 polyClassMachine_v310;
+                    PolyClassMachine_v2 polyClassMachine_v210;
                     ScriptValue scriptValue24 = scriptContext.getClassOrVar("Machine");
-                    ScriptValue scriptValue25 = scriptValue24 != ScriptValue.NULL ? ((polyClassMachine_v310 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue24)) != null ? polyClassMachine_v310.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue24, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+                    ScriptValue scriptValue25 = scriptValue24 != ScriptValue.NULL ? ((polyClassMachine_v210 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue24)) != null ? polyClassMachine_v210.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue24, (ScriptContext)scriptContext)) : ScriptValue.NULL;
                     double d16 = 0.0;
                     ScriptValue scriptValue26 = scriptValue20;
                     if (scriptValue25 instanceof ScriptValue.Obj && (object12 = (obj10 = (ScriptValue.Obj)scriptValue25).instance()) != null && !(object12 instanceof PolyClass) && obj10.typeName().equals("Container")) {
@@ -300,8 +300,8 @@ public final class FloorFunnelUtils {
             double d18 = -1.0;
             double d19 = 0.0;
             if (scriptValue27 instanceof ScriptValue.Obj && (object13 = (obj11 = (ScriptValue.Obj)scriptValue27).instance()) != null && !(object13 instanceof PolyClass) && obj11.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v311 = new PolyClassMachine_v3(object13);
-                v10 = ScriptValue.of((boolean)polyClassMachine_v311.tm$50_drop_item_at((ScriptValue)callSite6, d17, d18, d19));
+                PolyClassMachine_v2 polyClassMachine_v211 = new PolyClassMachine_v2(object13);
+                v10 = ScriptValue.of((boolean)polyClassMachine_v211.tm$50_drop_item_at((ScriptValue)callSite6, d17, d18, d19));
             } else {
                 v10 = PolyDispatch.bootstrapCall("memberCall", "drop_item_at", (ScriptValue)scriptValue27, (ScriptValue)callSite6, (ScriptValue)ScriptValue.of((double)d17), (ScriptValue)ScriptValue.of((double)d18), (ScriptValue)ScriptValue.of((double)d19), (ScriptContext)scriptContext);
             }
@@ -309,7 +309,7 @@ public final class FloorFunnelUtils {
             v10 = ScriptValue.NULL;
         }
         ScriptValue scriptValue28 = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue29 = scriptValue28 != ScriptValue.NULL ? ((polyClassMachine_v3 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue28)) != null ? polyClassMachine_v3.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue28, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        ScriptValue scriptValue29 = scriptValue28 != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue28)) != null ? polyClassMachine_v2.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue28, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         double d20 = 0.0;
         ScriptValue scriptValue30 = scriptContext.getClassOrVar("null");
         if (scriptValue29 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue29).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Container")) {
@@ -325,14 +325,14 @@ public final class FloorFunnelUtils {
         block6: {
             ScriptValue.Obj obj;
             Object object;
-            PolyClassMachine_v3 polyClassMachine_v3;
+            PolyClassMachine_v2 polyClassMachine_v2;
             CallSite callSite;
             ScriptValue.Obj obj2;
             Object object2;
-            PolyClassMachine_v3 polyClassMachine_v32;
+            PolyClassMachine_v2 polyClassMachine_v22;
             ScriptContext scriptContext = builder.peek();
             ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
-            ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? ((polyClassMachine_v32 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v32.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+            ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? ((polyClassMachine_v22 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v22.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
             double d = 0.0;
             if (scriptValue2 instanceof ScriptValue.Obj && (object2 = (obj2 = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object2 instanceof PolyClass) && obj2.typeName().equals("Container")) {
                 PolyClassContainer polyClassContainer = new PolyClassContainer(object2);
@@ -351,12 +351,12 @@ public final class FloorFunnelUtils {
                 Object object3;
                 ArrayList<CallSite> arrayList2 = new ArrayList<CallSite>();
                 arrayList2.add(callSite2);
-                v1 = scriptValue3 instanceof ScriptValue.Obj && (object3 = (obj3 = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object3 instanceof PolyClass) && obj3.typeName().equals("Machine") ? new PolyClassMachine_v3(object3).um$4_drop_item(arrayList2) : PolyDispatch.bootstrapCall("memberCall", "drop_item", (ScriptValue)scriptValue3, arrayList2, (ScriptContext)scriptContext);
+                v1 = scriptValue3 instanceof ScriptValue.Obj && (object3 = (obj3 = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object3 instanceof PolyClass) && obj3.typeName().equals("Machine") ? new PolyClassMachine_v2(object3).um$4_drop_item(arrayList2) : PolyDispatch.bootstrapCall("memberCall", "drop_item", (ScriptValue)scriptValue3, arrayList2, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
             ScriptValue scriptValue4 = scriptContext.getClassOrVar("Machine");
-            ScriptValue scriptValue5 = scriptValue4 != ScriptValue.NULL ? ((polyClassMachine_v3 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassMachine_v3.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+            ScriptValue scriptValue5 = scriptValue4 != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassMachine_v2.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL;
             double d2 = 0.0;
             ScriptValue scriptValue6 = scriptContext.getClassOrVar("null");
             if (scriptValue5 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Container")) {
@@ -372,21 +372,21 @@ public final class FloorFunnelUtils {
     public static ScriptValue _floorFunnelOnRightClick(ScriptContext.Builder builder) {
         ScriptValue.Obj obj;
         Object object;
-        PolyClassMachine_v3 polyClassMachine_v3;
+        PolyClassMachine_v2 polyClassMachine_v2;
         CallSite callSite;
         ScriptValue.Obj obj2;
         Object object2;
-        PolyClassMachine_v3 polyClassMachine_v32;
-        PolyClassPlayer polyClassPlayer;
+        PolyClassMachine_v2 polyClassMachine_v22;
+        PolyClassPlayer_v2 polyClassPlayer_v2;
         ScriptContext scriptContext = builder.peek();
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
-        arrayList.add((ScriptValue)(scriptValue != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassPlayer.pg$48_main_hand() : PolyDispatch.bootstrapGet("memberGet", "main_hand", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL));
+        arrayList.add((ScriptValue)(scriptValue != ScriptValue.NULL ? ((polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassPlayer_v2.pg$48_main_hand() : PolyDispatch.bootstrapGet("memberGet", "main_hand", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL));
         if (ScriptFormula.callBuiltin((String)"is_empty", arrayList, (ScriptContext)scriptContext).asBool() ^ true) {
             return ScriptValue.NULL;
         }
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue3 = scriptValue2 != ScriptValue.NULL ? ((polyClassMachine_v32 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassMachine_v32.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        ScriptValue scriptValue3 = scriptValue2 != ScriptValue.NULL ? ((polyClassMachine_v22 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassMachine_v22.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         double d = 0.0;
         if (scriptValue3 instanceof ScriptValue.Obj && (object2 = (obj2 = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object2 instanceof PolyClass) && obj2.typeName().equals("Container")) {
             PolyClassContainer polyClassContainer = new PolyClassContainer(object2);
@@ -407,8 +407,8 @@ public final class FloorFunnelUtils {
             Object object3;
             CallSite callSite3 = callSite2;
             if (scriptValue4 instanceof ScriptValue.Obj && (object3 = (obj3 = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object3 instanceof PolyClass) && obj3.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer2 = new PolyClassPlayer(object3);
-                v1 = ScriptValue.of((boolean)polyClassPlayer2.tm$14_give_item((ScriptValue)callSite3));
+                PolyClassPlayer_v2 polyClassPlayer_v22 = new PolyClassPlayer_v2(object3);
+                v1 = ScriptValue.of((boolean)polyClassPlayer_v22.tm$14_give_item((ScriptValue)callSite3));
             } else {
                 v1 = PolyDispatch.bootstrapCall("memberCall", "give_item", (ScriptValue)scriptValue4, (ScriptValue)callSite3, (ScriptContext)scriptContext);
             }
@@ -416,7 +416,7 @@ public final class FloorFunnelUtils {
             v1 = ScriptValue.NULL;
         }
         ScriptValue scriptValue5 = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue6 = scriptValue5 != ScriptValue.NULL ? ((polyClassMachine_v3 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue5)) != null ? polyClassMachine_v3.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue5, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        ScriptValue scriptValue6 = scriptValue5 != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue5)) != null ? polyClassMachine_v2.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue5, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         double d2 = 0.0;
         ScriptValue scriptValue7 = scriptContext.getClassOrVar("null");
         if (scriptValue6 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Container")) {

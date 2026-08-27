@@ -129,6 +129,23 @@ public final class PolyClassRuntime {
         return d != null && d.returnType() instanceof TypeCodecs.WrappedCodec ? d.returnType() : null;
     }
 
+    /** {@link TypeCodecs.ListCodec#encodeElements} through the erased codec reference a generated
+     *  wrapper holds, so the wrapper needs no generics and no cast of its own. */
+    public static List<ScriptValue> encodeElements(PolyType.TypeCodec<?> codec, Object rawList) {
+        @SuppressWarnings("unchecked")
+        TypeCodecs.ListCodec<Object> lc = (TypeCodecs.ListCodec<Object>) codec;
+        @SuppressWarnings("unchecked")
+        List<Object> list = (List<Object>) rawList;
+        return lc.encodeElements(list);
+    }
+
+    /** The elements of an already-boxed value, for a list accessor's generic fallback. Mirrors
+     *  {@link ScriptProgram#elementsOf}'s Array case; a non-Array yields null so the caller's loop
+     *  skips, which is what the erased path did by way of {@code elementsOf} returning null. */
+    public static List<ScriptValue> elementsOfValue(ScriptValue value) {
+        return value instanceof ScriptValue.Array a ? a.elements() : null;
+    }
+
     /** Resolves the property handler for {@code typeName.prop}, or null. */
     public static PolyType.PropertyHandler resolvePropertyHandler(String typeName, String prop) {
         PolyType type = PolyTypeRegistry.get(typeName);

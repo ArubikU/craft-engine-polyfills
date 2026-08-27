@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v3
+ *  dev.arubik.craftengine.script.PolyClassMachine_v2
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script.gen.block_interaction;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v3;
+import dev.arubik.craftengine.script.PolyClassMachine_v2;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -42,7 +42,7 @@ public final class JumpPad {
 
     public static void run(ScriptContext.Builder builder) {
         Object object;
-        PolyClassMachine_v3 polyClassMachine_v3;
+        PolyClassMachine_v2 polyClassMachine_v2;
         Object object2;
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
@@ -52,8 +52,8 @@ public final class JumpPad {
             String string = "force";
             String string2 = "int";
             if (scriptValue instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v32 = new PolyClassMachine_v3(object3);
-                object2 = polyClassMachine_v32.tm$34_get_typed(string, string2);
+                PolyClassMachine_v2 polyClassMachine_v22 = new PolyClassMachine_v2(object3);
+                object2 = polyClassMachine_v22.tm$34_get_typed(string, string2);
             } else {
                 object2 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
             }
@@ -74,7 +74,7 @@ public final class JumpPad {
         ScriptValue scriptValue5 = ScriptValue.of((double)d2);
         builder.val("vert_power", scriptValue5);
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("Machine");
-        boolean bl = ScriptFormula.valuesEqual((ScriptValue)(scriptValue6 != ScriptValue.NULL ? ((polyClassMachine_v3 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue6)) != null ? polyClassMachine_v3.pg$129_facing_dy() : PolyDispatch.bootstrapGet("memberGet", "facing_dy", (ScriptValue)scriptValue6, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", JumpPad.class, 0.0))) ^ true;
+        boolean bl = ScriptFormula.valuesEqual((ScriptValue)(scriptValue6 != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue6)) != null ? polyClassMachine_v2.pg$129_facing_dy() : PolyDispatch.bootstrapGet("memberGet", "facing_dy", (ScriptValue)scriptValue6, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", JumpPad.class, 0.0))) ^ true;
         ScriptValue scriptValue7 = ScriptValue.of((boolean)bl);
         builder.val("is_vertical", scriptValue7);
         ScriptValue scriptValue8 = scriptContext.getClassOrVar("Machine");
@@ -83,8 +83,8 @@ public final class JumpPad {
             Object object4;
             double d3 = 0.7;
             if (scriptValue8 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue8).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v33 = new PolyClassMachine_v3(object4);
-                object = polyClassMachine_v33.tm$94_nearby_entities(d3);
+                PolyClassMachine_v2 polyClassMachine_v23 = new PolyClassMachine_v2(object4);
+                object = polyClassMachine_v23.tm$94_nearby_entities(d3);
             } else {
                 object = PolyDispatch.bootstrapCall("memberCall", "nearby_entities", (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((double)d3), (ScriptContext)scriptContext);
             }
@@ -96,8 +96,8 @@ public final class JumpPad {
         List list = ScriptProgram.elementsOf((ScriptValue)scriptValue9);
         if (list != null) {
             for (ScriptValue scriptValue10 : list) {
-                PolyClassMachine_v3 polyClassMachine_v34;
-                PolyClassMachine_v3 polyClassMachine_v35;
+                PolyClassMachine_v2 polyClassMachine_v24;
+                PolyClassMachine_v2 polyClassMachine_v25;
                 builder.val("entity", scriptValue10);
                 ScriptValue scriptValue11 = scriptContext.getClassOrVar("entity");
                 if (!(scriptValue11 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_alive", (ScriptValue)scriptValue11, (ScriptContext)scriptContext) : ScriptValue.NULL).asBool()) continue;
@@ -117,10 +117,10 @@ public final class JumpPad {
                 }
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 ScriptValue scriptValue13 = scriptContext.getClassOrVar("Machine");
-                arrayList.add((ScriptValue)(scriptValue13 != ScriptValue.NULL ? ((polyClassMachine_v35 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue13)) != null ? polyClassMachine_v35.pg$133_facing_dx() : PolyDispatch.bootstrapGet("memberGet", "facing_dx", (ScriptValue)scriptValue13, (ScriptContext)scriptContext)) : ScriptValue.NULL));
+                arrayList.add((ScriptValue)(scriptValue13 != ScriptValue.NULL ? ((polyClassMachine_v25 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue13)) != null ? polyClassMachine_v25.pg$133_facing_dx() : PolyDispatch.bootstrapGet("memberGet", "facing_dx", (ScriptValue)scriptValue13, (ScriptContext)scriptContext)) : ScriptValue.NULL));
                 arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", JumpPad.class, 0.0));
                 ScriptValue scriptValue14 = scriptContext.getClassOrVar("Machine");
-                arrayList.add((ScriptValue)(scriptValue14 != ScriptValue.NULL ? ((polyClassMachine_v34 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue14)) != null ? polyClassMachine_v34.pg$131_facing_dz() : PolyDispatch.bootstrapGet("memberGet", "facing_dz", (ScriptValue)scriptValue14, (ScriptContext)scriptContext)) : ScriptValue.NULL));
+                arrayList.add((ScriptValue)(scriptValue14 != ScriptValue.NULL ? ((polyClassMachine_v24 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue14)) != null ? polyClassMachine_v24.pg$131_facing_dz() : PolyDispatch.bootstrapGet("memberGet", "facing_dz", (ScriptValue)scriptValue14, (ScriptContext)scriptContext)) : ScriptValue.NULL));
                 CallSite callSite = PolyDispatch.bootstrapCall("memberCall", "normalize", (ScriptValue)ScriptFormula.callBuiltin((String)"vec", arrayList, (ScriptContext)scriptContext), (ScriptContext)scriptContext);
                 builder.val("dir", (ScriptValue)callSite);
                 ScriptValue scriptValue15 = scriptContext.getClassOrVar("dir");

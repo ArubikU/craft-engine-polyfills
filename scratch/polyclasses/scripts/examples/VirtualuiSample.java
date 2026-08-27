@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassPlayer
+ *  dev.arubik.craftengine.script.PolyClassPlayer_v2
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script.gen.examples;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassPlayer;
+import dev.arubik.craftengine.script.PolyClassPlayer_v2;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -47,8 +47,8 @@ public final class VirtualuiSample {
                 Object object;
                 String string = "<red>You already have a VirtualUI open - <white>/virtualui close</white> first.";
                 if (scriptValue2 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                    v0 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+                    PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                    v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
                 } else {
                     v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }
@@ -148,8 +148,8 @@ public final class VirtualuiSample {
             Object object19;
             String string = "<aqua>VirtualUI sample opened. Left/right-click a button, sneak, or <white>/virtualui close</white> to exit.";
             if (scriptValue29 instanceof ScriptValue.Obj && (object19 = (obj = (ScriptValue.Obj)scriptValue29).instance()) != null && !(object19 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object19);
-                v23 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object19);
+                v23 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
             } else {
                 v23 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue29, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
@@ -169,8 +169,8 @@ public final class VirtualuiSample {
                 Object object;
                 String string = "<gray>You don't have a VirtualUI open.";
                 if (scriptValue2 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                    v0 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+                    PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                    v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
                 } else {
                     v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }
@@ -187,8 +187,8 @@ public final class VirtualuiSample {
             Object object2;
             String string = "<aqua>VirtualUI closed.";
             if (scriptValue4 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object2);
-                v2 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object2);
+                v2 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
             } else {
                 v2 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
@@ -224,8 +224,8 @@ public final class VirtualuiSample {
             Object object;
             String string = "<yellow>Opening the CraftEngine Polyfills repo link...";
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                v0 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
@@ -245,8 +245,8 @@ public final class VirtualuiSample {
             Object object;
             String string = "<gray>Closing VirtualUI sample.";
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                v0 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
@@ -266,8 +266,8 @@ public final class VirtualuiSample {
             Object object;
             String string = "<gray>VirtualUI sample closed.";
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                v0 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
@@ -285,8 +285,8 @@ public final class VirtualuiSample {
             Object object;
             String string = "<yellow>Volume scrollbar armed - move the cursor, click again to release.";
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                v0 = ScriptValue.of((boolean)polyClassPlayer.tm$36_send_actionbar(string));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$36_send_actionbar(string));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "send_actionbar", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
@@ -304,8 +304,8 @@ public final class VirtualuiSample {
             Object object;
             String string = "<gray>Volume scrollbar released.";
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                v0 = ScriptValue.of((boolean)polyClassPlayer.tm$36_send_actionbar(string));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$36_send_actionbar(string));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "send_actionbar", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
@@ -326,8 +326,8 @@ public final class VirtualuiSample {
             arrayList.add(ScriptValue.of((double)(scriptContext.getNum("value") * 100.0)));
             ScriptValue scriptValue2 = ScriptValue.of((String)stringBuilder.append(ScriptFormula.callBuiltin((String)"round", arrayList, (ScriptContext)scriptContext).asStr()).append("%").toString());
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                v1 = ScriptValue.of((boolean)polyClassPlayer.tm$36_send_actionbar(scriptValue2.asStr()));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                v1 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$36_send_actionbar(scriptValue2.asStr()));
             } else {
                 v1 = PolyDispatch.bootstrapCall("memberCall", "send_actionbar", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
             }
@@ -346,8 +346,8 @@ public final class VirtualuiSample {
                 Object object;
                 String string = "<red>Muted.";
                 if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                    v0 = ScriptValue.of((boolean)polyClassPlayer.tm$36_send_actionbar(string));
+                    PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                    v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$36_send_actionbar(string));
                 } else {
                     v0 = PolyDispatch.bootstrapCall("memberCall", "send_actionbar", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }
@@ -361,8 +361,8 @@ public final class VirtualuiSample {
                 Object object;
                 String string = "<green>Unmuted.";
                 if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                    v1 = ScriptValue.of((boolean)polyClassPlayer.tm$36_send_actionbar(string));
+                    PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                    v1 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$36_send_actionbar(string));
                 } else {
                     v1 = PolyDispatch.bootstrapCall("memberCall", "send_actionbar", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }
@@ -381,8 +381,8 @@ public final class VirtualuiSample {
             Object object;
             ScriptValue scriptValue2 = ScriptValue.of((String)("<aqua>Difficulty: <white>" + scriptContext.getStr("option") + " <gray>(" + scriptContext.getStr("index") + ")"));
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                v0 = ScriptValue.of((boolean)polyClassPlayer.tm$36_send_actionbar(scriptValue2.asStr()));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$36_send_actionbar(scriptValue2.asStr()));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "send_actionbar", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
             }

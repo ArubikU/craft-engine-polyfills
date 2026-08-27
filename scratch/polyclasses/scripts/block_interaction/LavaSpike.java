@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v3
+ *  dev.arubik.craftengine.script.PolyClassMachine_v2
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script.gen.block_interaction;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v3;
+import dev.arubik.craftengine.script.PolyClassMachine_v2;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -52,7 +52,7 @@ public final class LavaSpike {
                         var3_3 = "atk_cd";
                         var4_4 = "int";
                         if (var2_2 instanceof ScriptValue.Obj && (var6_6 = (var5_5 = (ScriptValue.Obj)var2_2).instance()) != null && !(var6_6 instanceof PolyClass) && var5_5.typeName().equals("Machine")) {
-                            var7_7 = new PolyClassMachine_v3(var6_6);
+                            var7_7 = new PolyClassMachine_v2(var6_6);
                             v0 /* !! */  = var7_7.tm$34_get_typed(var3_3, var4_4);
                         } else {
                             v0 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)var2_2, (ScriptValue)ScriptValue.of((String)var3_3), (ScriptValue)ScriptValue.of((String)var4_4), (ScriptContext)var1_1);
@@ -69,7 +69,7 @@ public final class LavaSpike {
                         var11_11 = "int";
                         var12_12 = ScriptValue.of((double)(var8_8.asNum() - 1.0));
                         if (var9_9 instanceof ScriptValue.Obj && (var14_14 = (var13_13 = (ScriptValue.Obj)var9_9).instance()) != null && !(var14_14 instanceof PolyClass) && var13_13.typeName().equals("Machine")) {
-                            var15_15 = new PolyClassMachine_v3(var14_14);
+                            var15_15 = new PolyClassMachine_v2(var14_14);
                             v1 /* !! */  = ScriptValue.of((boolean)var15_15.tm$82_set_typed(var10_10, var11_11, var12_12));
                         } else {
                             v1 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)var9_9, (ScriptValue)ScriptValue.of((String)var10_10), (ScriptValue)ScriptValue.of((String)var11_11), (ScriptValue)var12_12, (ScriptContext)var1_1);
@@ -80,13 +80,13 @@ public final class LavaSpike {
                     break block21;
                 }
                 var16_16 = var1_1.getClassOrVar("Machine");
-                var18_18 = var16_16 != ScriptValue.NULL ? ((var17_17 = PolyClassMachine_v3.ofGuarded((ScriptValue)var16_16)) != null ? var17_17.pg$209_owner_uuid() : PolyDispatch.bootstrapGet("memberGet", "owner_uuid", (ScriptValue)var16_16, (ScriptContext)var1_1)) : ScriptValue.NULL;
+                var18_18 = var16_16 != ScriptValue.NULL ? ((var17_17 = PolyClassMachine_v2.ofGuarded((ScriptValue)var16_16)) != null ? var17_17.pg$210_owner_uuid() : PolyDispatch.bootstrapGet("memberGet", "owner_uuid", (ScriptValue)var16_16, (ScriptContext)var1_1)) : ScriptValue.NULL;
                 var0.val("owner_id", var18_18);
                 var19_19 = var1_1.getClassOrVar("Machine");
                 if (var19_19 != ScriptValue.NULL) {
                     var20_20 = 0.8;
                     if (var19_19 instanceof ScriptValue.Obj && (var23_22 = (var22_21 = (ScriptValue.Obj)var19_19).instance()) != null && !(var23_22 instanceof PolyClass) && var22_21.typeName().equals("Machine")) {
-                        var24_23 = new PolyClassMachine_v3(var23_22);
+                        var24_23 = new PolyClassMachine_v2(var23_22);
                         v2 /* !! */  = var24_23.tm$94_nearby_entities(var20_20);
                     } else {
                         v2 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "nearby_entities", (ScriptValue)var19_19, (ScriptValue)ScriptValue.of((double)var20_20), (ScriptContext)var1_1);
@@ -136,7 +136,7 @@ public final class LavaSpike {
                     var42_40 = "int";
                     var43_41 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", LavaSpike.class, 15.0);
                     if (var40_38 instanceof ScriptValue.Obj && (var45_43 = (var44_42 = (ScriptValue.Obj)var40_38).instance()) != null && !(var45_43 instanceof PolyClass) && var44_42.typeName().equals("Machine")) {
-                        var46_44 = new PolyClassMachine_v3(var45_43);
+                        var46_44 = new PolyClassMachine_v2(var45_43);
                         v6 /* !! */  = ScriptValue.of((boolean)var46_44.tm$82_set_typed(var41_39, var42_40, var43_41));
                     } else {
                         v6 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)var40_38, (ScriptValue)ScriptValue.of((String)var41_39), (ScriptValue)ScriptValue.of((String)var42_40), (ScriptValue)var43_41, (ScriptContext)var1_1);

@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v3
+ *  dev.arubik.craftengine.script.PolyClassMachine_v2
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script.gen.farming;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v3;
+import dev.arubik.craftengine.script.PolyClassMachine_v2;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -54,7 +54,7 @@ public final class Freezer {
             if (var4_4 != ScriptValue.NULL) {
                 var5_5 = 4.0;
                 if (var4_4 instanceof ScriptValue.Obj && (var8_7 = (var7_6 = (ScriptValue.Obj)var4_4).instance()) != null && !(var8_7 instanceof PolyClass) && var7_6.typeName().equals("Machine")) {
-                    var9_8 = new PolyClassMachine_v3(var8_7);
+                    var9_8 = new PolyClassMachine_v2(var8_7);
                     v0 /* !! */  = var9_8.tm$86_blocks_in_range(var5_5);
                 } else {
                     v0 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "blocks_in_range", (ScriptValue)var4_4, (ScriptValue)ScriptValue.of((double)var5_5), (ScriptContext)var1_1);
@@ -82,7 +82,7 @@ public final class Freezer {
             if ((var21_20 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL) {
                 var22_21 = 4.0;
                 if (var21_20 instanceof ScriptValue.Obj && (var25_23 = (var24_22 = (ScriptValue.Obj)var21_20).instance()) != null && !(var25_23 instanceof PolyClass) && var24_22.typeName().equals("Machine")) {
-                    var26_24 = new PolyClassMachine_v3(var25_23);
+                    var26_24 = new PolyClassMachine_v2(var25_23);
                     v1 /* !! */  = var26_24.tm$94_nearby_entities(var22_21);
                 } else {
                     v1 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "nearby_entities", (ScriptValue)var21_20, (ScriptValue)ScriptValue.of((double)var22_21), (ScriptContext)var1_1);

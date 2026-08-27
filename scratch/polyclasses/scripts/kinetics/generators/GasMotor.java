@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v3
+ *  dev.arubik.craftengine.script.PolyClassMachine_v2
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -14,7 +14,7 @@
 package dev.arubik.craftengine.script.gen.kinetics.generators;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v3;
+import dev.arubik.craftengine.script.PolyClassMachine_v2;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -48,8 +48,8 @@ public final class GasMotor {
             String string = "target_rpm";
             String string2 = "int";
             if (scriptValue2 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object3);
-                object2 = polyClassMachine_v3.tm$34_get_typed(string, string2);
+                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object3);
+                object2 = polyClassMachine_v2.tm$34_get_typed(string, string2);
             } else {
                 object2 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
             }
@@ -77,8 +77,8 @@ public final class GasMotor {
             String string3 = "int";
             ScriptValue scriptValue8 = ScriptValue.of((double)d);
             if (scriptValue7 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object4);
-                v2 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string3, scriptValue8));
+                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object4);
+                v2 = ScriptValue.of((boolean)polyClassMachine_v2.tm$82_set_typed(string, string3, scriptValue8));
             } else {
                 v2 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue8, (ScriptContext)scriptContext);
             }
@@ -92,8 +92,8 @@ public final class GasMotor {
             String string = "target_su";
             String string4 = "int";
             if (scriptValue9 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object5);
-                object = polyClassMachine_v3.tm$34_get_typed(string, string4);
+                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object5);
+                object = polyClassMachine_v2.tm$34_get_typed(string, string4);
             } else {
                 object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue9, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string4), (ScriptContext)scriptContext);
             }
@@ -115,8 +115,8 @@ public final class GasMotor {
             double d3 = scriptContext.getNum("cur");
             ScriptValue scriptValue12 = ScriptValue.of((double)Math.floor(d3 == 0.0 ? 0.0 : scriptContext.getNum("cur_su") * d / d3));
             if (scriptValue instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object6);
-                v4 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string5, scriptValue12));
+                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object6);
+                v4 = ScriptValue.of((boolean)polyClassMachine_v2.tm$82_set_typed(string, string5, scriptValue12));
             } else {
                 v4 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string5), (ScriptValue)scriptValue12, (ScriptContext)scriptContext);
             }
@@ -136,8 +136,8 @@ public final class GasMotor {
             String string = "target_rpm";
             String string2 = "int";
             if (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object2);
-                object = polyClassMachine_v3.tm$34_get_typed(string, string2);
+                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object2);
+                object = polyClassMachine_v2.tm$34_get_typed(string, string2);
             } else {
                 object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
             }
@@ -165,8 +165,8 @@ public final class GasMotor {
             String string3 = "int";
             ScriptValue scriptValue6 = ScriptValue.of((double)d2);
             if (scriptValue5 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object3);
-                v2 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string3, scriptValue6));
+                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object3);
+                v2 = ScriptValue.of((boolean)polyClassMachine_v2.tm$82_set_typed(string, string3, scriptValue6));
             } else {
                 v2 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue6, (ScriptContext)scriptContext);
             }
@@ -182,8 +182,8 @@ public final class GasMotor {
                 String string4 = "int";
                 ScriptValue scriptValue8 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", GasMotor.class, 0.0);
                 if (scriptValue7 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object4);
-                    v3 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string4, scriptValue8));
+                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object4);
+                    v3 = ScriptValue.of((boolean)polyClassMachine_v2.tm$82_set_typed(string, string4, scriptValue8));
                 } else {
                     v3 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string4), (ScriptValue)scriptValue8, (ScriptContext)scriptContext);
                 }
@@ -200,8 +200,8 @@ public final class GasMotor {
                 String string = "target_su";
                 String string5 = "int";
                 if (scriptValue10 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object6);
-                    object5 = polyClassMachine_v3.tm$34_get_typed(string, string5);
+                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object6);
+                    object5 = polyClassMachine_v2.tm$34_get_typed(string, string5);
                 } else {
                     object5 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue10, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string5), (ScriptContext)scriptContext);
                 }
@@ -223,8 +223,8 @@ public final class GasMotor {
                 double d4 = scriptContext.getNum("cur");
                 ScriptValue scriptValue13 = ScriptValue.of((double)Math.floor(d4 == 0.0 ? 0.0 : scriptContext.getNum("cur_su") * d2 / d4));
                 if (scriptValue9 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object7);
-                    v5 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string6, scriptValue13));
+                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object7);
+                    v5 = ScriptValue.of((boolean)polyClassMachine_v2.tm$82_set_typed(string, string6, scriptValue13));
                 } else {
                     v5 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue9, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string6), (ScriptValue)scriptValue13, (ScriptContext)scriptContext);
                 }
@@ -245,8 +245,8 @@ public final class GasMotor {
             String string = "target_su";
             String string2 = "int";
             if (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object2);
-                object = polyClassMachine_v3.tm$34_get_typed(string, string2);
+                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object2);
+                object = polyClassMachine_v2.tm$34_get_typed(string, string2);
             } else {
                 object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
             }
@@ -274,8 +274,8 @@ public final class GasMotor {
             String string3 = "int";
             ScriptValue scriptValue7 = ScriptValue.of((double)d);
             if (scriptValue6 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object3);
-                v2 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string3, scriptValue7));
+                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object3);
+                v2 = ScriptValue.of((boolean)polyClassMachine_v2.tm$82_set_typed(string, string3, scriptValue7));
             } else {
                 v2 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue7, (ScriptContext)scriptContext);
             }
@@ -295,8 +295,8 @@ public final class GasMotor {
             String string = "target_su";
             String string2 = "int";
             if (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object2);
-                object = polyClassMachine_v3.tm$34_get_typed(string, string2);
+                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object2);
+                object = polyClassMachine_v2.tm$34_get_typed(string, string2);
             } else {
                 object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
             }
@@ -324,8 +324,8 @@ public final class GasMotor {
             String string3 = "int";
             ScriptValue scriptValue6 = ScriptValue.of((double)d2);
             if (scriptValue5 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object3);
-                v2 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string3, scriptValue6));
+                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object3);
+                v2 = ScriptValue.of((boolean)polyClassMachine_v2.tm$82_set_typed(string, string3, scriptValue6));
             } else {
                 v2 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue6, (ScriptContext)scriptContext);
             }
@@ -337,10 +337,10 @@ public final class GasMotor {
 
     public static ScriptValue status(ScriptContext.Builder builder) {
         Object object;
-        PolyClassMachine_v3 polyClassMachine_v3;
+        PolyClassMachine_v2 polyClassMachine_v2;
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? ((polyClassMachine_v3 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v3.pg$138_gas_tanks() : PolyDispatch.bootstrapGet("memberGet", "gas_tanks", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v2.pg$138_gas_tanks() : PolyDispatch.bootstrapGet("memberGet", "gas_tanks", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         builder.val("tanks", scriptValue2);
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("tanks");
         Object object2 = scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "length", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL;
@@ -361,8 +361,8 @@ public final class GasMotor {
             String string = "target_rpm";
             String string2 = "int";
             if (scriptValue7 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v32 = new PolyClassMachine_v3(object3);
-                object = polyClassMachine_v32.tm$34_get_typed(string, string2);
+                PolyClassMachine_v2 polyClassMachine_v22 = new PolyClassMachine_v2(object3);
+                object = polyClassMachine_v22.tm$34_get_typed(string, string2);
             } else {
                 object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
             }
@@ -385,8 +385,8 @@ public final class GasMotor {
             Object object;
             double d = 0.0;
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object);
-                v0 = ScriptValue.of((boolean)polyClassMachine_v3.tm$106_set_rpm_output(d));
+                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object);
+                v0 = ScriptValue.of((boolean)polyClassMachine_v2.tm$106_set_rpm_output(d));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "set_rpm_output", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
             }
@@ -399,8 +399,8 @@ public final class GasMotor {
             Object object;
             double d = 0.0;
             if (scriptValue2 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object);
-                v1 = ScriptValue.of((boolean)polyClassMachine_v3.tm$56_report_su(d));
+                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object);
+                v1 = ScriptValue.of((boolean)polyClassMachine_v2.tm$56_report_su(d));
             } else {
                 v1 = PolyDispatch.bootstrapCall("memberCall", "report_su", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
             }
@@ -411,11 +411,11 @@ public final class GasMotor {
     }
 
     public static void run(ScriptContext.Builder builder) {
-        PolyClassMachine_v3 polyClassMachine_v3;
-        PolyClassMachine_v3 polyClassMachine_v32;
-        PolyClassMachine_v3 polyClassMachine_v33;
+        PolyClassMachine_v2 polyClassMachine_v2;
+        PolyClassMachine_v2 polyClassMachine_v22;
+        PolyClassMachine_v2 polyClassMachine_v23;
         ScriptValue scriptValue;
-        PolyClassMachine_v3 polyClassMachine_v34;
+        PolyClassMachine_v2 polyClassMachine_v24;
         Object object;
         Object object2;
         ScriptContext scriptContext = builder.peek();
@@ -447,8 +447,8 @@ public final class GasMotor {
             String string = "target_rpm";
             String string2 = "int";
             if (scriptValue3 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v35 = new PolyClassMachine_v3(object3);
-                object2 = polyClassMachine_v35.tm$34_get_typed(string, string2);
+                PolyClassMachine_v2 polyClassMachine_v25 = new PolyClassMachine_v2(object3);
+                object2 = polyClassMachine_v25.tm$34_get_typed(string, string2);
             } else {
                 object2 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
             }
@@ -464,8 +464,8 @@ public final class GasMotor {
             String string = "target_su";
             String string3 = "int";
             if (scriptValue5 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v36 = new PolyClassMachine_v3(object4);
-                object = polyClassMachine_v36.tm$34_get_typed(string, string3);
+                PolyClassMachine_v2 polyClassMachine_v26 = new PolyClassMachine_v2(object4);
+                object = polyClassMachine_v26.tm$34_get_typed(string, string3);
             } else {
                 object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptContext)scriptContext);
             }
@@ -475,7 +475,7 @@ public final class GasMotor {
         ScriptValue scriptValue6 = object;
         builder.val("target_su", scriptValue6);
         ScriptValue scriptValue7 = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue8 = scriptValue7 != ScriptValue.NULL ? ((polyClassMachine_v34 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue7)) != null ? polyClassMachine_v34.pg$138_gas_tanks() : PolyDispatch.bootstrapGet("memberGet", "gas_tanks", (ScriptValue)scriptValue7, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        ScriptValue scriptValue8 = scriptValue7 != ScriptValue.NULL ? ((polyClassMachine_v24 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue7)) != null ? polyClassMachine_v24.pg$138_gas_tanks() : PolyDispatch.bootstrapGet("memberGet", "gas_tanks", (ScriptValue)scriptValue7, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         builder.val("gas_tanks", scriptValue8);
         ScriptValue scriptValue9 = scriptContext.getClassOrVar("gas_tanks");
         Object object5 = scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "length", (ScriptValue)scriptValue9, (ScriptContext)scriptContext) : ScriptValue.NULL;
@@ -486,8 +486,8 @@ public final class GasMotor {
                 Object object6;
                 double d = 0.0;
                 if (scriptValue10 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v37 = new PolyClassMachine_v3(object6);
-                    v3 = ScriptValue.of((boolean)polyClassMachine_v37.tm$106_set_rpm_output(d));
+                    PolyClassMachine_v2 polyClassMachine_v27 = new PolyClassMachine_v2(object6);
+                    v3 = ScriptValue.of((boolean)polyClassMachine_v27.tm$106_set_rpm_output(d));
                 } else {
                     v3 = PolyDispatch.bootstrapCall("memberCall", "set_rpm_output", (ScriptValue)scriptValue10, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
                 }
@@ -500,8 +500,8 @@ public final class GasMotor {
                 Object object7;
                 double d = 0.0;
                 if (scriptValue11 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue11).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v38 = new PolyClassMachine_v3(object7);
-                    v4 = ScriptValue.of((boolean)polyClassMachine_v38.tm$56_report_su(d));
+                    PolyClassMachine_v2 polyClassMachine_v28 = new PolyClassMachine_v2(object7);
+                    v4 = ScriptValue.of((boolean)polyClassMachine_v28.tm$56_report_su(d));
                 } else {
                     v4 = PolyDispatch.bootstrapCall("memberCall", "report_su", (ScriptValue)scriptValue11, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
                 }
@@ -537,8 +537,8 @@ public final class GasMotor {
                 Object object8;
                 double d = 0.0;
                 if (scriptValue23 instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue23).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v39 = new PolyClassMachine_v3(object8);
-                    v5 = ScriptValue.of((boolean)polyClassMachine_v39.tm$106_set_rpm_output(d));
+                    PolyClassMachine_v2 polyClassMachine_v29 = new PolyClassMachine_v2(object8);
+                    v5 = ScriptValue.of((boolean)polyClassMachine_v29.tm$106_set_rpm_output(d));
                 } else {
                     v5 = PolyDispatch.bootstrapCall("memberCall", "set_rpm_output", (ScriptValue)scriptValue23, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
                 }
@@ -551,8 +551,8 @@ public final class GasMotor {
                 Object object9;
                 double d = 0.0;
                 if (scriptValue24 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue24).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v310 = new PolyClassMachine_v3(object9);
-                    v6 = ScriptValue.of((boolean)polyClassMachine_v310.tm$56_report_su(d));
+                    PolyClassMachine_v2 polyClassMachine_v210 = new PolyClassMachine_v2(object9);
+                    v6 = ScriptValue.of((boolean)polyClassMachine_v210.tm$56_report_su(d));
                 } else {
                     v6 = PolyDispatch.bootstrapCall("memberCall", "report_su", (ScriptValue)scriptValue24, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
                 }
@@ -582,8 +582,8 @@ public final class GasMotor {
                 String string4 = "int";
                 ScriptValue scriptValue33 = scriptValue31;
                 if (scriptValue32 instanceof ScriptValue.Obj && (object10 = (obj = (ScriptValue.Obj)scriptValue32).instance()) != null && !(object10 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v311 = new PolyClassMachine_v3(object10);
-                    v7 = ScriptValue.of((boolean)polyClassMachine_v311.tm$82_set_typed(string, string4, scriptValue33));
+                    PolyClassMachine_v2 polyClassMachine_v211 = new PolyClassMachine_v2(object10);
+                    v7 = ScriptValue.of((boolean)polyClassMachine_v211.tm$82_set_typed(string, string4, scriptValue33));
                 } else {
                     v7 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue32, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string4), (ScriptValue)scriptValue33, (ScriptContext)scriptContext);
                 }
@@ -602,8 +602,8 @@ public final class GasMotor {
                 String string5 = "int";
                 ScriptValue scriptValue36 = scriptValue34;
                 if (scriptValue35 instanceof ScriptValue.Obj && (object11 = (obj = (ScriptValue.Obj)scriptValue35).instance()) != null && !(object11 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v312 = new PolyClassMachine_v3(object11);
-                    v8 = ScriptValue.of((boolean)polyClassMachine_v312.tm$82_set_typed(string, string5, scriptValue36));
+                    PolyClassMachine_v2 polyClassMachine_v212 = new PolyClassMachine_v2(object11);
+                    v8 = ScriptValue.of((boolean)polyClassMachine_v212.tm$82_set_typed(string, string5, scriptValue36));
                 } else {
                     v8 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue35, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string5), (ScriptValue)scriptValue36, (ScriptContext)scriptContext);
                 }
@@ -611,7 +611,7 @@ public final class GasMotor {
                 v8 = ScriptValue.NULL;
             }
         }
-        ScriptValue scriptValue37 = ScriptFormula.addPolymorphic((ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", GasMotor.class, 1.0)), (ScriptValue)((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? ((polyClassMachine_v33 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v33.pg$171_overclock() : PolyDispatch.bootstrapGet("memberGet", "overclock", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL));
+        ScriptValue scriptValue37 = ScriptFormula.addPolymorphic((ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", GasMotor.class, 1.0)), (ScriptValue)((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? ((polyClassMachine_v23 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v23.pg$172_overclock() : PolyDispatch.bootstrapGet("memberGet", "overclock", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL));
         builder.val("oc_factor", scriptValue37);
         double d = scriptContext.getNum("target_rpm") * scriptValue37.asNum();
         ScriptValue scriptValue38 = ScriptValue.of((double)d);
@@ -624,14 +624,14 @@ public final class GasMotor {
         ScriptValue scriptValue40 = ScriptValue.of((double)d4);
         builder.val("rpm_ratio", scriptValue40);
         ScriptValue scriptValue41 = scriptContext.getClassOrVar("Machine");
-        double d5 = Math.floor(scriptValue30.asNum() * d4 * scriptValue37.asNum() * (1.0 - (scriptValue41 != ScriptValue.NULL ? ((polyClassMachine_v32 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue41)) != null ? polyClassMachine_v32.tg$150_efficiency() : PolyDispatch.bootstrapGet("memberGet", "efficiency", (ScriptValue)scriptValue41, (ScriptContext)scriptContext).asNum()) : ScriptValue.NULL.asNum())));
+        double d5 = Math.floor(scriptValue30.asNum() * d4 * scriptValue37.asNum() * (1.0 - (scriptValue41 != ScriptValue.NULL ? ((polyClassMachine_v22 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue41)) != null ? polyClassMachine_v22.tg$151_efficiency() : PolyDispatch.bootstrapGet("memberGet", "efficiency", (ScriptValue)scriptValue41, (ScriptContext)scriptContext).asNum()) : ScriptValue.NULL.asNum())));
         ScriptValue scriptValue42 = ScriptValue.of((double)d5);
         builder.val("consume_per_tick", scriptValue42);
         double d6 = Math.max(1.0, scriptContext.getNum("consume_per_tick"));
         ScriptValue scriptValue43 = ScriptValue.of((double)d6);
         builder.val("consume_per_tick", scriptValue43);
         ScriptValue scriptValue44 = scriptContext.getClassOrVar("Machine");
-        boolean bl = scriptValue44 != ScriptValue.NULL ? ((polyClassMachine_v3 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue44)) != null ? polyClassMachine_v3.tg$198_is_overstressed() : PolyDispatch.bootstrapGet("memberGet", "is_overstressed", (ScriptValue)scriptValue44, (ScriptContext)scriptContext).asBool()) : ScriptValue.NULL.asBool();
+        boolean bl = scriptValue44 != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue44)) != null ? polyClassMachine_v2.tg$199_is_overstressed() : PolyDispatch.bootstrapGet("memberGet", "is_overstressed", (ScriptValue)scriptValue44, (ScriptContext)scriptContext).asBool()) : ScriptValue.NULL.asBool();
         if (bl) {
             ScriptValue scriptValue45 = scriptContext.getClassOrVar("Machine");
             if (scriptValue45 != ScriptValue.NULL) {
@@ -639,8 +639,8 @@ public final class GasMotor {
                 Object object12;
                 double d7 = 0.0;
                 if (scriptValue45 instanceof ScriptValue.Obj && (object12 = (obj = (ScriptValue.Obj)scriptValue45).instance()) != null && !(object12 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v313 = new PolyClassMachine_v3(object12);
-                    v10 = ScriptValue.of((boolean)polyClassMachine_v313.tm$106_set_rpm_output(d7));
+                    PolyClassMachine_v2 polyClassMachine_v213 = new PolyClassMachine_v2(object12);
+                    v10 = ScriptValue.of((boolean)polyClassMachine_v213.tm$106_set_rpm_output(d7));
                 } else {
                     v10 = PolyDispatch.bootstrapCall("memberCall", "set_rpm_output", (ScriptValue)scriptValue45, (ScriptValue)ScriptValue.of((double)d7), (ScriptContext)scriptContext);
                 }
@@ -653,8 +653,8 @@ public final class GasMotor {
                 Object object13;
                 double d8 = -d2;
                 if (scriptValue46 instanceof ScriptValue.Obj && (object13 = (obj = (ScriptValue.Obj)scriptValue46).instance()) != null && !(object13 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v314 = new PolyClassMachine_v3(object13);
-                    v11 = ScriptValue.of((boolean)polyClassMachine_v314.tm$56_report_su(d8));
+                    PolyClassMachine_v2 polyClassMachine_v214 = new PolyClassMachine_v2(object13);
+                    v11 = ScriptValue.of((boolean)polyClassMachine_v214.tm$56_report_su(d8));
                 } else {
                     v11 = PolyDispatch.bootstrapCall("memberCall", "report_su", (ScriptValue)scriptValue46, (ScriptValue)ScriptValue.of((double)d8), (ScriptContext)scriptContext);
                 }
@@ -668,8 +668,8 @@ public final class GasMotor {
                 Object object14;
                 double d9 = d;
                 if (scriptValue47 instanceof ScriptValue.Obj && (object14 = (obj = (ScriptValue.Obj)scriptValue47).instance()) != null && !(object14 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v315 = new PolyClassMachine_v3(object14);
-                    v12 = ScriptValue.of((boolean)polyClassMachine_v315.tm$106_set_rpm_output(d9));
+                    PolyClassMachine_v2 polyClassMachine_v215 = new PolyClassMachine_v2(object14);
+                    v12 = ScriptValue.of((boolean)polyClassMachine_v215.tm$106_set_rpm_output(d9));
                 } else {
                     v12 = PolyDispatch.bootstrapCall("memberCall", "set_rpm_output", (ScriptValue)scriptValue47, (ScriptValue)ScriptValue.of((double)d9), (ScriptContext)scriptContext);
                 }
@@ -682,8 +682,8 @@ public final class GasMotor {
                 Object object15;
                 double d10 = -d2;
                 if (scriptValue48 instanceof ScriptValue.Obj && (object15 = (obj = (ScriptValue.Obj)scriptValue48).instance()) != null && !(object15 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v316 = new PolyClassMachine_v3(object15);
-                    v13 = ScriptValue.of((boolean)polyClassMachine_v316.tm$56_report_su(d10));
+                    PolyClassMachine_v2 polyClassMachine_v216 = new PolyClassMachine_v2(object15);
+                    v13 = ScriptValue.of((boolean)polyClassMachine_v216.tm$56_report_su(d10));
                 } else {
                     v13 = PolyDispatch.bootstrapCall("memberCall", "report_su", (ScriptValue)scriptValue48, (ScriptValue)ScriptValue.of((double)d10), (ScriptContext)scriptContext);
                 }
@@ -697,8 +697,8 @@ public final class GasMotor {
                 String string = "vapor";
                 double d11 = d6;
                 if (scriptValue49 instanceof ScriptValue.Obj && (object16 = (obj = (ScriptValue.Obj)scriptValue49).instance()) != null && !(object16 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v317 = new PolyClassMachine_v3(object16);
-                    v14 = ScriptValue.of((boolean)polyClassMachine_v317.tm$88_consume_gas(string, d11));
+                    PolyClassMachine_v2 polyClassMachine_v217 = new PolyClassMachine_v2(object16);
+                    v14 = ScriptValue.of((boolean)polyClassMachine_v217.tm$88_consume_gas(string, d11));
                 } else {
                     v14 = PolyDispatch.bootstrapCall("memberCall", "consume_gas", (ScriptValue)scriptValue49, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((double)d11), (ScriptContext)scriptContext);
                 }
