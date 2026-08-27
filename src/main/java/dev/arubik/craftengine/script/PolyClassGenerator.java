@@ -442,6 +442,47 @@ final class PolyClassGenerator {
             factory.visitMaxs(0, 0);
             factory.visitEnd();
 
+            // ofGuarded(sv): the receiver check and the unboxing, as one call returning a TYPED
+            // reference or null. The call site then reads as
+            //     PolyClassMachine m = PolyClassMachine.ofGuarded(sv);
+            //     if (m != null) m.recipes(); else <generic>;
+            // instead of an inlined instanceof/typeName chain with a raw Object hanging out of it.
+            // The PolyClass check is the load-bearing part (see emitPolyTypeGuard's own doc): a
+            // PolyClass owns its dispatch and must never reach a same-named PolyType's handler.
+            MethodVisitor guarded = cw.visitMethod(ACC_PUBLIC | ACC_STATIC, "ofGuarded",
+                    "(L" + VALUE + ";)L" + className + ";", null, null);
+            guarded.visitCode();
+            Label notOurs = new Label();
+            guarded.visitVarInsn(ALOAD, 0);
+            guarded.visitTypeInsn(INSTANCEOF, VALUE + "$Obj");
+            guarded.visitJumpInsn(IFEQ, notOurs);
+            guarded.visitVarInsn(ALOAD, 0);
+            guarded.visitTypeInsn(CHECKCAST, VALUE + "$Obj");
+            guarded.visitVarInsn(ASTORE, 1);
+            guarded.visitVarInsn(ALOAD, 1);
+            guarded.visitMethodInsn(INVOKEVIRTUAL, VALUE + "$Obj", "instance", "()Ljava/lang/Object;", false);
+            guarded.visitVarInsn(ASTORE, 2);
+            guarded.visitVarInsn(ALOAD, 2);
+            guarded.visitJumpInsn(IFNULL, notOurs);
+            guarded.visitVarInsn(ALOAD, 2);
+            guarded.visitTypeInsn(INSTANCEOF, "dev/arubik/craftengine/script/PolyClass");
+            guarded.visitJumpInsn(IFNE, notOurs);
+            guarded.visitVarInsn(ALOAD, 1);
+            guarded.visitMethodInsn(INVOKEVIRTUAL, VALUE + "$Obj", "typeName", "()Ljava/lang/String;", false);
+            guarded.visitLdcInsn(typeName);
+            guarded.visitMethodInsn(INVOKEVIRTUAL, "java/lang/String", "equals", "(Ljava/lang/Object;)Z", false);
+            guarded.visitJumpInsn(IFEQ, notOurs);
+            guarded.visitTypeInsn(NEW, className);
+            guarded.visitInsn(DUP);
+            guarded.visitVarInsn(ALOAD, 2);
+            guarded.visitMethodInsn(INVOKESPECIAL, className, "<init>", "(Ljava/lang/Object;)V", false);
+            guarded.visitInsn(ARETURN);
+            guarded.visitLabel(notOurs);
+            guarded.visitInsn(ACONST_NULL);
+            guarded.visitInsn(ARETURN);
+            guarded.visitMaxs(0, 0);
+            guarded.visitEnd();
+
             cw.visitEnd();
             byte[] bytes = cw.toByteArray();
             dumpIfRequested(className, bytes);

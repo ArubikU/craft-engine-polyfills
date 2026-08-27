@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassServer_v2
+ *  dev.arubik.craftengine.script.PolyClassServer
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -14,7 +14,7 @@
 package dev.arubik.craftengine.script.gen.examples;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassServer_v2;
+import dev.arubik.craftengine.script.PolyClassServer;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -48,8 +48,8 @@ public final class ExampleCron {
                 String string3 = "example_cron_runs";
                 String string4 = "int";
                 if (scriptValue2 instanceof ScriptValue.Obj && (object3 = (obj2 = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object3 instanceof PolyClass) && obj2.typeName().equals("Server")) {
-                    PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object3);
-                    object2 = polyClassServer_v2.tm$6_get_typed(string3, string4);
+                    PolyClassServer polyClassServer = new PolyClassServer(object3);
+                    object2 = polyClassServer.tm$6_get_typed(string3, string4);
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string3));
@@ -61,8 +61,8 @@ public final class ExampleCron {
             }
             ScriptValue scriptValue3 = ScriptFormula.addPolymorphic((ScriptValue)object2, (ScriptValue)ScriptValue.of((double)1.0));
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object);
-                v1 = ScriptValue.of((boolean)polyClassServer_v2.tm$0_set_typed(string, string2, scriptValue3));
+                PolyClassServer polyClassServer = new PolyClassServer(object);
+                v1 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(string, string2, scriptValue3));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));

@@ -2,7 +2,6 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassPlayer
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -10,12 +9,10 @@
  *  dev.arubik.craftengine.script.ScriptFormula
  *  dev.arubik.craftengine.script.ScriptProgram
  *  dev.arubik.craftengine.script.ScriptValue
- *  dev.arubik.craftengine.script.ScriptValue$Obj
  *  dev.arubik.craftengine.script.gen.ChuteUtils
  */
 package dev.arubik.craftengine.script.gen.storage;
 
-import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassPlayer;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -44,22 +41,22 @@ public final class Chute {
         block3: {
             var1_1 = var0.peek();
             var2_2 = var1_1.getClassOrVar("Player");
-            v0 /* !! */  = var2_2 != ScriptValue.NULL ? (var2_2 instanceof ScriptValue.Obj && (var4_4 = (var3_3 = (ScriptValue.Obj)var2_2).instance()) != null && !(var4_4 instanceof PolyClass) && var3_3.typeName().equals("Player") ? new PolyClassPlayer(var4_4).pg$38_is_sneaking() : PolyDispatch.bootstrapGet("memberGet", "is_sneaking", (ScriptValue)var2_2, (ScriptContext)var1_1)) : ScriptValue.NULL;
+            v0 /* !! */  = var2_2 != ScriptValue.NULL ? ((var3_3 = PolyClassPlayer.ofGuarded((ScriptValue)var2_2)) != null ? var3_3.pg$38_is_sneaking() : PolyDispatch.bootstrapGet("memberGet", "is_sneaking", (ScriptValue)var2_2, (ScriptContext)var1_1)) : ScriptValue.NULL;
             if (v0 /* !! */ .asBool()) {
-                var5_5 = ScriptContext.builder().copyFrom(ChuteUtils.fileScope()).copyFrom(var1_1);
-                ChuteUtils._chuteCycleFacing((ScriptContext.Builder)var5_5);
+                var4_4 = ScriptContext.builder().copyFrom(ChuteUtils.fileScope()).copyFrom(var1_1);
+                ChuteUtils._chuteCycleFacing((ScriptContext.Builder)var4_4);
                 return ScriptValue.NULL;
             }
-            var6_6 = var1_1.getClassOrVar("Player");
-            var9_9 = var6_6 != ScriptValue.NULL ? (var6_6 instanceof ScriptValue.Obj && (var8_8 = (var7_7 = (ScriptValue.Obj)var6_6).instance()) != null && !(var8_8 instanceof PolyClass) && var7_7.typeName().equals("Player") ? new PolyClassPlayer(var8_8).pg$47_main_hand() : PolyDispatch.bootstrapGet("memberGet", "main_hand", (ScriptValue)var6_6, (ScriptContext)var1_1)) : ScriptValue.NULL;
-            var0.val("held", var9_9);
-            var10_10 = new ArrayList<ScriptValue>();
-            var10_10.add(var9_9);
-            if (!(ScriptFormula.callBuiltin((String)"is_empty", var10_10, (ScriptContext)var1_1).asBool() ^ true)) ** GOTO lbl-1000
-            var11_11 = ScriptContext.builder().copyFrom(ChuteUtils.fileScope()).copyFrom(var1_1);
-            var12_12 = var1_1.getClassOrVar("held");
-            var11_11.val("id", (ScriptValue)(var12_12 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)var12_12, (ScriptContext)var1_1) : ScriptValue.NULL));
-            if (ChuteUtils._isGlassItem((ScriptContext.Builder)var11_11).asBool()) {
+            var5_5 = var1_1.getClassOrVar("Player");
+            var7_7 = var5_5 != ScriptValue.NULL ? ((var6_6 = PolyClassPlayer.ofGuarded((ScriptValue)var5_5)) != null ? var6_6.pg$47_main_hand() : PolyDispatch.bootstrapGet("memberGet", "main_hand", (ScriptValue)var5_5, (ScriptContext)var1_1)) : ScriptValue.NULL;
+            var0.val("held", var7_7);
+            var8_8 = new ArrayList<ScriptValue>();
+            var8_8.add(var7_7);
+            if (!(ScriptFormula.callBuiltin((String)"is_empty", var8_8, (ScriptContext)var1_1).asBool() ^ true)) ** GOTO lbl-1000
+            var9_9 = ScriptContext.builder().copyFrom(ChuteUtils.fileScope()).copyFrom(var1_1);
+            var10_10 = var1_1.getClassOrVar("held");
+            var9_9.val("id", (ScriptValue)(var10_10 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)var10_10, (ScriptContext)var1_1) : ScriptValue.NULL));
+            if (ChuteUtils._isGlassItem((ScriptContext.Builder)var9_9).asBool()) {
                 v1 = true;
             } else lbl-1000:
             // 2 sources
@@ -68,8 +65,8 @@ public final class Chute {
                 v1 = false;
             }
             if (!v1) break block3;
-            var13_13 = ScriptContext.builder().copyFrom(ChuteUtils.fileScope()).copyFrom(var1_1);
-            ChuteUtils._chuteToggleWindow((ScriptContext.Builder)var13_13);
+            var11_11 = ScriptContext.builder().copyFrom(ChuteUtils.fileScope()).copyFrom(var1_1);
+            ChuteUtils._chuteToggleWindow((ScriptContext.Builder)var11_11);
         }
         return ScriptValue.NULL;
     }

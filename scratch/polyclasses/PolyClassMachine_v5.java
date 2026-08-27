@@ -2,6 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
@@ -11,17 +12,19 @@
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler3
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler4
  *  dev.arubik.craftengine.script.ScriptValue
+ *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
 package dev.arubik.craftengine.script;
 
-import dev.arubik.craftengine.script.PolyClassBlock;
+import dev.arubik.craftengine.script.PolyClass;
+import dev.arubik.craftengine.script.PolyClassBlock_v6;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.util.List;
 
 public class PolyClassMachine_v5
-extends PolyClassBlock {
+extends PolyClassBlock_v6 {
     private static volatile PolyType.TypedMethodHandler3 h$0;
     private static volatile PolyType.MethodHandler m$1;
     private static volatile PolyType.TypedMethodHandler2 h$2;
@@ -1580,5 +1583,14 @@ extends PolyClassBlock {
 
     public static PolyClassMachine_v5 of(Object object) {
         return new PolyClassMachine_v5(object);
+    }
+
+    public static PolyClassMachine_v5 ofGuarded(ScriptValue scriptValue) {
+        ScriptValue.Obj obj;
+        Object object;
+        if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
+            return new PolyClassMachine_v5(object);
+        }
+        return null;
     }
 }

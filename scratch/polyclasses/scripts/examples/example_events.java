@@ -38,13 +38,12 @@ public final class ExampleEvents {
         if (scriptValue != ScriptValue.NULL) {
             ScriptValue.Obj obj;
             Object object;
-            ScriptValue.Obj obj2;
-            Object object2;
+            PolyClassPlayer polyClassPlayer;
             ScriptValue scriptValue2;
-            ScriptValue scriptValue3 = ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"<green>Welcome, "), (ScriptValue)((scriptValue2 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? (scriptValue2 instanceof ScriptValue.Obj && (object2 = (obj2 = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object2 instanceof PolyClass) && obj2.typeName().equals("Player") ? new PolyClassPlayer(object2).pg$48_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL)), (ScriptValue)ScriptValue.of((String)"!"));
+            ScriptValue scriptValue3 = ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"<green>Welcome, "), (ScriptValue)((scriptValue2 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassPlayer.pg$48_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL)), (ScriptValue)ScriptValue.of((String)"!"));
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                v0 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue3.asStr()));
+                PolyClassPlayer polyClassPlayer2 = new PolyClassPlayer(object);
+                v0 = ScriptValue.of((boolean)polyClassPlayer2.tm$42_send_message(scriptValue3.asStr()));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue3);

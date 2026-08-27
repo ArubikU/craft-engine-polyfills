@@ -36,9 +36,8 @@ public final class Crusher {
     }
 
     public static void run(ScriptContext.Builder builder) {
-        ScriptValue.Obj obj;
+        PolyClassUpgrades polyClassUpgrades;
         Object object;
-        Object object2;
         double d;
         double d2;
         ScriptValue scriptValue;
@@ -82,28 +81,28 @@ public final class Crusher {
         builder.val("flash", scriptValue8);
         ScriptValue scriptValue9 = scriptContext.getClassOrVar("Upgrades");
         if (scriptValue9 != ScriptValue.NULL) {
-            ScriptValue.Obj obj2;
-            Object object3;
+            ScriptValue.Obj obj;
+            Object object2;
             String string = "cml:upgrade_diamond";
-            if (scriptValue9 instanceof ScriptValue.Obj && (object3 = (obj2 = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object3 instanceof PolyClass) && obj2.typeName().equals("Upgrades")) {
-                PolyClassUpgrades polyClassUpgrades = new PolyClassUpgrades(object3);
-                object2 = ScriptValue.of((double)polyClassUpgrades.tm$2_count(string));
+            if (scriptValue9 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Upgrades")) {
+                PolyClassUpgrades polyClassUpgrades2 = new PolyClassUpgrades(object2);
+                object = ScriptValue.of((double)polyClassUpgrades2.tm$2_count(string));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
-                object2 = PolyDispatch.bootstrapCall("memberCall", "count", (ScriptValue)scriptValue9, arrayList, (ScriptContext)scriptContext);
+                object = PolyDispatch.bootstrapCall("memberCall", "count", (ScriptValue)scriptValue9, arrayList, (ScriptContext)scriptContext);
             }
         } else {
-            object2 = ScriptValue.NULL;
+            object = ScriptValue.NULL;
         }
-        boolean bl5 = object2.asNum() > 0.0;
+        boolean bl5 = object.asNum() > 0.0;
         ScriptValue scriptValue10 = ScriptValue.of((boolean)bl5);
         builder.val("has_diamond", scriptValue10);
         double d7 = 0.0;
         ScriptValue scriptValue11 = ScriptValue.of((double)0.0);
         builder.val("upgrade_bonus", scriptValue11);
         ScriptValue scriptValue12 = scriptContext.getClassOrVar("Upgrades");
-        List list = ScriptProgram.rowsOf((ScriptValue)(scriptValue12 != ScriptValue.NULL ? (scriptValue12 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Upgrades") ? new PolyClassUpgrades(object).pg$9_inventory() : PolyDispatch.bootstrapGet("memberGet", "inventory", (ScriptValue)scriptValue12, (ScriptContext)scriptContext)) : ScriptValue.NULL), (int)1);
+        List list = ScriptProgram.rowsOf((ScriptValue)(scriptValue12 != ScriptValue.NULL ? ((polyClassUpgrades = PolyClassUpgrades.ofGuarded((ScriptValue)scriptValue12)) != null ? polyClassUpgrades.pg$9_inventory() : PolyDispatch.bootstrapGet("memberGet", "inventory", (ScriptValue)scriptValue12, (ScriptContext)scriptContext)) : ScriptValue.NULL), (int)1);
         if (list != null) {
             for (ScriptValue[] scriptValueArray : list) {
                 builder.val("item", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);

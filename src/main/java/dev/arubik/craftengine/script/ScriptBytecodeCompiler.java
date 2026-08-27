@@ -727,7 +727,32 @@ final class ScriptBytecodeCompiler {
                 StrLiteral lit = left instanceof StrLiteral sl ? sl
                         : right instanceof StrLiteral sr ? sr : null;
                 if (lit != null) {
-                    Expr other = toAny(left instanceof StrLiteral ? right : left);
+                    Expr otherRaw = left instanceof StrLiteral ? right : left;
+
+                    // A plain variable compared to a string literal — `id == "minecraft:oak_log"`,
+                    // which tree_utils' _is_log does seventeen times in one expression — is just a
+                    // String comparison. Read it as a String and use String.equals: no ScriptValue
+                    // for the variable, and no ScriptFormula call at all.
+                    //
+                    // Excludes the literal "null", where the two genuinely differ: valuesEqualStr
+                    // reports false for a NULL receiver, while asStr() renders it as the string
+                    // "null" and would report true.
+                    if (otherRaw instanceof VarRead v && !"null".equals(lit.value)) {
+                        return new BaseExpr(Type.BOOL) {
+                            @Override public void emit(MethodVisitor mv, Ctx c) {
+                                v.emitFused(mv, c, "getStr", "Ljava/lang/String;");
+                                mv.visitLdcInsn(lit.value);
+                                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/String", "equals",
+                                        "(Ljava/lang/Object;)Z", false);
+                                if (negate) {
+                                    mv.visitInsn(ICONST_1);
+                                    mv.visitInsn(IXOR);
+                                }
+                            }
+                        };
+                    }
+
+                    Expr other = toAny(otherRaw);
                     return new BaseExpr(Type.BOOL) {
                         @Override public void emit(MethodVisitor mv, Ctx c) {
                             other.emit(mv, c);
@@ -1565,12 +1590,18 @@ final class ScriptBytecodeCompiler {
 
                     if (propJavaName != null) {
                         Label fallbackL = new Label(), fastL = new Label();
-                        int objSlot = c.allocRef(), instSlot = c.allocRef();
-                        emitPolyTypeGuard(mv, c, svSlot, name, objSlot, instSlot, fallbackL);
-                        mv.visitTypeInsn(NEW, wrapperName);
-                        mv.visitInsn(DUP);
-                        mv.visitVarInsn(ALOAD, instSlot);
-                        mv.visitMethodInsn(INVOKESPECIAL, wrapperName, "<init>", "(Ljava/lang/Object;)V", false);
+                        // One call does the receiver check and the unboxing, and the local it lands
+                        // in is the PolyClass itself — `PolyClassMachine m = PolyClassMachine
+                        // .ofGuarded(sv)` — rather than a raw Object plus an inlined type-check
+                        // chain. Null means "not this type", which takes the generic path.
+                        int pcSlot = c.allocRef();
+                        mv.visitVarInsn(ALOAD, svSlot);
+                        mv.visitMethodInsn(INVOKESTATIC, wrapperName, "ofGuarded",
+                                "(L" + VALUE + ";)L" + wrapperName + ";", false);
+                        mv.visitVarInsn(ASTORE, pcSlot);
+                        mv.visitVarInsn(ALOAD, pcSlot);
+                        mv.visitJumpInsn(IFNULL, fallbackL);
+                        mv.visitVarInsn(ALOAD, pcSlot);
                         mv.visitMethodInsn(INVOKEVIRTUAL, wrapperName, propJavaName, "()L" + VALUE + ";", false);
                         mv.visitJumpInsn(GOTO, fastL);
                         mv.visitLabel(fallbackL);

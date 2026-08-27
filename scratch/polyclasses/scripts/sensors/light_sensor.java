@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v3
+ *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -13,7 +13,7 @@
 package dev.arubik.craftengine.script.gen.sensors;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v3;
+import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
@@ -42,8 +42,8 @@ public final class LightSensor {
             double d2 = 1.0;
             double d3 = 0.0;
             if (scriptValue2 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object2);
-                object = polyClassMachine_v3.tm$68_block_at(d, d2, d3);
+                PolyClassMachine polyClassMachine = new PolyClassMachine(object2);
+                object = polyClassMachine.tm$68_block_at(d, d2, d3);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((double)d));
@@ -74,8 +74,8 @@ public final class LightSensor {
             Object object3;
             ScriptValue scriptValue8 = scriptContext.getClassOrVar("light");
             if (scriptValue instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object3);
-                v1 = ScriptValue.of((boolean)polyClassMachine_v3.tm$108_emit_redstone(scriptValue8.asNum()));
+                PolyClassMachine polyClassMachine = new PolyClassMachine(object3);
+                v1 = ScriptValue.of((boolean)polyClassMachine.tm$108_emit_redstone(scriptValue8.asNum()));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue8);

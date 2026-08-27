@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v3
+ *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyClassPlayer
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -17,7 +17,7 @@
 package dev.arubik.craftengine.script.gen.storage;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v3;
+import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyClassPlayer;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -42,34 +42,32 @@ public final class SmartChute {
         block10: {
             ScriptContext scriptContext;
             block9: {
-                ScriptValue.Obj obj;
-                Object object;
-                ScriptValue.Obj obj2;
-                Object object2;
+                PolyClassPlayer polyClassPlayer;
+                PolyClassPlayer polyClassPlayer2;
                 scriptContext = builder.peek();
                 ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
-                Object object3 = scriptValue != ScriptValue.NULL ? (scriptValue instanceof ScriptValue.Obj && (object2 = (obj2 = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj2.typeName().equals("Player") ? new PolyClassPlayer(object2).pg$38_is_sneaking() : PolyDispatch.bootstrapGet("memberGet", "is_sneaking", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
-                if (object3.asBool()) {
+                Object object = scriptValue != ScriptValue.NULL ? ((polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassPlayer2.pg$38_is_sneaking() : PolyDispatch.bootstrapGet("memberGet", "is_sneaking", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+                if (object.asBool()) {
                     ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(ChuteUtils.fileScope()).copyFrom(scriptContext);
                     ChuteUtils._chuteOpenAmountDialog((ScriptContext.Builder)builder2);
                     return ScriptValue.NULL;
                 }
                 ScriptValue scriptValue2 = scriptContext.getClassOrVar("Player");
-                ScriptValue scriptValue3 = scriptValue2 != ScriptValue.NULL ? (scriptValue2 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player") ? new PolyClassPlayer(object).pg$47_main_hand() : PolyDispatch.bootstrapGet("memberGet", "main_hand", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+                ScriptValue scriptValue3 = scriptValue2 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassPlayer.pg$47_main_hand() : PolyDispatch.bootstrapGet("memberGet", "main_hand", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL;
                 builder.val("held", scriptValue3);
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue3);
                 if (!ScriptFormula.callBuiltin((String)"is_empty", arrayList, (ScriptContext)scriptContext).asBool()) break block9;
                 ScriptValue scriptValue4 = scriptContext.getClassOrVar("Machine");
                 if (scriptValue4 != ScriptValue.NULL) {
-                    ScriptValue.Obj obj3;
-                    Object object4;
+                    ScriptValue.Obj obj;
+                    Object object2;
                     String string = "_chute_filter";
                     String string2 = "str";
                     ScriptValue scriptValue5 = ScriptValue.of((String)"");
-                    if (scriptValue4 instanceof ScriptValue.Obj && (object4 = (obj3 = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object4 instanceof PolyClass) && obj3.typeName().equals("Machine")) {
-                        PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object4);
-                        v1 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string2, scriptValue5));
+                    if (scriptValue4 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                        PolyClassMachine polyClassMachine = new PolyClassMachine(object2);
+                        v1 = ScriptValue.of((boolean)polyClassMachine.tm$82_set_typed(string, string2, scriptValue5));
                     } else {
                         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
                         arrayList2.add(ScriptValue.of((String)string));
@@ -94,10 +92,10 @@ public final class SmartChute {
                 String string = "_chute_filter";
                 String string3 = "str";
                 ScriptValue scriptValue8 = scriptContext.getClassOrVar("held");
-                Object object5 = scriptValue7 = scriptValue8 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)scriptValue8, (ScriptContext)scriptContext) : ScriptValue.NULL;
+                Object object3 = scriptValue7 = scriptValue8 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)scriptValue8, (ScriptContext)scriptContext) : ScriptValue.NULL;
                 if (scriptValue6 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object);
-                    v3 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string3, scriptValue7));
+                    PolyClassMachine polyClassMachine = new PolyClassMachine(object);
+                    v3 = ScriptValue.of((boolean)polyClassMachine.tm$82_set_typed(string, string3, scriptValue7));
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));

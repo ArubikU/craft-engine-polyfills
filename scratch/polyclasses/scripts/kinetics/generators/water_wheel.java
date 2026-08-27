@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v3
+ *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -16,7 +16,7 @@
 package dev.arubik.craftengine.script.gen.kinetics.generators;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v3;
+import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -50,7 +50,7 @@ public final class WaterWheel {
 
     public static ScriptValue _smallOffsets(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        if (ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("axis"), (String)"y")) {
+        if (scriptContext.getStr("axis").equals("y")) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             builder2.val("dx", ScriptValue.of((double)1.0));
@@ -74,7 +74,7 @@ public final class WaterWheel {
             arrayList.add(WaterWheel._off(builder5));
             return new ScriptValue.Array(arrayList);
         }
-        if (ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("axis"), (String)"x")) {
+        if (scriptContext.getStr("axis").equals("x")) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             ScriptContext.Builder builder6 = ScriptContext.builder().copyFrom(scriptContext);
             builder6.val("dx", ScriptValue.of((double)0.0));
@@ -124,7 +124,7 @@ public final class WaterWheel {
 
     public static ScriptValue _largeOffsets(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        if (ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("axis"), (String)"y")) {
+        if (scriptContext.getStr("axis").equals("y")) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             builder2.val("dx", ScriptValue.of((double)1.0));
@@ -208,7 +208,7 @@ public final class WaterWheel {
             arrayList.add(WaterWheel._off(builder17));
             return new ScriptValue.Array(arrayList);
         }
-        if (ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("axis"), (String)"x")) {
+        if (scriptContext.getStr("axis").equals("x")) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             ScriptContext.Builder builder18 = ScriptContext.builder().copyFrom(scriptContext);
             builder18.val("dx", ScriptValue.of((double)0.0));
@@ -430,8 +430,8 @@ public final class WaterWheel {
                     ScriptValue scriptValue13 = scriptValue8;
                     ScriptValue scriptValue14 = scriptValue10;
                     if (scriptValue11 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue11).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                        PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object5);
-                        object = polyClassMachine_v3.tm$68_block_at(scriptValue12.asNum(), scriptValue13.asNum(), scriptValue14.asNum());
+                        PolyClassMachine polyClassMachine = new PolyClassMachine(object5);
+                        object = polyClassMachine.tm$68_block_at(scriptValue12.asNum(), scriptValue13.asNum(), scriptValue14.asNum());
                     } else {
                         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                         arrayList.add(scriptValue12);
@@ -449,11 +449,11 @@ public final class WaterWheel {
                 ScriptValue scriptValue17 = scriptContext.getClassOrVar("b");
                 ScriptValue scriptValue18 = scriptValue17 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "fluid_flow", (ScriptValue)scriptValue17, (ScriptContext)scriptContext) : ScriptValue.NULL;
                 builder.val("flow", scriptValue18);
-                ScriptValue scriptValue19 = ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("axis"), (String)"x") ? ScriptValue.of((double)0.0) : ((scriptValue4 = scriptContext.getClassOrVar("flow")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "x", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL);
+                ScriptValue scriptValue19 = scriptContext.getStr("axis").equals("x") ? ScriptValue.of((double)0.0) : ((scriptValue4 = scriptContext.getClassOrVar("flow")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "x", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL);
                 builder.val("fx", scriptValue19);
-                ScriptValue scriptValue20 = ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("axis"), (String)"y") ? ScriptValue.of((double)0.0) : ((scriptValue3 = scriptContext.getClassOrVar("flow")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL);
+                ScriptValue scriptValue20 = scriptContext.getStr("axis").equals("y") ? ScriptValue.of((double)0.0) : ((scriptValue3 = scriptContext.getClassOrVar("flow")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL);
                 builder.val("fy", scriptValue20);
-                ScriptValue scriptValue21 = ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("axis"), (String)"z") ? ScriptValue.of((double)0.0) : ((scriptValue2 = scriptContext.getClassOrVar("flow")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL);
+                ScriptValue scriptValue21 = scriptContext.getStr("axis").equals("z") ? ScriptValue.of((double)0.0) : ((scriptValue2 = scriptContext.getClassOrVar("flow")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL);
                 builder.val("fz", scriptValue21);
                 double d2 = Math.sqrt(scriptValue19.asNum() * scriptValue19.asNum() + scriptValue20.asNum() * scriptValue20.asNum() + scriptValue21.asNum() * scriptValue21.asNum());
                 ScriptValue scriptValue22 = ScriptValue.of((double)d2);
@@ -487,7 +487,7 @@ public final class WaterWheel {
                 double d15 = d14 == 0.0 ? 0.0 : scriptValue10.asNum() / d14;
                 ScriptValue scriptValue29 = ScriptValue.of((double)d15);
                 builder.val("nz", scriptValue29);
-                if (ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("axis"), (String)"x")) {
+                if (scriptContext.getStr("axis").equals("x")) {
                     double d16 = d11;
                     ScriptValue scriptValue30 = ScriptValue.of((double)d16);
                     builder.val("px", scriptValue30);
@@ -497,7 +497,7 @@ public final class WaterWheel {
                     double d18 = d13;
                     ScriptValue scriptValue32 = ScriptValue.of((double)d18);
                     builder.val("pz", scriptValue32);
-                } else if (ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("axis"), (String)"y")) {
+                } else if (scriptContext.getStr("axis").equals("y")) {
                     double d19 = d15;
                     ScriptValue scriptValue33 = ScriptValue.of((double)d19);
                     builder.val("px", scriptValue33);
@@ -536,11 +536,10 @@ public final class WaterWheel {
 
     public static ScriptValue _run(ScriptContext.Builder builder) {
         ScriptValue scriptValue;
-        ScriptValue.Obj obj;
-        Object object;
+        PolyClassMachine polyClassMachine;
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue3 = scriptValue2 != ScriptValue.NULL ? (scriptValue2 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v3(object).pg$123_axis() : PolyDispatch.bootstrapGet("memberGet", "axis", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        ScriptValue scriptValue3 = scriptValue2 != ScriptValue.NULL ? ((polyClassMachine = PolyClassMachine.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassMachine.pg$123_axis() : PolyDispatch.bootstrapGet("memberGet", "axis", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         builder.val("axis", scriptValue3);
         if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)scriptContext.getClassOrVar("null"))) {
             ScriptValue scriptValue4 = ScriptValue.of((String)"z");
@@ -575,12 +574,12 @@ public final class WaterWheel {
         builder.val("rpm_out", scriptValue9);
         ScriptValue scriptValue10 = scriptContext.getClassOrVar("Machine");
         if (scriptValue10 != ScriptValue.NULL) {
-            ScriptValue.Obj obj2;
-            Object object2;
+            ScriptValue.Obj obj;
+            Object object;
             double d2 = d;
-            if (scriptValue10 instanceof ScriptValue.Obj && (object2 = (obj2 = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object2 instanceof PolyClass) && obj2.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object2);
-                v1 = ScriptValue.of((boolean)polyClassMachine_v3.tm$106_set_rpm_output(d2));
+            if (scriptValue10 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                PolyClassMachine polyClassMachine2 = new PolyClassMachine(object);
+                v1 = ScriptValue.of((boolean)polyClassMachine2.tm$106_set_rpm_output(d2));
             } else {
                 ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
                 arrayList2.add(ScriptValue.of((double)d2));
@@ -592,12 +591,12 @@ public final class WaterWheel {
         if (d == 0.0) {
             ScriptValue scriptValue11 = scriptContext.getClassOrVar("Machine");
             if (scriptValue11 != ScriptValue.NULL) {
-                ScriptValue.Obj obj3;
-                Object object3;
+                ScriptValue.Obj obj;
+                Object object;
                 double d3 = 0.0;
-                if (scriptValue11 instanceof ScriptValue.Obj && (object3 = (obj3 = (ScriptValue.Obj)scriptValue11).instance()) != null && !(object3 instanceof PolyClass) && obj3.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object3);
-                    v2 = ScriptValue.of((boolean)polyClassMachine_v3.tm$56_report_su(d3));
+                if (scriptValue11 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue11).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                    PolyClassMachine polyClassMachine3 = new PolyClassMachine(object);
+                    v2 = ScriptValue.of((boolean)polyClassMachine3.tm$56_report_su(d3));
                 } else {
                     ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
                     arrayList3.add(ScriptValue.of((double)d3));
@@ -609,12 +608,12 @@ public final class WaterWheel {
         } else {
             ScriptValue scriptValue12 = scriptContext.getClassOrVar("Machine");
             if (scriptValue12 != ScriptValue.NULL) {
-                ScriptValue.Obj obj4;
-                Object object4;
+                ScriptValue.Obj obj;
+                Object object;
                 double d4 = -scriptValue8.asNum();
-                if (scriptValue12 instanceof ScriptValue.Obj && (object4 = (obj4 = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object4 instanceof PolyClass) && obj4.typeName().equals("Machine")) {
-                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object4);
-                    v3 = ScriptValue.of((boolean)polyClassMachine_v3.tm$56_report_su(d4));
+                if (scriptValue12 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                    PolyClassMachine polyClassMachine4 = new PolyClassMachine(object);
+                    v3 = ScriptValue.of((boolean)polyClassMachine4.tm$56_report_su(d4));
                 } else {
                     ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
                     arrayList4.add(ScriptValue.of((double)d4));
@@ -656,8 +655,8 @@ public final class WaterWheel {
             Object object;
             double d = 0.0;
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object);
-                v0 = ScriptValue.of((boolean)polyClassMachine_v3.tm$106_set_rpm_output(d));
+                PolyClassMachine polyClassMachine = new PolyClassMachine(object);
+                v0 = ScriptValue.of((boolean)polyClassMachine.tm$106_set_rpm_output(d));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((double)d));
@@ -672,8 +671,8 @@ public final class WaterWheel {
             Object object;
             double d = 0.0;
             if (scriptValue2 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object);
-                v1 = ScriptValue.of((boolean)polyClassMachine_v3.tm$56_report_su(d));
+                PolyClassMachine polyClassMachine = new PolyClassMachine(object);
+                v1 = ScriptValue.of((boolean)polyClassMachine.tm$56_report_su(d));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((double)d));

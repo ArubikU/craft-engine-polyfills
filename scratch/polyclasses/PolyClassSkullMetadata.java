@@ -2,12 +2,15 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
+ *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
 package dev.arubik.craftengine.script;
 
+import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassBlockMetadata;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
@@ -52,5 +55,14 @@ extends PolyClassBlockMetadata {
 
     public static PolyClassSkullMetadata of(Object object) {
         return new PolyClassSkullMetadata(object);
+    }
+
+    public static PolyClassSkullMetadata ofGuarded(ScriptValue scriptValue) {
+        ScriptValue.Obj obj;
+        Object object;
+        if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("SkullMetadata")) {
+            return new PolyClassSkullMetadata(object);
+        }
+        return null;
     }
 }

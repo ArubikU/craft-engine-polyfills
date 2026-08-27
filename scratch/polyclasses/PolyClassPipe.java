@@ -2,12 +2,15 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
+ *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
 package dev.arubik.craftengine.script;
 
+import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
 import dev.arubik.craftengine.script.ScriptValue;
@@ -96,5 +99,14 @@ public class PolyClassPipe {
 
     public static PolyClassPipe of(Object object) {
         return new PolyClassPipe(object);
+    }
+
+    public static PolyClassPipe ofGuarded(ScriptValue scriptValue) {
+        ScriptValue.Obj obj;
+        Object object;
+        if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Pipe")) {
+            return new PolyClassPipe(object);
+        }
+        return null;
     }
 }

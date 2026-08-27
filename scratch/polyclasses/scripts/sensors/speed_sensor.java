@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v3
+ *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script.gen.sensors;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v3;
+import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -36,35 +36,34 @@ public final class SpeedSensor {
     }
 
     public static void run(ScriptContext.Builder builder) {
-        ScriptValue.Obj obj;
+        PolyClassMachine polyClassMachine;
         Object object;
         Object object2;
         Object object3;
         Object object4;
         Object object5;
-        Object object6;
         ScriptValue scriptValue;
-        Object object7;
+        Object object6;
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("Machine");
         if (scriptValue2 != ScriptValue.NULL) {
-            ScriptValue.Obj obj2;
-            Object object8;
+            ScriptValue.Obj obj;
+            Object object7;
             String string = "scan_range";
             String string2 = "int";
-            if (scriptValue2 instanceof ScriptValue.Obj && (object8 = (obj2 = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object8 instanceof PolyClass) && obj2.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object8);
-                object7 = polyClassMachine_v3.tm$34_get_typed(string, string2);
+            if (scriptValue2 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                PolyClassMachine polyClassMachine2 = new PolyClassMachine(object7);
+                object6 = polyClassMachine2.tm$34_get_typed(string, string2);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
                 arrayList.add(ScriptValue.of((String)string2));
-                object7 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, arrayList, (ScriptContext)scriptContext);
+                object6 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, arrayList, (ScriptContext)scriptContext);
             }
         } else {
-            object7 = ScriptValue.NULL;
+            object6 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue3 = object7;
+        ScriptValue scriptValue3 = object6;
         builder.val("scan_range", scriptValue3);
         if (scriptValue3.asNum() <= 0.0) {
             double d = 3.0;
@@ -72,23 +71,23 @@ public final class SpeedSensor {
             builder.val("scan_range", scriptValue4);
         }
         if ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL) {
-            ScriptValue.Obj obj3;
-            Object object9;
+            ScriptValue.Obj obj;
+            Object object8;
             String string = "full_speed";
             String string3 = "int";
-            if (scriptValue instanceof ScriptValue.Obj && (object9 = (obj3 = (ScriptValue.Obj)scriptValue).instance()) != null && !(object9 instanceof PolyClass) && obj3.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object9);
-                object6 = polyClassMachine_v3.tm$34_get_typed(string, string3);
+            if (scriptValue instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                PolyClassMachine polyClassMachine3 = new PolyClassMachine(object8);
+                object5 = polyClassMachine3.tm$34_get_typed(string, string3);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
                 arrayList.add(ScriptValue.of((String)string3));
-                object6 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
+                object5 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
             }
         } else {
-            object6 = ScriptValue.NULL;
+            object5 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue5 = object6;
+        ScriptValue scriptValue5 = object5;
         builder.val("full_speed", scriptValue5);
         if (scriptValue5.asNum() <= 0.0) {
             double d = 50.0;
@@ -101,23 +100,23 @@ public final class SpeedSensor {
         builder.val("full", scriptValue7);
         ScriptValue scriptValue8 = scriptContext.getClassOrVar("Machine");
         if (scriptValue8 != ScriptValue.NULL) {
-            ScriptValue.Obj obj4;
-            Object object10;
+            ScriptValue.Obj obj;
+            Object object9;
             String string = "deadzone";
             String string4 = "int";
-            if (scriptValue8 instanceof ScriptValue.Obj && (object10 = (obj4 = (ScriptValue.Obj)scriptValue8).instance()) != null && !(object10 instanceof PolyClass) && obj4.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object10);
-                object5 = polyClassMachine_v3.tm$34_get_typed(string, string4);
+            if (scriptValue8 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue8).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                PolyClassMachine polyClassMachine4 = new PolyClassMachine(object9);
+                object4 = polyClassMachine4.tm$34_get_typed(string, string4);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
                 arrayList.add(ScriptValue.of((String)string4));
-                object5 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue8, arrayList, (ScriptContext)scriptContext);
+                object4 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue8, arrayList, (ScriptContext)scriptContext);
             }
         } else {
-            object5 = ScriptValue.NULL;
+            object4 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue9 = object5;
+        ScriptValue scriptValue9 = object4;
         builder.val("deadzone", scriptValue9);
         if (scriptValue9.asNum() <= 0.0) {
             double d3 = 10.0;
@@ -130,61 +129,61 @@ public final class SpeedSensor {
         builder.val("dead", scriptValue11);
         ScriptValue scriptValue12 = scriptContext.getClassOrVar("Machine");
         if (scriptValue12 != ScriptValue.NULL) {
-            ScriptValue.Obj obj5;
-            Object object11;
+            ScriptValue.Obj obj;
+            Object object10;
             String string = "living_only";
             String string5 = "int";
-            if (scriptValue12 instanceof ScriptValue.Obj && (object11 = (obj5 = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object11 instanceof PolyClass) && obj5.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object11);
-                object4 = polyClassMachine_v3.tm$34_get_typed(string, string5);
+            if (scriptValue12 instanceof ScriptValue.Obj && (object10 = (obj = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object10 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                PolyClassMachine polyClassMachine5 = new PolyClassMachine(object10);
+                object3 = polyClassMachine5.tm$34_get_typed(string, string5);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
                 arrayList.add(ScriptValue.of((String)string5));
-                object4 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue12, arrayList, (ScriptContext)scriptContext);
-            }
-        } else {
-            object4 = ScriptValue.NULL;
-        }
-        ScriptValue scriptValue13 = object4;
-        builder.val("living_only", scriptValue13);
-        ScriptValue scriptValue14 = scriptContext.getClassOrVar("Machine");
-        if (scriptValue14 != ScriptValue.NULL) {
-            ScriptValue.Obj obj6;
-            Object object12;
-            String string = "count_y";
-            String string6 = "int";
-            if (scriptValue14 instanceof ScriptValue.Obj && (object12 = (obj6 = (ScriptValue.Obj)scriptValue14).instance()) != null && !(object12 instanceof PolyClass) && obj6.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object12);
-                object3 = polyClassMachine_v3.tm$34_get_typed(string, string6);
-            } else {
-                ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)string));
-                arrayList.add(ScriptValue.of((String)string6));
-                object3 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue14, arrayList, (ScriptContext)scriptContext);
+                object3 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue12, arrayList, (ScriptContext)scriptContext);
             }
         } else {
             object3 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue15 = object3;
-        builder.val("count_y", scriptValue15);
-        ScriptValue scriptValue16 = scriptContext.getClassOrVar("Machine");
-        if (scriptValue16 != ScriptValue.NULL) {
-            ScriptValue.Obj obj7;
-            Object object13;
-            ScriptValue scriptValue17 = scriptContext.getClassOrVar("scan_range");
-            if (scriptValue16 instanceof ScriptValue.Obj && (object13 = (obj7 = (ScriptValue.Obj)scriptValue16).instance()) != null && !(object13 instanceof PolyClass) && obj7.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object13);
-                object2 = polyClassMachine_v3.tm$94_nearby_entities(scriptValue17.asNum());
+        ScriptValue scriptValue13 = object3;
+        builder.val("living_only", scriptValue13);
+        ScriptValue scriptValue14 = scriptContext.getClassOrVar("Machine");
+        if (scriptValue14 != ScriptValue.NULL) {
+            ScriptValue.Obj obj;
+            Object object11;
+            String string = "count_y";
+            String string6 = "int";
+            if (scriptValue14 instanceof ScriptValue.Obj && (object11 = (obj = (ScriptValue.Obj)scriptValue14).instance()) != null && !(object11 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                PolyClassMachine polyClassMachine6 = new PolyClassMachine(object11);
+                object2 = polyClassMachine6.tm$34_get_typed(string, string6);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(scriptValue17);
-                object2 = PolyDispatch.bootstrapCall("memberCall", "nearby_entities", (ScriptValue)scriptValue16, arrayList, (ScriptContext)scriptContext);
+                arrayList.add(ScriptValue.of((String)string));
+                arrayList.add(ScriptValue.of((String)string6));
+                object2 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue14, arrayList, (ScriptContext)scriptContext);
             }
         } else {
             object2 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue18 = object2;
+        ScriptValue scriptValue15 = object2;
+        builder.val("count_y", scriptValue15);
+        ScriptValue scriptValue16 = scriptContext.getClassOrVar("Machine");
+        if (scriptValue16 != ScriptValue.NULL) {
+            ScriptValue.Obj obj;
+            Object object12;
+            ScriptValue scriptValue17 = scriptContext.getClassOrVar("scan_range");
+            if (scriptValue16 instanceof ScriptValue.Obj && (object12 = (obj = (ScriptValue.Obj)scriptValue16).instance()) != null && !(object12 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                PolyClassMachine polyClassMachine7 = new PolyClassMachine(object12);
+                object = polyClassMachine7.tm$94_nearby_entities(scriptValue17.asNum());
+            } else {
+                ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
+                arrayList.add(scriptValue17);
+                object = PolyDispatch.bootstrapCall("memberCall", "nearby_entities", (ScriptValue)scriptValue16, arrayList, (ScriptContext)scriptContext);
+            }
+        } else {
+            object = ScriptValue.NULL;
+        }
+        ScriptValue scriptValue18 = object;
         builder.val("entities", scriptValue18);
         double d6 = 0.0;
         ScriptValue scriptValue19 = ScriptValue.of((double)0.0);
@@ -230,7 +229,7 @@ public final class SpeedSensor {
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         arrayList.add(scriptContext.getClassOrVar("power"));
         ScriptValue scriptValue31 = scriptContext.getClassOrVar("Machine");
-        PolyDispatch.bootstrapCall("memberCall", "set", (ScriptValue)(scriptValue31 != ScriptValue.NULL ? (scriptValue31 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue31).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v3(object).pg$148_redstone() : PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue31, (ScriptContext)scriptContext)) : ScriptValue.NULL), arrayList, (ScriptContext)scriptContext);
+        PolyDispatch.bootstrapCall("memberCall", "set", (ScriptValue)(scriptValue31 != ScriptValue.NULL ? ((polyClassMachine = PolyClassMachine.ofGuarded((ScriptValue)scriptValue31)) != null ? polyClassMachine.pg$148_redstone() : PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue31, (ScriptContext)scriptContext)) : ScriptValue.NULL), arrayList, (ScriptContext)scriptContext);
         FILE_SCOPE = builder.build();
     }
 }

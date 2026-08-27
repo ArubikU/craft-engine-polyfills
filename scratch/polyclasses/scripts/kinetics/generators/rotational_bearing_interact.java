@@ -5,7 +5,7 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassContraptionManager
  *  dev.arubik.craftengine.script.PolyClassGlue
- *  dev.arubik.craftengine.script.PolyClassMachine_v3
+ *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyClassPlayer
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -19,7 +19,7 @@ package dev.arubik.craftengine.script.gen.kinetics.generators;
 import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassContraptionManager;
 import dev.arubik.craftengine.script.PolyClassGlue;
-import dev.arubik.craftengine.script.PolyClassMachine_v3;
+import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyClassPlayer;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -51,8 +51,8 @@ public final class RotationalBearingInteract {
             double d2 = 0.0;
             double d3 = 0.0;
             if (scriptValue instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object4);
-                object3 = polyClassMachine_v3.tm$68_block_at(d, d2, d3);
+                PolyClassMachine polyClassMachine = new PolyClassMachine(object4);
+                object3 = polyClassMachine.tm$68_block_at(d, d2, d3);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((double)d));
@@ -89,21 +89,18 @@ public final class RotationalBearingInteract {
             ScriptValue.Obj obj;
             Object object6;
             ScriptValue scriptValue6;
-            ScriptValue.Obj obj2;
-            Object object7;
-            ScriptValue.Obj obj3;
-            Object object8;
-            ScriptValue.Obj obj4;
-            Object object9;
+            PolyClassMachine polyClassMachine;
+            PolyClassMachine polyClassMachine2;
+            PolyClassMachine polyClassMachine3;
             ScriptValue scriptValue7 = scriptContext.getClassOrVar("Machine");
-            ScriptValue scriptValue8 = scriptValue7 != ScriptValue.NULL ? (scriptValue7 instanceof ScriptValue.Obj && (object9 = (obj4 = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object9 instanceof PolyClass) && obj4.typeName().equals("Machine") ? new PolyClassMachine_v3(object9).pg$126_facing_dx() : PolyDispatch.bootstrapGet("memberGet", "facing_dx", (ScriptValue)scriptValue7, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+            ScriptValue scriptValue8 = scriptValue7 != ScriptValue.NULL ? ((polyClassMachine3 = PolyClassMachine.ofGuarded((ScriptValue)scriptValue7)) != null ? polyClassMachine3.pg$126_facing_dx() : PolyDispatch.bootstrapGet("memberGet", "facing_dx", (ScriptValue)scriptValue7, (ScriptContext)scriptContext)) : ScriptValue.NULL;
             ScriptValue scriptValue9 = scriptContext.getClassOrVar("Machine");
-            ScriptValue scriptValue10 = scriptValue9 != ScriptValue.NULL ? (scriptValue9 instanceof ScriptValue.Obj && (object8 = (obj3 = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object8 instanceof PolyClass) && obj3.typeName().equals("Machine") ? new PolyClassMachine_v3(object8).pg$124_facing_dy() : PolyDispatch.bootstrapGet("memberGet", "facing_dy", (ScriptValue)scriptValue9, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+            ScriptValue scriptValue10 = scriptValue9 != ScriptValue.NULL ? ((polyClassMachine2 = PolyClassMachine.ofGuarded((ScriptValue)scriptValue9)) != null ? polyClassMachine2.pg$124_facing_dy() : PolyDispatch.bootstrapGet("memberGet", "facing_dy", (ScriptValue)scriptValue9, (ScriptContext)scriptContext)) : ScriptValue.NULL;
             ScriptValue scriptValue11 = scriptContext.getClassOrVar("Machine");
-            Object object10 = scriptValue11 != ScriptValue.NULL ? (scriptValue11 instanceof ScriptValue.Obj && (object7 = (obj2 = (ScriptValue.Obj)scriptValue11).instance()) != null && !(object7 instanceof PolyClass) && obj2.typeName().equals("Machine") ? new PolyClassMachine_v3(object7).pg$125_facing_dz() : PolyDispatch.bootstrapGet("memberGet", "facing_dz", (ScriptValue)scriptValue11, (ScriptContext)scriptContext)) : (scriptValue6 = ScriptValue.NULL);
+            Object object7 = scriptValue11 != ScriptValue.NULL ? ((polyClassMachine = PolyClassMachine.ofGuarded((ScriptValue)scriptValue11)) != null ? polyClassMachine.pg$125_facing_dz() : PolyDispatch.bootstrapGet("memberGet", "facing_dz", (ScriptValue)scriptValue11, (ScriptContext)scriptContext)) : (scriptValue6 = ScriptValue.NULL);
             if (scriptValue5 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object6);
-                object = polyClassMachine_v3.tm$68_block_at(scriptValue8.asNum(), scriptValue10.asNum(), scriptValue6.asNum());
+                PolyClassMachine polyClassMachine4 = new PolyClassMachine(object6);
+                object = polyClassMachine4.tm$68_block_at(scriptValue8.asNum(), scriptValue10.asNum(), scriptValue6.asNum());
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue8);
@@ -118,74 +115,73 @@ public final class RotationalBearingInteract {
     }
 
     public static void run(ScriptContext.Builder builder) {
-        ScriptValue.Obj obj;
+        PolyClassPlayer polyClassPlayer;
         Object object;
-        Object object2;
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
         if (scriptValue != ScriptValue.NULL) {
-            ScriptValue.Obj obj2;
-            Object object3;
+            ScriptValue.Obj obj;
+            Object object2;
             String string = "assembled";
             String string2 = "int";
-            if (scriptValue instanceof ScriptValue.Obj && (object3 = (obj2 = (ScriptValue.Obj)scriptValue).instance()) != null && !(object3 instanceof PolyClass) && obj2.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object3);
-                object2 = polyClassMachine_v3.tm$34_get_typed(string, string2);
+            if (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                PolyClassMachine polyClassMachine = new PolyClassMachine(object2);
+                object = polyClassMachine.tm$34_get_typed(string, string2);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
                 arrayList.add(ScriptValue.of((String)string2));
-                object2 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
+                object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
             }
         } else {
-            object2 = ScriptValue.NULL;
+            object = ScriptValue.NULL;
         }
-        ScriptValue scriptValue2 = object2;
+        ScriptValue scriptValue2 = object;
         builder.val("assembled", scriptValue2);
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
-        Object object4 = scriptValue3 != ScriptValue.NULL ? (scriptValue3 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player") ? new PolyClassPlayer(object).pg$38_is_sneaking() : PolyDispatch.bootstrapGet("memberGet", "is_sneaking", (ScriptValue)scriptValue3, (ScriptContext)scriptContext)) : ScriptValue.NULL;
-        if (object4.asBool()) {
+        Object object3 = scriptValue3 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3)) != null ? polyClassPlayer.pg$38_is_sneaking() : PolyDispatch.bootstrapGet("memberGet", "is_sneaking", (ScriptValue)scriptValue3, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        if (object3.asBool()) {
             if (scriptValue2.asNum() > 0.0) {
                 ScriptValue scriptValue4;
+                Object object4;
                 Object object5;
-                Object object6;
                 ScriptValue scriptValue5 = scriptContext.getClassOrVar("Machine");
                 if (scriptValue5 != ScriptValue.NULL) {
-                    ScriptValue.Obj obj3;
-                    Object object7;
+                    ScriptValue.Obj obj;
+                    Object object6;
                     String string = "contraption_uuid";
                     String string3 = "string";
-                    if (scriptValue5 instanceof ScriptValue.Obj && (object7 = (obj3 = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object7 instanceof PolyClass) && obj3.typeName().equals("Machine")) {
-                        PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object7);
-                        object6 = polyClassMachine_v3.tm$34_get_typed(string, string3);
+                    if (scriptValue5 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                        PolyClassMachine polyClassMachine = new PolyClassMachine(object6);
+                        object5 = polyClassMachine.tm$34_get_typed(string, string3);
                     } else {
                         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                         arrayList.add(ScriptValue.of((String)string));
                         arrayList.add(ScriptValue.of((String)string3));
-                        object6 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue5, arrayList, (ScriptContext)scriptContext);
-                    }
-                } else {
-                    object6 = ScriptValue.NULL;
-                }
-                ScriptValue scriptValue6 = object6;
-                builder.val("cid", scriptValue6);
-                ScriptValue scriptValue7 = scriptContext.getClassOrVar("ContraptionManager");
-                if (scriptValue7 != ScriptValue.NULL) {
-                    ScriptValue.Obj obj4;
-                    Object object8;
-                    ScriptValue scriptValue8 = scriptValue6;
-                    if (scriptValue7 instanceof ScriptValue.Obj && (object8 = (obj4 = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object8 instanceof PolyClass) && obj4.typeName().equals("ContraptionManager")) {
-                        PolyClassContraptionManager polyClassContraptionManager = new PolyClassContraptionManager(object8);
-                        object5 = polyClassContraptionManager.tm$6_get(scriptValue8.asStr());
-                    } else {
-                        ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                        arrayList.add(scriptValue8);
-                        object5 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue7, arrayList, (ScriptContext)scriptContext);
+                        object5 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue5, arrayList, (ScriptContext)scriptContext);
                     }
                 } else {
                     object5 = ScriptValue.NULL;
                 }
-                ScriptValue scriptValue9 = object5;
+                ScriptValue scriptValue6 = object5;
+                builder.val("cid", scriptValue6);
+                ScriptValue scriptValue7 = scriptContext.getClassOrVar("ContraptionManager");
+                if (scriptValue7 != ScriptValue.NULL) {
+                    ScriptValue.Obj obj;
+                    Object object7;
+                    ScriptValue scriptValue8 = scriptValue6;
+                    if (scriptValue7 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("ContraptionManager")) {
+                        PolyClassContraptionManager polyClassContraptionManager = new PolyClassContraptionManager(object7);
+                        object4 = polyClassContraptionManager.tm$6_get(scriptValue8.asStr());
+                    } else {
+                        ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
+                        arrayList.add(scriptValue8);
+                        object4 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue7, arrayList, (ScriptContext)scriptContext);
+                    }
+                } else {
+                    object4 = ScriptValue.NULL;
+                }
+                ScriptValue scriptValue9 = object4;
                 builder.val("contraption", scriptValue9);
                 if (ScriptFormula.valuesEqual((ScriptValue)scriptValue9, (ScriptValue)scriptContext.getClassOrVar("null")) ^ true) {
                     ScriptValue scriptValue10 = scriptContext.getClassOrVar("contraption");
@@ -197,14 +193,14 @@ public final class RotationalBearingInteract {
                     }
                 }
                 if ((scriptValue4 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL) {
-                    ScriptValue.Obj obj5;
-                    Object object9;
+                    ScriptValue.Obj obj;
+                    Object object8;
                     String string = "assembled";
                     String string4 = "int";
                     ScriptValue scriptValue11 = ScriptValue.of((double)0.0);
-                    if (scriptValue4 instanceof ScriptValue.Obj && (object9 = (obj5 = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object9 instanceof PolyClass) && obj5.typeName().equals("Machine")) {
-                        PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object9);
-                        v5 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string4, scriptValue11));
+                    if (scriptValue4 instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                        PolyClassMachine polyClassMachine = new PolyClassMachine(object8);
+                        v5 = ScriptValue.of((boolean)polyClassMachine.tm$82_set_typed(string, string4, scriptValue11));
                     } else {
                         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                         arrayList.add(ScriptValue.of((String)string));
@@ -217,14 +213,14 @@ public final class RotationalBearingInteract {
                 }
                 ScriptValue scriptValue12 = scriptContext.getClassOrVar("Machine");
                 if (scriptValue12 != ScriptValue.NULL) {
-                    ScriptValue.Obj obj6;
-                    Object object10;
+                    ScriptValue.Obj obj;
+                    Object object9;
                     String string = "contraption_uuid";
                     String string5 = "string";
                     ScriptValue scriptValue13 = ScriptValue.of((String)"");
-                    if (scriptValue12 instanceof ScriptValue.Obj && (object10 = (obj6 = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object10 instanceof PolyClass) && obj6.typeName().equals("Machine")) {
-                        PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object10);
-                        v6 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string5, scriptValue13));
+                    if (scriptValue12 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                        PolyClassMachine polyClassMachine = new PolyClassMachine(object9);
+                        v6 = ScriptValue.of((boolean)polyClassMachine.tm$82_set_typed(string, string5, scriptValue13));
                     } else {
                         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                         arrayList.add(ScriptValue.of((String)string));
@@ -237,12 +233,12 @@ public final class RotationalBearingInteract {
                 }
                 ScriptValue scriptValue14 = scriptContext.getClassOrVar("Machine");
                 if (scriptValue14 != ScriptValue.NULL) {
-                    ScriptValue.Obj obj7;
-                    Object object11;
+                    ScriptValue.Obj obj;
+                    Object object10;
                     double d = 0.0;
-                    if (scriptValue14 instanceof ScriptValue.Obj && (object11 = (obj7 = (ScriptValue.Obj)scriptValue14).instance()) != null && !(object11 instanceof PolyClass) && obj7.typeName().equals("Machine")) {
-                        PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object11);
-                        v7 = ScriptValue.of((boolean)polyClassMachine_v3.tm$56_report_su(d));
+                    if (scriptValue14 instanceof ScriptValue.Obj && (object10 = (obj = (ScriptValue.Obj)scriptValue14).instance()) != null && !(object10 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                        PolyClassMachine polyClassMachine = new PolyClassMachine(object10);
+                        v7 = ScriptValue.of((boolean)polyClassMachine.tm$56_report_su(d));
                     } else {
                         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                         arrayList.add(ScriptValue.of((double)d));
@@ -253,12 +249,12 @@ public final class RotationalBearingInteract {
                 }
                 ScriptValue scriptValue15 = scriptContext.getClassOrVar("Player");
                 if (scriptValue15 != ScriptValue.NULL) {
-                    ScriptValue.Obj obj8;
-                    Object object12;
+                    ScriptValue.Obj obj;
+                    Object object11;
                     String string = "<gray>Rotational bearing disassembled.";
-                    if (scriptValue15 instanceof ScriptValue.Obj && (object12 = (obj8 = (ScriptValue.Obj)scriptValue15).instance()) != null && !(object12 instanceof PolyClass) && obj8.typeName().equals("Player")) {
-                        PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object12);
-                        v8 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+                    if (scriptValue15 instanceof ScriptValue.Obj && (object11 = (obj = (ScriptValue.Obj)scriptValue15).instance()) != null && !(object11 instanceof PolyClass) && obj.typeName().equals("Player")) {
+                        PolyClassPlayer polyClassPlayer2 = new PolyClassPlayer(object11);
+                        v8 = ScriptValue.of((boolean)polyClassPlayer2.tm$42_send_message(string));
                     } else {
                         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                         arrayList.add(ScriptValue.of((String)string));
@@ -271,12 +267,12 @@ public final class RotationalBearingInteract {
         } else if (scriptValue2.asNum() > 0.0) {
             ScriptValue scriptValue16 = scriptContext.getClassOrVar("Player");
             if (scriptValue16 != ScriptValue.NULL) {
-                ScriptValue.Obj obj9;
-                Object object13;
+                ScriptValue.Obj obj;
+                Object object12;
                 String string = "<gray>Already assembled - feed RPM from below to turn it.";
-                if (scriptValue16 instanceof ScriptValue.Obj && (object13 = (obj9 = (ScriptValue.Obj)scriptValue16).instance()) != null && !(object13 instanceof PolyClass) && obj9.typeName().equals("Player")) {
-                    PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object13);
-                    v9 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+                if (scriptValue16 instanceof ScriptValue.Obj && (object12 = (obj = (ScriptValue.Obj)scriptValue16).instance()) != null && !(object12 instanceof PolyClass) && obj.typeName().equals("Player")) {
+                    PolyClassPlayer polyClassPlayer3 = new PolyClassPlayer(object12);
+                    v9 = ScriptValue.of((boolean)polyClassPlayer3.tm$42_send_message(string));
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));
@@ -293,12 +289,12 @@ public final class RotationalBearingInteract {
             if (ScriptFormula.valuesEqual((ScriptValue)scriptValue18, (ScriptValue)scriptContext.getClassOrVar("null")) || ((scriptValue17 = scriptContext.getClassOrVar("seed")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_air", (ScriptValue)scriptValue17, (ScriptContext)scriptContext) : ScriptValue.NULL).asBool()) {
                 ScriptValue scriptValue19 = scriptContext.getClassOrVar("Player");
                 if (scriptValue19 != ScriptValue.NULL) {
-                    ScriptValue.Obj obj10;
-                    Object object14;
+                    ScriptValue.Obj obj;
+                    Object object13;
                     String string = "<red>Nothing attached to the bearing's face to assemble.";
-                    if (scriptValue19 instanceof ScriptValue.Obj && (object14 = (obj10 = (ScriptValue.Obj)scriptValue19).instance()) != null && !(object14 instanceof PolyClass) && obj10.typeName().equals("Player")) {
-                        PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object14);
-                        v10 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+                    if (scriptValue19 instanceof ScriptValue.Obj && (object13 = (obj = (ScriptValue.Obj)scriptValue19).instance()) != null && !(object13 instanceof PolyClass) && obj.typeName().equals("Player")) {
+                        PolyClassPlayer polyClassPlayer4 = new PolyClassPlayer(object13);
+                        v10 = ScriptValue.of((boolean)polyClassPlayer4.tm$42_send_message(string));
                     } else {
                         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                         arrayList.add(ScriptValue.of((String)string));
@@ -308,32 +304,32 @@ public final class RotationalBearingInteract {
                     v10 = ScriptValue.NULL;
                 }
             } else {
-                Object object15;
+                Object object14;
                 ScriptValue scriptValue20 = scriptContext.getClassOrVar("Glue");
                 if (scriptValue20 != ScriptValue.NULL) {
-                    ScriptValue.Obj obj11;
-                    Object object16;
+                    ScriptValue.Obj obj;
+                    Object object15;
                     ScriptValue scriptValue21 = scriptValue18;
-                    if (scriptValue20 instanceof ScriptValue.Obj && (object16 = (obj11 = (ScriptValue.Obj)scriptValue20).instance()) != null && !(object16 instanceof PolyClass) && obj11.typeName().equals("Glue")) {
-                        PolyClassGlue polyClassGlue = new PolyClassGlue(object16);
-                        object15 = ScriptValue.of((boolean)polyClassGlue.tm$2_is_glued(scriptValue21));
+                    if (scriptValue20 instanceof ScriptValue.Obj && (object15 = (obj = (ScriptValue.Obj)scriptValue20).instance()) != null && !(object15 instanceof PolyClass) && obj.typeName().equals("Glue")) {
+                        PolyClassGlue polyClassGlue = new PolyClassGlue(object15);
+                        object14 = ScriptValue.of((boolean)polyClassGlue.tm$2_is_glued(scriptValue21));
                     } else {
                         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                         arrayList.add(scriptValue21);
-                        object15 = PolyDispatch.bootstrapCall("memberCall", "is_glued", (ScriptValue)scriptValue20, arrayList, (ScriptContext)scriptContext);
+                        object14 = PolyDispatch.bootstrapCall("memberCall", "is_glued", (ScriptValue)scriptValue20, arrayList, (ScriptContext)scriptContext);
                     }
                 } else {
-                    object15 = ScriptValue.NULL;
+                    object14 = ScriptValue.NULL;
                 }
-                if (object15.asBool() ^ true) {
+                if (object14.asBool() ^ true) {
                     ScriptValue scriptValue22 = scriptContext.getClassOrVar("Player");
                     if (scriptValue22 != ScriptValue.NULL) {
-                        ScriptValue.Obj obj12;
-                        Object object17;
+                        ScriptValue.Obj obj;
+                        Object object16;
                         String string = "<red>That structure is not glued together - glue it to itself and to the bearing.";
-                        if (scriptValue22 instanceof ScriptValue.Obj && (object17 = (obj12 = (ScriptValue.Obj)scriptValue22).instance()) != null && !(object17 instanceof PolyClass) && obj12.typeName().equals("Player")) {
-                            PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object17);
-                            v12 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+                        if (scriptValue22 instanceof ScriptValue.Obj && (object16 = (obj = (ScriptValue.Obj)scriptValue22).instance()) != null && !(object16 instanceof PolyClass) && obj.typeName().equals("Player")) {
+                            PolyClassPlayer polyClassPlayer5 = new PolyClassPlayer(object16);
+                            v12 = ScriptValue.of((boolean)polyClassPlayer5.tm$42_send_message(string));
                         } else {
                             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                             arrayList.add(ScriptValue.of((String)string));
@@ -343,50 +339,50 @@ public final class RotationalBearingInteract {
                         v12 = ScriptValue.NULL;
                     }
                 } else {
-                    Object object18;
+                    Object object17;
                     ScriptValue scriptValue23 = scriptContext.getClassOrVar("ContraptionManager");
                     if (scriptValue23 != ScriptValue.NULL) {
-                        ScriptValue.Obj obj13;
+                        ScriptValue.Obj obj;
+                        Object object18;
                         Object object19;
-                        Object object20;
                         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                         arrayList.add(scriptValue18);
                         ScriptValue scriptValue24 = scriptContext.getClassOrVar("Machine");
                         if (scriptValue24 != ScriptValue.NULL) {
-                            ScriptValue.Obj obj14;
-                            Object object21;
+                            ScriptValue.Obj obj2;
+                            Object object20;
                             double d = 0.0;
                             double d2 = 0.0;
                             double d3 = 0.0;
-                            if (scriptValue24 instanceof ScriptValue.Obj && (object21 = (obj14 = (ScriptValue.Obj)scriptValue24).instance()) != null && !(object21 instanceof PolyClass) && obj14.typeName().equals("Machine")) {
-                                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object21);
-                                object20 = polyClassMachine_v3.tm$68_block_at(d, d2, d3);
+                            if (scriptValue24 instanceof ScriptValue.Obj && (object20 = (obj2 = (ScriptValue.Obj)scriptValue24).instance()) != null && !(object20 instanceof PolyClass) && obj2.typeName().equals("Machine")) {
+                                PolyClassMachine polyClassMachine = new PolyClassMachine(object20);
+                                object19 = polyClassMachine.tm$68_block_at(d, d2, d3);
                             } else {
                                 ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
                                 arrayList2.add(ScriptValue.of((double)d));
                                 arrayList2.add(ScriptValue.of((double)d2));
                                 arrayList2.add(ScriptValue.of((double)d3));
-                                object20 = PolyDispatch.bootstrapCall("memberCall", "block_at", (ScriptValue)scriptValue24, arrayList2, (ScriptContext)scriptContext);
+                                object19 = PolyDispatch.bootstrapCall("memberCall", "block_at", (ScriptValue)scriptValue24, arrayList2, (ScriptContext)scriptContext);
                             }
                         } else {
-                            object20 = ScriptValue.NULL;
+                            object19 = ScriptValue.NULL;
                         }
-                        arrayList.add((ScriptValue)object20);
-                        object18 = scriptValue23 instanceof ScriptValue.Obj && (object19 = (obj13 = (ScriptValue.Obj)scriptValue23).instance()) != null && !(object19 instanceof PolyClass) && obj13.typeName().equals("ContraptionManager") ? new PolyClassContraptionManager(object19).um$1_create_bearing(arrayList) : PolyDispatch.bootstrapCall("memberCall", "create_bearing", (ScriptValue)scriptValue23, arrayList, (ScriptContext)scriptContext);
+                        arrayList.add((ScriptValue)object19);
+                        object17 = scriptValue23 instanceof ScriptValue.Obj && (object18 = (obj = (ScriptValue.Obj)scriptValue23).instance()) != null && !(object18 instanceof PolyClass) && obj.typeName().equals("ContraptionManager") ? new PolyClassContraptionManager(object18).um$1_create_bearing(arrayList) : PolyDispatch.bootstrapCall("memberCall", "create_bearing", (ScriptValue)scriptValue23, arrayList, (ScriptContext)scriptContext);
                     } else {
-                        object18 = ScriptValue.NULL;
+                        object17 = ScriptValue.NULL;
                     }
-                    ScriptValue scriptValue25 = object18;
+                    ScriptValue scriptValue25 = object17;
                     builder.val("contraption", scriptValue25);
                     if (ScriptFormula.valuesEqual((ScriptValue)scriptValue25, (ScriptValue)scriptContext.getClassOrVar("null"))) {
                         ScriptValue scriptValue26 = scriptContext.getClassOrVar("Player");
                         if (scriptValue26 != ScriptValue.NULL) {
-                            ScriptValue.Obj obj15;
-                            Object object22;
+                            ScriptValue.Obj obj;
+                            Object object21;
                             String string = "<red>Could not assemble that structure.";
-                            if (scriptValue26 instanceof ScriptValue.Obj && (object22 = (obj15 = (ScriptValue.Obj)scriptValue26).instance()) != null && !(object22 instanceof PolyClass) && obj15.typeName().equals("Player")) {
-                                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object22);
-                                v15 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+                            if (scriptValue26 instanceof ScriptValue.Obj && (object21 = (obj = (ScriptValue.Obj)scriptValue26).instance()) != null && !(object21 instanceof PolyClass) && obj.typeName().equals("Player")) {
+                                PolyClassPlayer polyClassPlayer6 = new PolyClassPlayer(object21);
+                                v15 = ScriptValue.of((boolean)polyClassPlayer6.tm$42_send_message(string));
                             } else {
                                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                                 arrayList.add(ScriptValue.of((String)string));
@@ -398,16 +394,16 @@ public final class RotationalBearingInteract {
                     } else {
                         ScriptValue scriptValue27 = scriptContext.getClassOrVar("Machine");
                         if (scriptValue27 != ScriptValue.NULL) {
-                            ScriptValue.Obj obj16;
-                            Object object23;
+                            ScriptValue.Obj obj;
+                            Object object22;
                             ScriptValue scriptValue28;
                             String string = "contraption_uuid";
                             String string6 = "string";
                             ScriptValue scriptValue29 = scriptContext.getClassOrVar("contraption");
-                            Object object24 = scriptValue28 = scriptValue29 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue29, (ScriptContext)scriptContext) : ScriptValue.NULL;
-                            if (scriptValue27 instanceof ScriptValue.Obj && (object23 = (obj16 = (ScriptValue.Obj)scriptValue27).instance()) != null && !(object23 instanceof PolyClass) && obj16.typeName().equals("Machine")) {
-                                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object23);
-                                v17 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string6, scriptValue28));
+                            Object object23 = scriptValue28 = scriptValue29 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue29, (ScriptContext)scriptContext) : ScriptValue.NULL;
+                            if (scriptValue27 instanceof ScriptValue.Obj && (object22 = (obj = (ScriptValue.Obj)scriptValue27).instance()) != null && !(object22 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                                PolyClassMachine polyClassMachine = new PolyClassMachine(object22);
+                                v17 = ScriptValue.of((boolean)polyClassMachine.tm$82_set_typed(string, string6, scriptValue28));
                             } else {
                                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                                 arrayList.add(ScriptValue.of((String)string));
@@ -420,14 +416,14 @@ public final class RotationalBearingInteract {
                         }
                         ScriptValue scriptValue30 = scriptContext.getClassOrVar("Machine");
                         if (scriptValue30 != ScriptValue.NULL) {
-                            ScriptValue.Obj obj17;
-                            Object object25;
+                            ScriptValue.Obj obj;
+                            Object object24;
                             String string = "assembled";
                             String string7 = "int";
                             ScriptValue scriptValue31 = ScriptValue.of((double)1.0);
-                            if (scriptValue30 instanceof ScriptValue.Obj && (object25 = (obj17 = (ScriptValue.Obj)scriptValue30).instance()) != null && !(object25 instanceof PolyClass) && obj17.typeName().equals("Machine")) {
-                                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object25);
-                                v18 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string7, scriptValue31));
+                            if (scriptValue30 instanceof ScriptValue.Obj && (object24 = (obj = (ScriptValue.Obj)scriptValue30).instance()) != null && !(object24 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                                PolyClassMachine polyClassMachine = new PolyClassMachine(object24);
+                                v18 = ScriptValue.of((boolean)polyClassMachine.tm$82_set_typed(string, string7, scriptValue31));
                             } else {
                                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                                 arrayList.add(ScriptValue.of((String)string));
@@ -440,15 +436,15 @@ public final class RotationalBearingInteract {
                         }
                         ScriptValue scriptValue32 = scriptContext.getClassOrVar("Machine");
                         if (scriptValue32 != ScriptValue.NULL) {
-                            ScriptValue.Obj obj18;
-                            Object object26;
+                            ScriptValue.Obj obj;
+                            Object object25;
                             String string = "assembled_tick";
                             String string8 = "int";
                             ArrayList arrayList = new ArrayList();
                             ScriptValue scriptValue33 = ScriptFormula.callBuiltin((String)"tick", arrayList, (ScriptContext)scriptContext);
-                            if (scriptValue32 instanceof ScriptValue.Obj && (object26 = (obj18 = (ScriptValue.Obj)scriptValue32).instance()) != null && !(object26 instanceof PolyClass) && obj18.typeName().equals("Machine")) {
-                                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object26);
-                                v19 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string8, scriptValue33));
+                            if (scriptValue32 instanceof ScriptValue.Obj && (object25 = (obj = (ScriptValue.Obj)scriptValue32).instance()) != null && !(object25 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                                PolyClassMachine polyClassMachine = new PolyClassMachine(object25);
+                                v19 = ScriptValue.of((boolean)polyClassMachine.tm$82_set_typed(string, string8, scriptValue33));
                             } else {
                                 ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
                                 arrayList3.add(ScriptValue.of((String)string));
@@ -461,15 +457,15 @@ public final class RotationalBearingInteract {
                         }
                         ScriptValue scriptValue34 = scriptContext.getClassOrVar("Player");
                         if (scriptValue34 != ScriptValue.NULL) {
-                            ScriptValue.Obj obj19;
-                            Object object27;
+                            ScriptValue.Obj obj;
+                            Object object26;
                             ScriptValue scriptValue35;
                             ScriptValue scriptValue36 = ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"<green>Rotational bearing assembled <gray>("), (ScriptValue)((scriptValue35 = scriptContext.getClassOrVar("contraption")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "block_count", (ScriptValue)scriptValue35, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)ScriptValue.of((String)" blocks, weight "));
                             ScriptValue scriptValue37 = scriptContext.getClassOrVar("contraption");
                             ScriptValue scriptValue38 = ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)scriptValue36, (ScriptValue)ScriptValue.of((double)Math.floor((scriptValue37 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "weight", (ScriptValue)scriptValue37, (ScriptContext)scriptContext) : ScriptValue.NULL).asNum()))), (ScriptValue)ScriptValue.of((String)")."));
-                            if (scriptValue34 instanceof ScriptValue.Obj && (object27 = (obj19 = (ScriptValue.Obj)scriptValue34).instance()) != null && !(object27 instanceof PolyClass) && obj19.typeName().equals("Player")) {
-                                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object27);
-                                v21 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue38.asStr()));
+                            if (scriptValue34 instanceof ScriptValue.Obj && (object26 = (obj = (ScriptValue.Obj)scriptValue34).instance()) != null && !(object26 instanceof PolyClass) && obj.typeName().equals("Player")) {
+                                PolyClassPlayer polyClassPlayer7 = new PolyClassPlayer(object26);
+                                v21 = ScriptValue.of((boolean)polyClassPlayer7.tm$42_send_message(scriptValue38.asStr()));
                             } else {
                                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                                 arrayList.add(scriptValue38);

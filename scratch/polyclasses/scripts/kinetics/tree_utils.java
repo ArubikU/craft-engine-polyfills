@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v3
+ *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyClassWorld
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -17,7 +17,7 @@
 package dev.arubik.craftengine.script.gen.kinetics;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v3;
+import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyClassWorld;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -40,12 +40,12 @@ public final class TreeUtils {
 
     public static ScriptValue _isLog(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        return ScriptValue.of((ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:oak_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:spruce_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:birch_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:jungle_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:acacia_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:dark_oak_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:cherry_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:mangrove_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:crimson_stem") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:warped_stem") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:stripped_oak_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:stripped_spruce_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:stripped_birch_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:stripped_jungle_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:stripped_acacia_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:stripped_dark_oak_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:mushroom_stem") ? 1 : 0) != 0);
+        return ScriptValue.of((scriptContext.getStr("id").equals("minecraft:oak_log") || scriptContext.getStr("id").equals("minecraft:spruce_log") || scriptContext.getStr("id").equals("minecraft:birch_log") || scriptContext.getStr("id").equals("minecraft:jungle_log") || scriptContext.getStr("id").equals("minecraft:acacia_log") || scriptContext.getStr("id").equals("minecraft:dark_oak_log") || scriptContext.getStr("id").equals("minecraft:cherry_log") || scriptContext.getStr("id").equals("minecraft:mangrove_log") || scriptContext.getStr("id").equals("minecraft:crimson_stem") || scriptContext.getStr("id").equals("minecraft:warped_stem") || scriptContext.getStr("id").equals("minecraft:stripped_oak_log") || scriptContext.getStr("id").equals("minecraft:stripped_spruce_log") || scriptContext.getStr("id").equals("minecraft:stripped_birch_log") || scriptContext.getStr("id").equals("minecraft:stripped_jungle_log") || scriptContext.getStr("id").equals("minecraft:stripped_acacia_log") || scriptContext.getStr("id").equals("minecraft:stripped_dark_oak_log") || scriptContext.getStr("id").equals("minecraft:mushroom_stem") ? 1 : 0) != 0);
     }
 
     public static ScriptValue _isLeafId(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        return ScriptValue.of((ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:oak_leaves") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:spruce_leaves") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:birch_leaves") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:jungle_leaves") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:acacia_leaves") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:dark_oak_leaves") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:cherry_leaves") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:azalea_leaves") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:flowering_azalea_leaves") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:mangrove_leaves") ? 1 : 0) != 0);
+        return ScriptValue.of((scriptContext.getStr("id").equals("minecraft:oak_leaves") || scriptContext.getStr("id").equals("minecraft:spruce_leaves") || scriptContext.getStr("id").equals("minecraft:birch_leaves") || scriptContext.getStr("id").equals("minecraft:jungle_leaves") || scriptContext.getStr("id").equals("minecraft:acacia_leaves") || scriptContext.getStr("id").equals("minecraft:dark_oak_leaves") || scriptContext.getStr("id").equals("minecraft:cherry_leaves") || scriptContext.getStr("id").equals("minecraft:azalea_leaves") || scriptContext.getStr("id").equals("minecraft:flowering_azalea_leaves") || scriptContext.getStr("id").equals("minecraft:mangrove_leaves") ? 1 : 0) != 0);
     }
 
     /*
@@ -123,7 +123,7 @@ public final class TreeUtils {
         while (var19_14 < 1000) {
             block19: {
                 ++var19_14;
-                if (!(((ScriptFormula.valuesEqualStr((ScriptValue)var1_1.getClassOrVar("frontier"), (String)"") ^ true) != false && var1_1.getNum("round_i") < var8_6 != false) != false && var1_1.getNum("log_count") < var2_2 != false)) break;
+                if (!(((var1_1.getStr("frontier").equals("") ^ true) != false && var1_1.getNum("round_i") < var8_6 != false) != false && var1_1.getNum("log_count") < var2_2 != false)) break;
                 var20_15 = ScriptValue.of((String)"");
                 var0.val("next_frontier", var20_15);
                 var24_19 = new ArrayList<ScriptValue>();
@@ -213,7 +213,7 @@ public final class TreeUtils {
                                     if (v0) {
                                         var58_50 = ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("found"), (ScriptValue)ScriptValue.of((String)";")), (ScriptValue)var50_42);
                                         var0.val("found", var58_50);
-                                        var59_51 = ScriptFormula.valuesEqualStr((ScriptValue)var1_1.getClassOrVar("next_frontier"), (String)"") != false ? var50_42 : ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("next_frontier"), (ScriptValue)ScriptValue.of((String)";")), (ScriptValue)var50_42);
+                                        var59_51 = var1_1.getStr("next_frontier").equals("") != false ? var50_42 : ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("next_frontier"), (ScriptValue)ScriptValue.of((String)";")), (ScriptValue)var50_42);
                                         var0.val("next_frontier", var59_51);
                                         var60_52 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("log_count"), (ScriptValue)ScriptValue.of((double)1.0));
                                         var0.val("log_count", var60_52);
@@ -252,7 +252,7 @@ public final class TreeUtils {
         while (var76_66 < 1000) {
             block21: {
                 ++var76_66;
-                if (!(((ScriptFormula.valuesEqualStr((ScriptValue)var1_1.getClassOrVar("leaf_frontier"), (String)"") ^ true) != false && var1_1.getNum("lround_i") < var8_6 != false) != false && var1_1.getNum("leaf_count") < var5_4 != false)) break;
+                if (!(((var1_1.getStr("leaf_frontier").equals("") ^ true) != false && var1_1.getNum("lround_i") < var8_6 != false) != false && var1_1.getNum("leaf_count") < var5_4 != false)) break;
                 var77_67 = ScriptValue.of((String)"");
                 var0.val("next_leaf_frontier", var77_67);
                 var81_71 = new ArrayList<ScriptValue>();
@@ -354,7 +354,7 @@ public final class TreeUtils {
                         var114_104 = ScriptFormula.callBuiltin((String)"num", var113_103, (ScriptContext)var1_1);
                         var0.val("dist", var114_104);
                         if (!(var114_104.asNum() > var93_83.asNum())) continue;
-                        var115_105 = ScriptFormula.valuesEqualStr((ScriptValue)var1_1.getClassOrVar("leaves"), (String)"") != false ? var100_90 : ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("leaves"), (ScriptValue)ScriptValue.of((String)";")), (ScriptValue)var100_90);
+                        var115_105 = var1_1.getStr("leaves").equals("") != false ? var100_90 : ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("leaves"), (ScriptValue)ScriptValue.of((String)";")), (ScriptValue)var100_90);
                         var0.val("leaves", var115_105);
                         var116_106 = var1_1.getClassOrVar("leaf_dist");
                         if (var116_106 != ScriptValue.NULL) {
@@ -369,7 +369,7 @@ public final class TreeUtils {
                         }
                         var119_109 = v4 /* !! */ ;
                         var0.val("leaf_dist", var119_109);
-                        var120_110 = ScriptFormula.valuesEqualStr((ScriptValue)var1_1.getClassOrVar("next_leaf_frontier"), (String)"") != false ? var100_90 : ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("next_leaf_frontier"), (ScriptValue)ScriptValue.of((String)";")), (ScriptValue)var100_90);
+                        var120_110 = var1_1.getStr("next_leaf_frontier").equals("") != false ? var100_90 : ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("next_leaf_frontier"), (ScriptValue)ScriptValue.of((String)";")), (ScriptValue)var100_90);
                         var0.val("next_leaf_frontier", var120_110);
                         var121_111 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("leaf_count"), (ScriptValue)ScriptValue.of((double)1.0));
                         var0.val("leaf_count", var121_111);
@@ -381,7 +381,7 @@ public final class TreeUtils {
             var123_113 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("lround_i"), (ScriptValue)ScriptValue.of((double)1.0));
             var0.val("lround_i", var123_113);
         }
-        return ScriptFormula.valuesEqualStr((ScriptValue)var1_1.getClassOrVar("leaves"), (String)"") != false ? var1_1.getClassOrVar("found") : ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("found"), (ScriptValue)ScriptValue.of((String)";")), (ScriptValue)var1_1.getClassOrVar("leaves"));
+        return var1_1.getStr("leaves").equals("") != false ? var1_1.getClassOrVar("found") : ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("found"), (ScriptValue)ScriptValue.of((String)";")), (ScriptValue)var1_1.getClassOrVar("leaves"));
     }
 
     public static ScriptValue _fellTree(ScriptContext.Builder builder) {
@@ -434,8 +434,8 @@ public final class TreeUtils {
                     ScriptValue scriptValue10 = scriptValue8;
                     ScriptValue scriptValue11 = scriptContext.getClassOrVar("speed");
                     if (scriptValue9 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                        PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object2);
-                        object = polyClassMachine_v3.tm$2_tick_break(scriptValue10, scriptValue11.asNum());
+                        PolyClassMachine polyClassMachine = new PolyClassMachine(object2);
+                        object = polyClassMachine.tm$2_tick_break(scriptValue10, scriptValue11.asNum());
                     } else {
                         ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
                         arrayList6.add(scriptValue10);

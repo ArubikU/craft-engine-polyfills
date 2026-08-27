@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v3
+ *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script.gen.farming;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v3;
+import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -83,7 +83,7 @@ public final class Breeder {
             if (var4_4 != ScriptValue.NULL) {
                 var5_5 = 5.0;
                 if (var4_4 instanceof ScriptValue.Obj && (var8_7 = (var7_6 = (ScriptValue.Obj)var4_4).instance()) != null && !(var8_7 instanceof PolyClass) && var7_6.typeName().equals("Machine")) {
-                    var9_8 = new PolyClassMachine_v3(var8_7);
+                    var9_8 = new PolyClassMachine(var8_7);
                     v0 /* !! */  = var9_8.tm$94_nearby_entities(var5_5);
                 } else {
                     var10_9 = new ArrayList<ScriptValue>();
@@ -138,30 +138,30 @@ public final class Breeder {
                     var29_28 = new ArrayList<ScriptValue>();
                     var29_28.add(var1_1.getClassOrVar("i"));
                     var30_29 = var1_1.getClassOrVar("Machine");
-                    var33_32 = PolyDispatch.bootstrapCall("memberCall", "get_item", (ScriptValue)(var30_29 != ScriptValue.NULL ? (var30_29 instanceof ScriptValue.Obj && (var32_31 = (var31_30 = (ScriptValue.Obj)var30_29).instance()) != null && !(var32_31 instanceof PolyClass) && var31_30.typeName().equals("Machine") ? new PolyClassMachine_v3(var32_31).pg$119_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var30_29, (ScriptContext)var1_1)) : ScriptValue.NULL), var29_28, (ScriptContext)var1_1);
-                    var0.val("item", (ScriptValue)var33_32);
-                    var34_33 = new ArrayList<CallSite>();
-                    var34_33.add(var33_32);
-                    if (!((ScriptFormula.callBuiltin((String)"is_empty", var34_33, (ScriptContext)var1_1).asBool() ^ true) != false && ScriptFormula.valuesEqual((ScriptValue)((var35_34 = var1_1.getClassOrVar("item")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)var35_34, (ScriptContext)var1_1) : ScriptValue.NULL), (ScriptValue)var22_21) != false)) continue;
-                    var36_35 = var1_1.getClassOrVar("Machine");
-                    if (var36_35 != ScriptValue.NULL) {
-                        var37_36 = var1_1.getClassOrVar("animal");
-                        var38_37 = var1_1.getClassOrVar("i");
-                        if (var36_35 instanceof ScriptValue.Obj && (var40_39 = (var39_38 = (ScriptValue.Obj)var36_35).instance()) != null && !(var40_39 instanceof PolyClass) && var39_38.typeName().equals("Machine")) {
-                            var41_40 = new PolyClassMachine_v3(var40_39);
-                            v4 /* !! */  = ScriptValue.of((boolean)var41_40.tm$42_use_item_on_entity(var37_36, var38_37.asNum()));
+                    var32_31 = PolyDispatch.bootstrapCall("memberCall", "get_item", (ScriptValue)(var30_29 != ScriptValue.NULL ? ((var31_30 = PolyClassMachine.ofGuarded((ScriptValue)var30_29)) != null ? var31_30.pg$119_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var30_29, (ScriptContext)var1_1)) : ScriptValue.NULL), var29_28, (ScriptContext)var1_1);
+                    var0.val("item", (ScriptValue)var32_31);
+                    var33_32 = new ArrayList<CallSite>();
+                    var33_32.add(var32_31);
+                    if (!((ScriptFormula.callBuiltin((String)"is_empty", var33_32, (ScriptContext)var1_1).asBool() ^ true) != false && ScriptFormula.valuesEqual((ScriptValue)((var34_33 = var1_1.getClassOrVar("item")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)var34_33, (ScriptContext)var1_1) : ScriptValue.NULL), (ScriptValue)var22_21) != false)) continue;
+                    var35_34 = var1_1.getClassOrVar("Machine");
+                    if (var35_34 != ScriptValue.NULL) {
+                        var36_35 = var1_1.getClassOrVar("animal");
+                        var37_36 = var1_1.getClassOrVar("i");
+                        if (var35_34 instanceof ScriptValue.Obj && (var39_38 = (var38_37 = (ScriptValue.Obj)var35_34).instance()) != null && !(var39_38 instanceof PolyClass) && var38_37.typeName().equals("Machine")) {
+                            var40_39 = new PolyClassMachine(var39_38);
+                            v4 /* !! */  = ScriptValue.of((boolean)var40_39.tm$42_use_item_on_entity(var36_35, var37_36.asNum()));
                         } else {
-                            var42_41 = new ArrayList<ScriptValue>();
-                            var42_41.add(var37_36);
-                            var42_41.add(var38_37);
-                            v4 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "use_item_on_entity", (ScriptValue)var36_35, var42_41, (ScriptContext)var1_1);
+                            var41_40 = new ArrayList<ScriptValue>();
+                            var41_40.add(var36_35);
+                            var41_40.add(var37_36);
+                            v4 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "use_item_on_entity", (ScriptValue)var35_34, var41_40, (ScriptContext)var1_1);
                         }
                     } else {
                         v4 /* !! */  = ScriptValue.NULL;
                     }
-                    var43_42 = true;
-                    var44_43 = ScriptValue.of((boolean)true);
-                    var0.val("fed", var44_43);
+                    var42_41 = true;
+                    var43_42 = ScriptValue.of((boolean)true);
+                    var0.val("fed", var43_42);
                 }
             }
         }

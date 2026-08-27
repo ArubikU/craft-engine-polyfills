@@ -2,19 +2,22 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
+ *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
 package dev.arubik.craftengine.script;
 
-import dev.arubik.craftengine.script.PolyClassLivingEntity;
+import dev.arubik.craftengine.script.PolyClass;
+import dev.arubik.craftengine.script.PolyClassLivingEntity_v2;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
 import dev.arubik.craftengine.script.ScriptValue;
 
 public class PolyClassMob
-extends PolyClassLivingEntity {
+extends PolyClassLivingEntity_v2 {
     private static volatile PolyType.PropertyHandler p$0;
     private static volatile PolyType.PropertyHandler p$1;
     private static volatile PolyType.PropertyHandler p$2;
@@ -61,5 +64,14 @@ extends PolyClassLivingEntity {
 
     public static PolyClassMob of(Object object) {
         return new PolyClassMob(object);
+    }
+
+    public static PolyClassMob ofGuarded(ScriptValue scriptValue) {
+        ScriptValue.Obj obj;
+        Object object;
+        if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Mob")) {
+            return new PolyClassMob(object);
+        }
+        return null;
     }
 }

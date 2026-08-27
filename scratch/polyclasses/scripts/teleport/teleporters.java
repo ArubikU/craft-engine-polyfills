@@ -4,7 +4,7 @@
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassPlayer
- *  dev.arubik.craftengine.script.PolyClassServer_v2
+ *  dev.arubik.craftengine.script.PolyClassServer
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -18,7 +18,7 @@ package dev.arubik.craftengine.script.gen.teleport;
 
 import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassPlayer;
-import dev.arubik.craftengine.script.PolyClassServer_v2;
+import dev.arubik.craftengine.script.PolyClassServer;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -104,7 +104,7 @@ public final class Teleporters {
                 if (list2 != null) {
                     for (ScriptValue[] scriptValueArray2 : list2) {
                         builder.val("line", scriptValueArray2.length > 0 ? scriptValueArray2[0] : ScriptValue.NULL);
-                        if (!(ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("line"), (String)"") ^ true)) continue;
+                        if (!(scriptContext.getStr("line").equals("") ^ true)) continue;
                         return scriptContext.getClassOrVar("line");
                     }
                 }
@@ -160,7 +160,7 @@ public final class Teleporters {
 
     public static ScriptValue onFrequencySubmit(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        if (ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("freq"), (String)"")) {
+        if (scriptContext.getStr("freq").equals("")) {
             ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
             if (scriptValue != ScriptValue.NULL) {
                 ScriptValue.Obj obj;
@@ -250,8 +250,8 @@ public final class Teleporters {
             ScriptValue scriptValue7 = Teleporters.freqKey(builder2);
             String string = "string";
             if (scriptValue6 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object5);
-                object = polyClassServer_v2.tm$6_get_typed(scriptValue7.asStr(), string);
+                PolyClassServer polyClassServer = new PolyClassServer(object5);
+                object = polyClassServer.tm$6_get_typed(scriptValue7.asStr(), string);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue7);
@@ -273,7 +273,7 @@ public final class Teleporters {
         if (list != null) {
             for (ScriptValue[] scriptValueArray : list) {
                 builder.val("entry", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
-                if (!(ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("entry"), (String)"") ^ true)) continue;
+                if (!(scriptContext.getStr("entry").equals("") ^ true)) continue;
                 ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
                 arrayList3.add(scriptContext.getClassOrVar("entries"));
                 arrayList3.add(scriptContext.getClassOrVar("entry"));
@@ -487,7 +487,7 @@ public final class Teleporters {
             var11_12 = Teleporters.freqKey(var12_11);
             var13_13 = "string";
             if (var10_10 instanceof ScriptValue.Obj && (var15_15 = (var14_14 = (ScriptValue.Obj)var10_10).instance()) != null && !(var15_15 instanceof PolyClass) && var14_14.typeName().equals("Server")) {
-                var16_16 = new PolyClassServer_v2(var15_15);
+                var16_16 = new PolyClassServer(var15_15);
                 v1 /* !! */  = var16_16.tm$6_get_typed(var11_12.asStr(), var13_13);
             } else {
                 var17_17 = new ArrayList<ScriptValue>();
@@ -510,7 +510,7 @@ public final class Teleporters {
         if (var21_22 != null) {
             for (ScriptValue[] var23_24 : var21_22) {
                 var0.val("entry", var23_24.length > 0 ? var23_24[0] : ScriptValue.NULL);
-                if (!(ScriptFormula.valuesEqualStr((ScriptValue)var1_1.getClassOrVar("entry"), (String)"") ^ true)) continue;
+                if (!(var1_1.getStr("entry").equals("") ^ true)) continue;
                 var25_25 = new ArrayList<ScriptValue>();
                 var25_25.add(var1_1.getClassOrVar("entries"));
                 var25_25.add(var1_1.getClassOrVar("entry"));

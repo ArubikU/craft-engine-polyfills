@@ -2,6 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
@@ -9,9 +10,11 @@
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler3
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler6
  *  dev.arubik.craftengine.script.ScriptValue
+ *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
 package dev.arubik.craftengine.script;
 
+import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyClassWorld;
 import dev.arubik.craftengine.script.PolyType;
@@ -229,5 +232,14 @@ extends PolyClassWorld {
 
     public static PolyClassContraptionWorld of(Object object) {
         return new PolyClassContraptionWorld(object);
+    }
+
+    public static PolyClassContraptionWorld ofGuarded(ScriptValue scriptValue) {
+        ScriptValue.Obj obj;
+        Object object;
+        if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("ContraptionWorld")) {
+            return new PolyClassContraptionWorld(object);
+        }
+        return null;
     }
 }

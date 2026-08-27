@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v3
+ *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script.gen.storage;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v3;
+import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -45,31 +45,29 @@ public final class ItemTrash {
         List list = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList, (ScriptContext)scriptContext), (int)1);
         if (list != null) {
             for (ScriptValue[] scriptValueArray : list) {
-                ScriptValue.Obj obj;
-                Object object2;
-                ScriptValue.Obj obj2;
-                Object object3;
+                PolyClassMachine polyClassMachine;
+                PolyClassMachine polyClassMachine2;
                 builder.val("i", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
                 ArrayList<CallSite> arrayList2 = new ArrayList<CallSite>();
                 ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
                 arrayList3.add(scriptContext.getClassOrVar("i"));
                 ScriptValue scriptValue2 = scriptContext.getClassOrVar("Machine");
-                arrayList2.add(PolyDispatch.bootstrapCall("memberCall", "get_item", (ScriptValue)(scriptValue2 != ScriptValue.NULL ? (scriptValue2 instanceof ScriptValue.Obj && (object3 = (obj2 = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object3 instanceof PolyClass) && obj2.typeName().equals("Machine") ? new PolyClassMachine_v3(object3).pg$119_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL), arrayList3, (ScriptContext)scriptContext));
+                arrayList2.add(PolyDispatch.bootstrapCall("memberCall", "get_item", (ScriptValue)(scriptValue2 != ScriptValue.NULL ? ((polyClassMachine2 = PolyClassMachine.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassMachine2.pg$119_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL), arrayList3, (ScriptContext)scriptContext));
                 if (!(ScriptFormula.callBuiltin((String)"is_empty", arrayList2, (ScriptContext)scriptContext).asBool() ^ true)) continue;
                 ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
                 arrayList4.add(scriptContext.getClassOrVar("i"));
                 arrayList4.add(ScriptValue.of((double)64.0));
                 ScriptValue scriptValue3 = scriptContext.getClassOrVar("Machine");
-                PolyDispatch.bootstrapCall("memberCall", "remove_item", (ScriptValue)(scriptValue3 != ScriptValue.NULL ? (scriptValue3 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v3(object2).pg$119_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue3, (ScriptContext)scriptContext)) : ScriptValue.NULL), arrayList4, (ScriptContext)scriptContext);
+                PolyDispatch.bootstrapCall("memberCall", "remove_item", (ScriptValue)(scriptValue3 != ScriptValue.NULL ? ((polyClassMachine = PolyClassMachine.ofGuarded((ScriptValue)scriptValue3)) != null ? polyClassMachine.pg$119_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue3, (ScriptContext)scriptContext)) : ScriptValue.NULL), arrayList4, (ScriptContext)scriptContext);
             }
         }
         if ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL) {
             ScriptValue.Obj obj;
-            Object object4;
+            Object object2;
             double d = 1.0;
-            if (scriptValue instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object4);
-                object = polyClassMachine_v3.tm$94_nearby_entities(d);
+            if (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                PolyClassMachine polyClassMachine = new PolyClassMachine(object2);
+                object = polyClassMachine.tm$94_nearby_entities(d);
             } else {
                 ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
                 arrayList5.add(ScriptValue.of((double)d));
@@ -83,17 +81,17 @@ public final class ItemTrash {
         List list2 = ScriptProgram.rowsOf((ScriptValue)scriptValue4, (int)1);
         if (list2 != null) {
             for (ScriptValue[] scriptValueArray : list2) {
-                Object object5;
+                Object object3;
                 builder.val("entity", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
                 ScriptValue scriptValue5 = scriptContext.getClassOrVar("entity");
                 if (!ScriptFormula.valuesEqualStr((ScriptValue)(scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "type", (ScriptValue)scriptValue5, (ScriptContext)scriptContext) : ScriptValue.NULL), (String)"minecraft:item")) continue;
                 ScriptValue scriptValue6 = scriptContext.getClassOrVar("entity");
                 if (scriptValue6 != ScriptValue.NULL) {
                     ArrayList arrayList6 = new ArrayList();
-                    object5 = PolyDispatch.bootstrapCall("memberCall", "remove", (ScriptValue)scriptValue6, arrayList6, (ScriptContext)scriptContext);
+                    object3 = PolyDispatch.bootstrapCall("memberCall", "remove", (ScriptValue)scriptValue6, arrayList6, (ScriptContext)scriptContext);
                     continue;
                 }
-                object5 = ScriptValue.NULL;
+                object3 = ScriptValue.NULL;
             }
         }
         FILE_SCOPE = builder.build();

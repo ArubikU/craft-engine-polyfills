@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v3
+ *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script.gen.storage;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v3;
+import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -38,20 +38,19 @@ public final class ItemMagnet {
 
     public static void run(ScriptContext.Builder builder) {
         Object object;
-        ScriptValue.Obj obj;
-        Object object2;
+        PolyClassMachine polyClassMachine;
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v3(object2).pg$156_pos() : PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? ((polyClassMachine = PolyClassMachine.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine.pg$156_pos() : PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         builder.val("machine", scriptValue2);
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("Machine");
         if (scriptValue3 != ScriptValue.NULL) {
-            ScriptValue.Obj obj2;
-            Object object3;
+            ScriptValue.Obj obj;
+            Object object2;
             double d = 8.0;
-            if (scriptValue3 instanceof ScriptValue.Obj && (object3 = (obj2 = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object3 instanceof PolyClass) && obj2.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object3);
-                object = polyClassMachine_v3.tm$94_nearby_entities(d);
+            if (scriptValue3 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                PolyClassMachine polyClassMachine2 = new PolyClassMachine(object2);
+                object = polyClassMachine2.tm$94_nearby_entities(d);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((double)d));
@@ -65,8 +64,8 @@ public final class ItemMagnet {
         List list = ScriptProgram.rowsOf((ScriptValue)scriptValue4, (int)1);
         if (list != null) {
             for (ScriptValue[] scriptValueArray : list) {
+                Object object3;
                 Object object4;
-                Object object5;
                 builder.val("entity", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
                 ScriptValue scriptValue5 = scriptContext.getClassOrVar("entity");
                 if (!ScriptFormula.valuesEqualStr((ScriptValue)(scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "type", (ScriptValue)scriptValue5, (ScriptContext)scriptContext) : ScriptValue.NULL), (String)"minecraft:item")) continue;
@@ -76,8 +75,7 @@ public final class ItemMagnet {
                 CallSite callSite = PolyDispatch.bootstrapCall("memberCall", "distance_sq", (ScriptValue)(scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL), arrayList, (ScriptContext)scriptContext);
                 builder.val("dsq", (ScriptValue)callSite);
                 if (callSite.asNum() <= 9.0) {
-                    ScriptValue.Obj obj3;
-                    Object object6;
+                    PolyClassMachine polyClassMachine3;
                     ScriptValue scriptValue7 = scriptContext.getClassOrVar("entity");
                     ScriptValue scriptValue8 = scriptValue7 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "item", (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL;
                     builder.val("item", scriptValue8);
@@ -91,7 +89,7 @@ public final class ItemMagnet {
                     ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
                     arrayList3.add(scriptValue8);
                     ScriptValue scriptValue10 = scriptContext.getClassOrVar("Machine");
-                    PolyDispatch.bootstrapCall("memberCall", "push", (ScriptValue)(scriptValue10 != ScriptValue.NULL ? (scriptValue10 instanceof ScriptValue.Obj && (object6 = (obj3 = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object6 instanceof PolyClass) && obj3.typeName().equals("Machine") ? new PolyClassMachine_v3(object6).pg$119_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue10, (ScriptContext)scriptContext)) : ScriptValue.NULL), arrayList3, (ScriptContext)scriptContext);
+                    PolyDispatch.bootstrapCall("memberCall", "push", (ScriptValue)(scriptValue10 != ScriptValue.NULL ? ((polyClassMachine3 = PolyClassMachine.ofGuarded((ScriptValue)scriptValue10)) != null ? polyClassMachine3.pg$119_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue10, (ScriptContext)scriptContext)) : ScriptValue.NULL), arrayList3, (ScriptContext)scriptContext);
                     continue;
                 }
                 ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
@@ -102,20 +100,20 @@ public final class ItemMagnet {
                     ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
                     ScriptValue scriptValue12 = scriptContext.getClassOrVar("entity");
                     arrayList6.add((ScriptValue)(scriptValue12 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue12, (ScriptContext)scriptContext) : ScriptValue.NULL));
-                    object5 = PolyDispatch.bootstrapCall("memberCall", "sub", (ScriptValue)scriptValue11, arrayList6, (ScriptContext)scriptContext);
+                    object4 = PolyDispatch.bootstrapCall("memberCall", "sub", (ScriptValue)scriptValue11, arrayList6, (ScriptContext)scriptContext);
                 } else {
-                    object5 = ScriptValue.NULL;
+                    object4 = ScriptValue.NULL;
                 }
-                CallSite callSite2 = PolyDispatch.bootstrapCall("memberCall", "scale", (ScriptValue)PolyDispatch.bootstrapCall("memberCall", "normalize", (ScriptValue)object5, arrayList5, (ScriptContext)scriptContext), arrayList4, (ScriptContext)scriptContext);
+                CallSite callSite2 = PolyDispatch.bootstrapCall("memberCall", "scale", (ScriptValue)PolyDispatch.bootstrapCall("memberCall", "normalize", (ScriptValue)object4, arrayList5, (ScriptContext)scriptContext), arrayList4, (ScriptContext)scriptContext);
                 builder.val("direction", (ScriptValue)callSite2);
                 ScriptValue scriptValue13 = scriptContext.getClassOrVar("entity");
                 if (scriptValue13 != ScriptValue.NULL) {
                     ArrayList<CallSite> arrayList7 = new ArrayList<CallSite>();
                     arrayList7.add(callSite2);
-                    object4 = PolyDispatch.bootstrapCall("memberCall", "push", (ScriptValue)scriptValue13, arrayList7, (ScriptContext)scriptContext);
+                    object3 = PolyDispatch.bootstrapCall("memberCall", "push", (ScriptValue)scriptValue13, arrayList7, (ScriptContext)scriptContext);
                     continue;
                 }
-                object4 = ScriptValue.NULL;
+                object3 = ScriptValue.NULL;
             }
         }
         FILE_SCOPE = builder.build();

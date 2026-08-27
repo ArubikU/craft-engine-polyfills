@@ -2,6 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
@@ -12,17 +13,19 @@
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler4
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler5
  *  dev.arubik.craftengine.script.ScriptValue
+ *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
 package dev.arubik.craftengine.script;
 
-import dev.arubik.craftengine.script.PolyClassLivingEntity;
+import dev.arubik.craftengine.script.PolyClass;
+import dev.arubik.craftengine.script.PolyClassLivingEntity_v2;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.util.List;
 
 public class PolyClassPlayer_v2
-extends PolyClassLivingEntity {
+extends PolyClassLivingEntity_v2 {
     private static volatile PolyType.TypedMethodHandler4 h$0;
     private static volatile PolyType.MethodHandler m$1;
     private static volatile PolyType.TypedMethodHandler1 h$2;
@@ -546,5 +549,14 @@ extends PolyClassLivingEntity {
 
     public static PolyClassPlayer_v2 of(Object object) {
         return new PolyClassPlayer_v2(object);
+    }
+
+    public static PolyClassPlayer_v2 ofGuarded(ScriptValue scriptValue) {
+        ScriptValue.Obj obj;
+        Object object;
+        if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
+            return new PolyClassPlayer_v2(object);
+        }
+        return null;
     }
 }

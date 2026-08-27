@@ -3,21 +3,19 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v3
+ *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
- *  dev.arubik.craftengine.script.ScriptFormula
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
 package dev.arubik.craftengine.script.gen.kinetics.shafts;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v3;
+import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
-import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.util.ArrayList;
 
@@ -34,16 +32,16 @@ public final class Overclock {
 
     public static ScriptValue _step(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        if (ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("click_type"), (String)"drop")) {
+        if (scriptContext.getStr("click_type").equals("drop")) {
             return ScriptValue.of((double)0.5);
         }
-        if (ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("click_type"), (String)"control_drop")) {
+        if (scriptContext.getStr("click_type").equals("control_drop")) {
             return ScriptValue.of((double)0.5);
         }
-        if (ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("click_type"), (String)"right")) {
+        if (scriptContext.getStr("click_type").equals("right")) {
             return ScriptValue.of((double)0.25);
         }
-        if (ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("click_type"), (String)"shift_right")) {
+        if (scriptContext.getStr("click_type").equals("shift_right")) {
             return ScriptValue.of((double)0.25);
         }
         return ScriptValue.of((double)0.01);
@@ -58,8 +56,8 @@ public final class Overclock {
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             ScriptValue scriptValue2 = Overclock._step(builder2);
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object);
-                v0 = ScriptValue.of((boolean)polyClassMachine_v3.tm$70_bump_overclock(scriptValue2.asNum()));
+                PolyClassMachine polyClassMachine = new PolyClassMachine(object);
+                v0 = ScriptValue.of((boolean)polyClassMachine.tm$70_bump_overclock(scriptValue2.asNum()));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue2);
@@ -80,8 +78,8 @@ public final class Overclock {
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             double d = -Overclock._step(builder2).asNum();
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object);
-                v0 = ScriptValue.of((boolean)polyClassMachine_v3.tm$70_bump_overclock(d));
+                PolyClassMachine polyClassMachine = new PolyClassMachine(object);
+                v0 = ScriptValue.of((boolean)polyClassMachine.tm$70_bump_overclock(d));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((double)d));
