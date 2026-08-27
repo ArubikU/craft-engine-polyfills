@@ -30,7 +30,7 @@ import static org.objectweb.asm.Opcodes.*;
  *
  * <p>Deliberately fail-soft: {@link #tryCompile} runs its own small recursive-descent parser
  * SEPARATELY from {@link ScriptFormula}'s real one, and bails (returns {@code null}) the instant
- * it sees a construct it doesn't model at all — a string literal, {@code $var}, {@code ??},
+ * it sees a construct it doesn't model at all — {@code $var}, {@code ??},
  * ranges/array literals, bitwise/shift operators, {@code **}/{@code //}/{@code ^}, the
  * {@code "file.pf:func"} cross-file call form — OR whenever it recognizes a construct but can't
  * PROVE its narrow (numeric/boolean) codegen would match the interpreter's actual runtime
@@ -222,7 +222,7 @@ final class ScriptBytecodeCompiler {
      *  DADD}/{@code DMUL}/...), with NO runtime {@code ScriptFormula.compile}/{@code evaluate}
      *  round-trip at all for anything this grammar covers. Returns {@code null} (caller falls back
      *  to the {@code ScriptFormula.compile(expr).evaluate(ctx)} pattern for just that one
-     *  expression) for anything outside the grammar — a string literal, {@code $var}, {@code ??},
+     *  expression) for anything outside the grammar — {@code $var}, {@code ??},
      *  array/range literals, the {@code "file.pf:func"} form. The caller supplies its OWN {@link
      *  Ctx} (its own ctx-holding slot and scratch-slot allocator) rather than this class's
      *  fixed-slot-1 standalone convention — see {@link Ctx}'s own doc. */
@@ -635,6 +635,41 @@ final class ScriptBytecodeCompiler {
                 return inner;
             }
 
+            // String literal — mirrors ScriptFormula.Parser's own string-literal branch exactly:
+            // both ' and " as quote chars, \n \t \r \\ as recognized escapes, any OTHER escaped
+            // char passes through as itself (so "\x" -> "x", not a bail). Deliberately does NOT
+            // support a suffix chain after the literal (the real parser's parseSuffixChain, e.g.
+            // "abc"[0] or "abc".upper() chained straight off a literal) — this compiler's dot-
+            // access grammar only ever recognizes Name.member on a bare IDENTIFIER primary (see
+            // the identifier branch below), so a suffixed string literal simply isn't in this
+            // compiler's grammar and correctly bails to the interpreter, same as before this
+            // literal was supported at all.
+            if (c == '"' || c == '\'') {
+                char quote = c;
+                pos++;
+                StringBuilder sb = new StringBuilder();
+                while (pos < src.length() && src.charAt(pos) != quote) {
+                    char ch = src.charAt(pos);
+                    if (ch == '\\' && pos + 1 < src.length()) {
+                        pos++;
+                        char esc = src.charAt(pos);
+                        sb.append(switch (esc) {
+                            case 'n' -> '\n';
+                            case 't' -> '\t';
+                            case 'r' -> '\r';
+                            case '\\' -> '\\';
+                            default -> esc;
+                        });
+                    } else {
+                        sb.append(ch);
+                    }
+                    pos++;
+                }
+                if (pos >= src.length()) return null; // unterminated string literal — bail
+                pos++; // consume closing quote
+                return strLit(sb.toString());
+            }
+
             if (Character.isDigit(c) || (c == '.' && pos + 1 < src.length() && Character.isDigit(src.charAt(pos + 1)))) {
                 int start = pos;
                 while (pos < src.length() && (Character.isDigit(src.charAt(pos)) || src.charAt(pos) == '.')) pos++;
@@ -752,7 +787,7 @@ final class ScriptBytecodeCompiler {
                 };
             }
 
-            return null; // string literal, '$var', '[', or anything else unsupported
+            return null; // '$var', '[', or anything else unsupported
         }
 
         /** Parses a parenthesized, comma-separated arg list whose opening '(' has already been
@@ -784,6 +819,20 @@ final class ScriptBytecodeCompiler {
         private static Expr boolLit(boolean v) {
             return new Literal(Type.BOOL) {
                 @Override public void emit(MethodVisitor mv, Ctx c) { mv.visitInsn(v ? ICONST_1 : ICONST_0); }
+            };
+        }
+
+        /** A string literal — ANY-typed (like every other {@code ScriptValue}-boxed result here),
+         *  since a string is exactly one of the runtime shapes an ANY value already has to
+         *  represent. Still a {@link Literal} (a bare {@code LDC} + one {@code ScriptValue.of}
+         *  call, no branching/computation), so {@link #tryCompile}'s own literal-bail check still
+         *  skips generating a whole standalone class for a formula that's JUST a bare string. */
+        private static Expr strLit(String v) {
+            return new Literal(Type.ANY) {
+                @Override public void emit(MethodVisitor mv, Ctx c) {
+                    mv.visitLdcInsn(v);
+                    mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Ljava/lang/String;)L" + VALUE + ";", true);
+                }
             };
         }
 
