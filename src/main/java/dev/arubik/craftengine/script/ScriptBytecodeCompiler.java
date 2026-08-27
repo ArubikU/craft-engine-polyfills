@@ -190,7 +190,7 @@ final class ScriptBytecodeCompiler {
      *  — a String/ScriptValue parameter, or a type mismatch (e.g. a STRING expr feeding a
      *  {@code double} param) — held as the boxed {@code ScriptValue} {@code toAny} already produces,
      *  decoded to native via {@link #emitDecodeToNative} on the way in. */
-    private enum ArgSlotKind { NUM_RAW, BOOL_RAW, ANY_BOXED }
+    private enum ArgSlotKind { NUM_RAW, BOOL_RAW, STR_RAW, ANY_BOXED }
 
     /** name -> java.lang.Math method of the same (double)->double shape. Only pure, total (no
      *  exceptions) single-argument math functions — everything else falls through to {@code
@@ -358,6 +358,25 @@ final class ScriptBytecodeCompiler {
      *  value used ANYWHERE in the whole script set. */
     abstract static class Literal extends BaseExpr {
         Literal(Type type) { super(type); }
+    }
+
+    /** A string literal, which keeps its raw Java {@link String} rather than only knowing how to
+     *  emit a boxed {@code ScriptValue}. That matters at a typed call site: a generated PolyClass
+     *  method taking a native {@code String} parameter would otherwise be handed
+     *  {@code ScriptValue.of("head_angle")} and immediately call {@code asStr()} back off it — a
+     *  pure box-then-unbox round trip, on a pattern that is everywhere and hot
+     *  ({@code Machine.get_typed("head_angle", "int")} runs per machine per tick). Holding the
+     *  String lets {@link P#dotMethodCall} {@code LDC} it straight into the native parameter.
+     *
+     *  <p>Still a {@link Literal}, so {@link #tryCompile}'s "a bare literal needs no class at all"
+     *  bail is unchanged. */
+    static final class StrLiteral extends Literal {
+        final String value;
+        StrLiteral(String value) { super(Type.ANY); this.value = value; }
+        @Override public void emit(MethodVisitor mv, Ctx c) {
+            mv.visitLdcInsn(value);
+            mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Ljava/lang/String;)L" + VALUE + ";", true);
+        }
     }
 
     // ---- Coercions — mirror ScriptValue#asNum()/#asBool() exactly ----
@@ -1350,12 +1369,7 @@ final class ScriptBytecodeCompiler {
          *  call, no branching/computation), so {@link #tryCompile}'s own literal-bail check still
          *  skips generating a whole standalone class for a formula that's JUST a bare string. */
         private static Expr strLit(String v) {
-            return new Literal(Type.ANY) {
-                @Override public void emit(MethodVisitor mv, Ctx c) {
-                    mv.visitLdcInsn(v);
-                    mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Ljava/lang/String;)L" + VALUE + ";", true);
-                }
-            };
+            return new StrLiteral(v);
         }
 
         /** {@code [e1, e2, ...]} — builds a real {@code ScriptValue.Array} at runtime (each element
@@ -1568,6 +1582,10 @@ final class ScriptBytecodeCompiler {
                     Type rawType = rawArgs.get(i).type();
                     if (k == PolyClassGenerator.Kind.DOUBLE && rawType == Type.NUM) argSlotKinds[i] = ArgSlotKind.NUM_RAW;
                     else if (k == PolyClassGenerator.Kind.BOOL && rawType == Type.BOOL) argSlotKinds[i] = ArgSlotKind.BOOL_RAW;
+                    // A string LITERAL into a native String parameter: hold the raw String, so the
+                    // call site never boxes it just for the callee to asStr() it straight back.
+                    else if (k == PolyClassGenerator.Kind.STRING && rawArgs.get(i) instanceof StrLiteral)
+                        argSlotKinds[i] = ArgSlotKind.STR_RAW;
                     else argSlotKinds[i] = ArgSlotKind.ANY_BOXED;
                 }
             }
@@ -1600,6 +1618,11 @@ final class ScriptBytecodeCompiler {
                                     rawArgs.get(i).emit(mv, c);
                                     mv.visitVarInsn(ISTORE, argSlots[i]);
                                 }
+                                case STR_RAW -> {
+                                    argSlots[i] = c.allocRef();
+                                    mv.visitLdcInsn(((StrLiteral) rawArgs.get(i)).value);
+                                    mv.visitVarInsn(ASTORE, argSlots[i]);
+                                }
                                 case ANY_BOXED -> {
                                     argSlots[i] = c.allocRef();
                                     toAny(rawArgs.get(i)).emit(mv, c);
@@ -1622,6 +1645,7 @@ final class ScriptBytecodeCompiler {
                             switch (finalArgSlotKinds[i]) {
                                 case NUM_RAW -> mv.visitVarInsn(DLOAD, argSlots[i]);
                                 case BOOL_RAW -> mv.visitVarInsn(ILOAD, argSlots[i]);
+                                case STR_RAW -> mv.visitVarInsn(ALOAD, argSlots[i]); // already a String
                                 case ANY_BOXED -> {
                                     mv.visitVarInsn(ALOAD, argSlots[i]);
                                     emitDecodeToNative(mv, typedRef.argKinds()[i]);
@@ -1702,6 +1726,10 @@ final class ScriptBytecodeCompiler {
                     case BOOL_RAW -> {
                         mv.visitVarInsn(ILOAD, argSlots[i]);
                         mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Z)L" + VALUE + ";", true);
+                    }
+                    case STR_RAW -> {
+                        mv.visitVarInsn(ALOAD, argSlots[i]);
+                        mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Ljava/lang/String;)L" + VALUE + ";", true);
                     }
                     case ANY_BOXED -> mv.visitVarInsn(ALOAD, argSlots[i]);
                 }
