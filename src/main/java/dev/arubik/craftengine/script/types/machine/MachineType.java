@@ -208,119 +208,118 @@ public final class MachineType {
             // was dead/unreachable — every real .pf caller of "set_rpm_output" was already passing a
             // number (the value setter), never the face CSV this one expects, so renaming it is a
             // pure bug fix, not a behavior change for any shipped script.
-            .method("set_rpm_input", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                if (ref(obj).blockEntity() instanceof DataMachineBlockEntity machine) {
-                    machine.setRpmInputOverride(args.get(0).asStr());
-                    return ScriptValue.of(true);
-                }
-                return ScriptValue.of(false);
-            })
-            .method("set_rpm_output_same", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                if (ref(obj).blockEntity() instanceof DataMachineBlockEntity machine) {
-                    machine.setRpmOutputSameOverride(args.get(0).asStr());
-                    return ScriptValue.of(true);
-                }
-                return ScriptValue.of(false);
-            })
-            .method("set_rpm_output_same_inverted", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                if (ref(obj).blockEntity() instanceof DataMachineBlockEntity machine) {
-                    machine.setRpmOutputSameInvertedOverride(args.get(0).asStr());
-                    return ScriptValue.of(true);
-                }
-                return ScriptValue.of(false);
-            })
-            .method("set_rpm_output_new_network", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                if (ref(obj).blockEntity() instanceof DataMachineBlockEntity machine) {
-                    machine.setRpmOutputNewNetworkOverride(args.get(0).asStr());
-                    return ScriptValue.of(true);
-                }
-                return ScriptValue.of(false);
-            })
-            .method("set_rpm_output_inverted", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                if (ref(obj).blockEntity() instanceof DataMachineBlockEntity machine) {
-                    machine.setRpmOutputInvertedOverride(args.get(0).asStr());
-                    return ScriptValue.of(true);
-                }
-                return ScriptValue.of(false);
-            })
-            .method("clear_rpm_override", (obj, args) -> {
-                if (ref(obj).blockEntity() instanceof DataMachineBlockEntity machine) {
-                    machine.clearRpmOverride();
-                    return ScriptValue.of(true);
-                }
-                return ScriptValue.of(false);
-            })
+            .methodTyped1("set_rpm_input", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (MachineRef m, String csv) -> {
+                    if (m.blockEntity() instanceof DataMachineBlockEntity machine) {
+                        machine.setRpmInputOverride(csv);
+                        return true;
+                    }
+                    return false;
+                })
+            .methodTyped1("set_rpm_output_same", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (MachineRef m, String csv) -> {
+                    if (m.blockEntity() instanceof DataMachineBlockEntity machine) {
+                        machine.setRpmOutputSameOverride(csv);
+                        return true;
+                    }
+                    return false;
+                })
+            .methodTyped1("set_rpm_output_same_inverted", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (MachineRef m, String csv) -> {
+                    if (m.blockEntity() instanceof DataMachineBlockEntity machine) {
+                        machine.setRpmOutputSameInvertedOverride(csv);
+                        return true;
+                    }
+                    return false;
+                })
+            .methodTyped1("set_rpm_output_new_network", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (MachineRef m, String csv) -> {
+                    if (m.blockEntity() instanceof DataMachineBlockEntity machine) {
+                        machine.setRpmOutputNewNetworkOverride(csv);
+                        return true;
+                    }
+                    return false;
+                })
+            .methodTyped1("set_rpm_output_inverted", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (MachineRef m, String csv) -> {
+                    if (m.blockEntity() instanceof DataMachineBlockEntity machine) {
+                        machine.setRpmOutputInvertedOverride(csv);
+                        return true;
+                    }
+                    return false;
+                })
+            .methodTyped0("clear_rpm_override", TypeCodecs.BOOL,
+                (MachineRef m) -> {
+                    if (m.blockEntity() instanceof DataMachineBlockEntity machine) {
+                        machine.clearRpmOverride();
+                        return true;
+                    }
+                    return false;
+                })
             // turn_page(delta) — multipage chest page switch (stash+show items)
-            .method("turn_page", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                int delta = (int) args.get(0).asNum();
-                MachineRef m = ref(obj);
-                if (m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMultiBlockMachineBlockEntity dmb) {
-                    dmb.turnPage(delta);
-                    return ScriptValue.of(true);
-                }
-                return ScriptValue.of(false);
-            })
+            .methodTyped1("turn_page", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (MachineRef m, Double deltaArg) -> {
+                    int delta = deltaArg.intValue();
+                    if (m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMultiBlockMachineBlockEntity dmb) {
+                        dmb.turnPage(delta);
+                        return true;
+                    }
+                    return false;
+                })
             // --- Page navigation (browser-like history) ---
             // Machine.page(n) — navigate to page n
-            .method("page", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                int n = (int) args.get(0).asNum();
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(false);
-                // Use active player if available — for script-triggered navigation we store per-machine
-                try {
-                    // Find viewer via active MachineMenu
-                    org.bukkit.entity.Player p = null;
-                    if (dm.getMenu() != null) {
-                        for (org.bukkit.entity.HumanEntity he : dm.getMenu().getInventory().getViewers()) {
-                            if (he instanceof org.bukkit.entity.Player bp) { p = bp; break; }
+            .methodTyped1("page", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (MachineRef m, Double nArg) -> {
+                    int n = nArg.intValue();
+                    if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return false;
+                    // Use active player if available — for script-triggered navigation we store per-machine
+                    try {
+                        // Find viewer via active MachineMenu
+                        org.bukkit.entity.Player p = null;
+                        if (dm.getMenu() != null) {
+                            for (org.bukkit.entity.HumanEntity he : dm.getMenu().getInventory().getViewers()) {
+                                if (he instanceof org.bukkit.entity.Player bp) { p = bp; break; }
+                            }
                         }
-                    }
-                    if (p == null) return ScriptValue.of(false);
-                    dm.openPage(p, n);
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
-            })
+                        if (p == null) return false;
+                        dm.openPage(p, n);
+                        return true;
+                    } catch (Throwable ignored) { return false; }
+                })
             // Machine.next_page() — go to currentPage+1
-            .method("next_page", (obj, args) -> {
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(false);
-                try {
-                    // Find viewer via active MachineMenu
-                    org.bukkit.entity.Player p = null;
-                    if (dm.getMenu() != null) {
-                        for (org.bukkit.entity.HumanEntity he : dm.getMenu().getInventory().getViewers()) {
-                            if (he instanceof org.bukkit.entity.Player bp) { p = bp; break; }
+            .methodTyped0("next_page", TypeCodecs.BOOL,
+                (MachineRef m) -> {
+                    if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return false;
+                    try {
+                        // Find viewer via active MachineMenu
+                        org.bukkit.entity.Player p = null;
+                        if (dm.getMenu() != null) {
+                            for (org.bukkit.entity.HumanEntity he : dm.getMenu().getInventory().getViewers()) {
+                                if (he instanceof org.bukkit.entity.Player bp) { p = bp; break; }
+                            }
                         }
-                    }
-                    if (p == null) return ScriptValue.of(false);
-                    dm.openPage(p, Math.min(dm.currentPage() + 1, dm.pageCount() - 1));
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
-            })
+                        if (p == null) return false;
+                        dm.openPage(p, Math.min(dm.currentPage() + 1, dm.pageCount() - 1));
+                        return true;
+                    } catch (Throwable ignored) { return false; }
+                })
             // Machine.prev_page() — browser back (history)
-            .method("prev_page", (obj, args) -> {
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(false);
-                try {
-                    // Find viewer via active MachineMenu
-                    org.bukkit.entity.Player p = null;
-                    if (dm.getMenu() != null) {
-                        for (org.bukkit.entity.HumanEntity he : dm.getMenu().getInventory().getViewers()) {
-                            if (he instanceof org.bukkit.entity.Player bp) { p = bp; break; }
+            .methodTyped0("prev_page", TypeCodecs.BOOL,
+                (MachineRef m) -> {
+                    if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return false;
+                    try {
+                        // Find viewer via active MachineMenu
+                        org.bukkit.entity.Player p = null;
+                        if (dm.getMenu() != null) {
+                            for (org.bukkit.entity.HumanEntity he : dm.getMenu().getInventory().getViewers()) {
+                                if (he instanceof org.bukkit.entity.Player bp) { p = bp; break; }
+                            }
                         }
-                    }
-                    if (p == null) return ScriptValue.of(false);
-                    dm.openPrevPage(p);
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
-            })
+                        if (p == null) return false;
+                        dm.openPrevPage(p);
+                        return true;
+                    } catch (Throwable ignored) { return false; }
+                })
             .property("current_page", obj -> {
                 if (!(ref(obj).blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(0.0);
                 return ScriptValue.of(dm.currentPage());
@@ -390,42 +389,39 @@ public final class MachineType {
 
 
             // --- Methods: Entity interaction ---
-            .method("nearby_entities", (obj, args) -> {
-                MachineRef m = ref(obj);
-                double radius = args.isEmpty() ? 5 : args.get(0).asNum();
-                Vec3 center = Vec3.atCenterOf(m.pos());
-                AABB box = AABB.ofSize(center, radius * 2, radius * 2, radius * 2);
-                List<Entity> entities = m.level().getEntities((Entity) null, box, e -> true);
-                List<ScriptValue> result = new ArrayList<>(entities.size());
-                for (Entity e : entities) {
-                    result.add(EntityType.wrap(e));
-                }
-                return new ScriptValue.Array(result);
-            })
+            .methodTypedOpt1("nearby_entities", TypeCodecs.DOUBLE, 5.0, TypeCodecs.RAW,
+                (MachineRef m, Double radius) -> {
+                    Vec3 center = Vec3.atCenterOf(m.pos());
+                    AABB box = AABB.ofSize(center, radius * 2, radius * 2, radius * 2);
+                    List<Entity> entities = m.level().getEntities((Entity) null, box, e -> true);
+                    List<ScriptValue> result = new ArrayList<>(entities.size());
+                    for (Entity e : entities) {
+                        result.add(EntityType.wrap(e));
+                    }
+                    return new ScriptValue.Array(result);
+                })
             // kill_entity / push_entity kept as convenience aliases for Machine context
             // (entity.kill() and entity.push(vec) are the canonical API)
-            .method("use_item_on_entity", (obj, args) -> {
-                // use_item_on_entity(entity, slot) — feeds/interacts with entity using item from slot
-                if (args.size() < 2) return ScriptValue.of(false);
-                MachineRef m = ref(obj);
-                ScriptValue eArg = args.get(0);
-                int slot = (int) args.get(1).asNum();
-                if (!(eArg instanceof ScriptValue.Obj eo) || !(eo.instance() instanceof LivingEntity target))
-                    return ScriptValue.of(false);
-                PersistentBlockEntity be = m.blockEntity();
-                if (!(be instanceof PersistentWorldlyBlockEntity worldly)) return ScriptValue.of(false);
-                ItemStack stack = worldly.getItem(slot);
-                if (stack.isEmpty()) return ScriptValue.of(false);
-                // Interact: feed animal or generic mob interact
-                if (target instanceof net.minecraft.world.entity.animal.Animal animal) {
-                    net.minecraft.world.item.ItemStack foodCopy = stack.copy();
-                    animal.setInLoveTime(600);
-                    stack.shrink(1);
-                    worldly.setItem(slot, stack);
-                    return ScriptValue.of(true);
-                }
-                return ScriptValue.of(false);
-            })
+            // use_item_on_entity(entity, slot) — feeds/interacts with entity using item from slot.
+            // arg0 stays TypeCodecs.RAW: it's an Entity script object, not a native scalar.
+            .methodTyped2("use_item_on_entity", TypeCodecs.RAW, TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (MachineRef m, ScriptValue eArg, Double slotArg) -> {
+                    int slot = slotArg.intValue();
+                    if (!(eArg instanceof ScriptValue.Obj eo) || !(eo.instance() instanceof LivingEntity target))
+                        return false;
+                    PersistentBlockEntity be = m.blockEntity();
+                    if (!(be instanceof PersistentWorldlyBlockEntity worldly)) return false;
+                    ItemStack stack = worldly.getItem(slot);
+                    if (stack.isEmpty()) return false;
+                    // Interact: feed animal or generic mob interact
+                    if (target instanceof net.minecraft.world.entity.animal.Animal animal) {
+                        animal.setInLoveTime(600);
+                        stack.shrink(1);
+                        worldly.setItem(slot, stack);
+                        return true;
+                    }
+                    return false;
+                })
             // spawn_entity → use World.spawn_entity(type, x, y, z) instead
 
             // --- Methods: Inventory ---
@@ -450,6 +446,10 @@ public final class MachineType {
             // both defaulting to true so a bare to_item("id") keeps its old full-copy behavior; pass
             // false to leave that part of the built item untouched (e.g. a "peek" item with no live
             // storage).
+            // Left untyped: arg0 is REQUIRED (0 args -> NULL without running the body) while args 1-2
+            // are optional-with-default-true — a mixed required/optional arity neither methodTypedN
+            // (which would skip the body) nor methodTypedOptN (which has no "was it passed" notion)
+            // can express exactly.
             .method("to_item", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.NULL;
                 dev.arubik.craftengine.item.ItemDefinition itemDef =
@@ -520,6 +520,9 @@ public final class MachineType {
             // trailing (px,py,pz) — same block-relative, +0.5-centered convention as drop_item_at —
             // spawns away from this machine's own tile center; omitted, it's the original behavior
             // (spawn AT the machine's own center).
+            // Left untyped: (px,py,pz) is an ALL-OR-NOTHING positional group — only honoured when
+            // args.size() >= 4, so a 2-arg call must ignore arg1 rather than read it as px. Per-arg
+            // defaults (methodTypedOptN) cannot express a group gate on the total arg count.
             .method("drop_item", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.of(false);
                 java.util.List<ItemStack> toDrop = extractStacks(args.get(0));
@@ -546,6 +549,8 @@ public final class MachineType {
             // facing out of, not from the middle of its own block. Backward compatible: existing
             // 4-arg single-item callers (saw.pf) keep spawning at the machine's own center exactly
             // as before.
+            // Left untyped: same all-or-nothing (px,py,pz) positional group as drop_item, gated on
+            // args.size() >= 7 — not expressible with per-argument defaults.
             .method("drop_item_toward", (obj, args) -> {
                 if (args.size() < 4) return ScriptValue.of(false);
                 java.util.List<ItemStack> toDrop = extractStacks(args.get(0));
@@ -572,21 +577,19 @@ public final class MachineType {
             // entity EMPTY first; vanilla ItemEntity discards itself if it ticks while empty, and
             // depending on exactly when that first tick lands relative to the second script call,
             // the item can vanish before set_item ever reaches it.
-            .method("drop_item_at", (obj, args) -> {
-                if (args.size() < 4) return ScriptValue.of(false);
-                ItemStack toDrop;
-                ScriptValue arg = args.get(0);
-                if (arg instanceof ScriptValue.Item i) toDrop = i.stack().copy();
-                else if (arg instanceof ScriptValue.Obj o && o.instance() instanceof ItemStack is) toDrop = is.copy();
-                else return ScriptValue.of(false);
-                if (toDrop.isEmpty()) return ScriptValue.of(false);
-                MachineRef m = ref(obj);
-                double dx = args.get(1).asNum(), dy = args.get(2).asNum(), dz = args.get(3).asNum();
-                ItemEntity spawned = new ItemEntity(m.level(), m.pos().getX() + dx + 0.5,
-                        m.pos().getY() + dy + 0.5, m.pos().getZ() + dz + 0.5, toDrop);
-                m.level().addFreshEntity(spawned);
-                return ScriptValue.of(true);
-            })
+            .methodTyped4("drop_item_at", TypeCodecs.RAW, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE,
+                TypeCodecs.BOOL, false,
+                (MachineRef m, ScriptValue arg, Double dx, Double dy, Double dz) -> {
+                    ItemStack toDrop;
+                    if (arg instanceof ScriptValue.Item i) toDrop = i.stack().copy();
+                    else if (arg instanceof ScriptValue.Obj o && o.instance() instanceof ItemStack is) toDrop = is.copy();
+                    else return false;
+                    if (toDrop.isEmpty()) return false;
+                    ItemEntity spawned = new ItemEntity(m.level(), m.pos().getX() + dx + 0.5,
+                            m.pos().getY() + dy + 0.5, m.pos().getZ() + dz + 0.5, toDrop);
+                    m.level().addFreshEntity(spawned);
+                    return true;
+                })
             // open_menu(Player) — opens this machine's normal menu. A machine whose interact_script
             // fully replaces on-right-click handling (see MachineBlockBehavior#useWithoutItem — once
             // an interact_script is declared, the menu no longer opens on its own) calls this itself
@@ -605,53 +608,48 @@ public final class MachineType {
             // that wants its generator to reflect current state on every open declares
             // "on_right_click": "....pf:on_right_click" with a body that just calls
             // Machine.open_menu(Player).
-            .method("open_menu", (obj, args) -> {
-                if (args.isEmpty() || !(args.get(0) instanceof ScriptValue.Obj po)
-                        || !(po.instance() instanceof net.minecraft.world.entity.player.Player p))
-                    return ScriptValue.of(false);
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity amb)) return ScriptValue.of(false);
-                if (!(p.getBukkitEntity() instanceof org.bukkit.entity.Player bukkitPlayer)) return ScriptValue.of(false);
-                try {
-                    if (amb instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm) {
-                        dm.openPage(bukkitPlayer, dm.currentPage());
-                    } else {
-                        amb.getMenu().open(bukkitPlayer);
-                    }
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
-            })
+            .methodTyped1("open_menu", TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                (MachineRef m, ScriptValue playerArg) -> {
+                    if (!(playerArg instanceof ScriptValue.Obj po)
+                            || !(po.instance() instanceof net.minecraft.world.entity.player.Player p))
+                        return false;
+                    if (!(m.blockEntity() instanceof AbstractMachineBlockEntity amb)) return false;
+                    if (!(p.getBukkitEntity() instanceof org.bukkit.entity.Player bukkitPlayer)) return false;
+                    try {
+                        if (amb instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm) {
+                            dm.openPage(bukkitPlayer, dm.currentPage());
+                        } else {
+                            amb.getMenu().open(bukkitPlayer);
+                        }
+                        return true;
+                    } catch (Throwable ignored) { return false; }
+                })
             // add_items(array) — batch convenience over this machine's OWN container: pushes every
             // item in `array` via the same merge-then-fill Container.push already implements
             // generically (see ContainerType) — a loop of Machine.container.push(...) calls, not a
             // separate implementation.
-            .method("add_items", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                ScriptValue arrVal = args.get(0);
-                if (!(arrVal instanceof ScriptValue.Array arr)) return ScriptValue.of(false);
-                MachineRef m = ref(obj);
-                var containerOpt = dev.arubik.craftengine.pipe.item.ItemTransferHelper.getContainer(m.level(), m.pos());
-                if (containerOpt.isEmpty()) return ScriptValue.of(false);
-                net.minecraft.world.Container container = containerOpt.get();
-                for (ScriptValue elem : arr.elements()) {
-                    ItemStack stack;
-                    if (elem instanceof ScriptValue.Item i) stack = i.stack().copy();
-                    else if (elem instanceof ScriptValue.Obj o && o.instance() instanceof ItemStack is) stack = is.copy();
-                    else continue;
-                    dev.arubik.craftengine.script.types.util.ContainerType.push(container, stack);
-                }
-                return ScriptValue.of(true);
-            })
+            .methodTyped1("add_items", TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                (MachineRef m, ScriptValue arrVal) -> {
+                    if (!(arrVal instanceof ScriptValue.Array arr)) return false;
+                    var containerOpt = dev.arubik.craftengine.pipe.item.ItemTransferHelper.getContainer(m.level(), m.pos());
+                    if (containerOpt.isEmpty()) return false;
+                    net.minecraft.world.Container container = containerOpt.get();
+                    for (ScriptValue elem : arr.elements()) {
+                        ItemStack stack;
+                        if (elem instanceof ScriptValue.Item i) stack = i.stack().copy();
+                        else if (elem instanceof ScriptValue.Obj o && o.instance() instanceof ItemStack is) stack = is.copy();
+                        else continue;
+                        dev.arubik.craftengine.script.types.util.ContainerType.push(container, stack);
+                    }
+                    return true;
+                })
 
             // --- Methods: Redstone ---
             // Shorthand for Machine.redstone.set(n). Kept because 17 shipped scripts use it.
             // Delegates to MachineRedstone so writer and reader can never disagree on the key.
-            .method("emit_redstone", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                MachineRef m = ref(obj);
-                return ScriptValue.of(MachineRedstone.setOutput(
-                        m.level(), m.pos(), m.blockEntity(), (int) args.get(0).asNum()));
-            })
+            .methodTyped1("emit_redstone", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (MachineRef m, Double level) -> MachineRedstone.setOutput(
+                        m.level(), m.pos(), m.blockEntity(), level.intValue()))
 
             // --- Methods: generic per-face IOConfiguration read/write ---
             // These are the one true primitive for "does this face pass X" / "make this face pass X" —
@@ -663,47 +661,46 @@ public final class MachineType {
             // (reusing IOType.REDSTONE), and the visual connected-face mask (IOType.VISUAL_CONNECTION,
             // consulted by ConnectedBlockBehavior#shouldConnect) uniformly, for whichever resource the
             // owning pipe/machine actually carries.
-            .method("io_get", (obj, args) -> {
-                // io_get(type, mode, dir) -> bool. mode is "input" or "output".
-                if (args.size() < 3) return ScriptValue.of(false);
-                MachineRef m = ref(obj);
-                dev.arubik.craftengine.multiblock.IOConfiguration.IOType type = parseIoType(args.get(0).asStr());
-                Direction dir = Direction.byName(args.get(2).asStr());
-                if (type == null || dir == null) return ScriptValue.of(false);
-                dev.arubik.craftengine.multiblock.IOConfiguration cfg = resolveLiveIOConfig(m);
-                if (cfg == null) return ScriptValue.of(false);
-                boolean input = "input".equalsIgnoreCase(args.get(1).asStr());
-                return ScriptValue.of(input ? cfg.acceptsInput(type, dir) : cfg.providesOutput(type, dir));
-            })
-            .method("io_set", (obj, args) -> {
-                // io_set(type, mode, dir, bool) -> bool (whether it applied)
-                if (args.size() < 4) return ScriptValue.of(false);
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(false);
-                dev.arubik.craftengine.multiblock.IOConfiguration.IOType type = parseIoType(args.get(0).asStr());
-                Direction dir = Direction.byName(args.get(2).asStr());
-                if (type == null || dir == null) return ScriptValue.of(false);
-                dev.arubik.craftengine.multiblock.IOConfiguration.Simple cfg = liveSimpleConfig(machine);
-                boolean input = "input".equalsIgnoreCase(args.get(1).asStr());
-                boolean on = args.get(3).asBool();
-                if (input) {
-                    if (on) cfg.addInput(type, dir); else cfg.removeInput(type, dir);
-                } else {
-                    if (on) cfg.addOutput(type, dir); else cfg.removeOutput(type, dir);
-                }
-                // The mutation above is pure data — nothing re-derives the connected-face mask on
-                // its own. Recompute now (self + the touched neighbour) so a panel toggle shows up
-                // immediately instead of waiting for an unrelated block update.
-                recomputeMaskIfConnected(m);
-                return ScriptValue.of(true);
-            })
+            // io_get(type, mode, dir) -> bool. mode is "input" or "output".
+            .methodTyped3("io_get", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (MachineRef m, String typeName, String mode, String dirName) -> {
+                    dev.arubik.craftengine.multiblock.IOConfiguration.IOType type = parseIoType(typeName);
+                    Direction dir = Direction.byName(dirName);
+                    if (type == null || dir == null) return false;
+                    dev.arubik.craftengine.multiblock.IOConfiguration cfg = resolveLiveIOConfig(m);
+                    if (cfg == null) return false;
+                    boolean input = "input".equalsIgnoreCase(mode);
+                    return input ? cfg.acceptsInput(type, dir) : cfg.providesOutput(type, dir);
+                })
+            // io_set(type, mode, dir, bool) -> bool (whether it applied)
+            .methodTyped4("io_set", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.BOOL,
+                TypeCodecs.BOOL, false,
+                (MachineRef m, String typeName, String mode, String dirName, Boolean on) -> {
+                    if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return false;
+                    dev.arubik.craftengine.multiblock.IOConfiguration.IOType type = parseIoType(typeName);
+                    Direction dir = Direction.byName(dirName);
+                    if (type == null || dir == null) return false;
+                    dev.arubik.craftengine.multiblock.IOConfiguration.Simple cfg = liveSimpleConfig(machine);
+                    boolean input = "input".equalsIgnoreCase(mode);
+                    if (input) {
+                        if (on) cfg.addInput(type, dir); else cfg.removeInput(type, dir);
+                    } else {
+                        if (on) cfg.addOutput(type, dir); else cfg.removeOutput(type, dir);
+                    }
+                    // The mutation above is pure data — nothing re-derives the connected-face mask on
+                    // its own. Recompute now (self + the touched neighbour) so a panel toggle shows up
+                    // immediately instead of waiting for an unrelated block update.
+                    recomputeMaskIfConnected(m);
+                    return true;
+                })
             // Manual trigger for the same recompute io_set already does automatically — useful after
             // a batch of io_set calls, or after something else (a script, an upgrade) changed this
             // block's IOConfiguration through a path that doesn't already call it.
-            .method("recompute_io", (obj, args) -> {
-                recomputeMaskIfConnected(ref(obj));
-                return ScriptValue.of(true);
-            })
+            .methodTyped0("recompute_io", TypeCodecs.BOOL,
+                (MachineRef m) -> {
+                    recomputeMaskIfConnected(m);
+                    return true;
+                })
 
             // get_renderer(id) -> MegRenderer / BetterModelRenderer / NULL. Resolves a renderer
             // entry declared with "id": "<id>" in this machine's own renderer config (see
@@ -712,93 +709,90 @@ public final class MachineType {
             // expressions the renderer config itself supports. NULL if this machine has no renderer
             // config, or no entry with that id, or the entry with that id isn't currently backed by
             // a live BetterModel/ModelEngine instance (e.g. the "when" condition is currently false).
-            .method("get_renderer", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                String id = args.get(0).asStr();
-                dev.arubik.craftengine.machine.render.RendererManager rm = rendererManagerOf(ref(obj));
-                if (rm == null) return ScriptValue.NULL;
-                dev.arubik.craftengine.machine.render.renderer.BetterModelRenderer bm = rm.betterModelRendererById(id);
-                if (bm != null) return dev.arubik.craftengine.script.types.machine.renderer.BetterModelRendererType.wrap(bm);
-                dev.arubik.craftengine.machine.render.renderer.MegRenderer me = rm.modelEngineRendererById(id);
-                if (me != null) return dev.arubik.craftengine.script.types.machine.renderer.MegRendererType.wrap(me);
-                return ScriptValue.NULL;
-            })
+            .methodTyped1("get_renderer", TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
+                (MachineRef m, String id) -> {
+                    dev.arubik.craftengine.machine.render.RendererManager rm = rendererManagerOf(m);
+                    if (rm == null) return ScriptValue.NULL;
+                    dev.arubik.craftengine.machine.render.renderer.BetterModelRenderer bm = rm.betterModelRendererById(id);
+                    if (bm != null) return dev.arubik.craftengine.script.types.machine.renderer.BetterModelRendererType.wrap(bm);
+                    dev.arubik.craftengine.machine.render.renderer.MegRenderer me = rm.modelEngineRendererById(id);
+                    if (me != null) return dev.arubik.craftengine.script.types.machine.renderer.MegRendererType.wrap(me);
+                    return ScriptValue.NULL;
+                })
 
             // Bridges a panel-driven pipe segment into its resource network engine. Called every
             // tick (cheap: a single map put) from the panel machine's own action_script — the
             // existing periodic-hook mechanism (see machines/item_pipe_panel.json's action_script),
             // not a bespoke ticker. No-ops on any block that isn't an item pipe.
-            .method("pipe_register_network", (obj, args) -> {
-                MachineRef m = ref(obj);
-                try {
-                    net.minecraft.world.level.block.state.BlockState state = m.level().getBlockState(m.pos());
-                    var custom = net.momirealms.craftengine.bukkit.util.BlockStateUtils
-                            .getOptionalCustomBlockState(state);
-                    if (custom.isEmpty()) return ScriptValue.of(false);
-                    var beh = custom.get().behavior();
-                    dev.arubik.craftengine.pipe.item.ItemPipeBehavior pipe = beh instanceof dev.arubik.craftengine.pipe.item.ItemPipeBehavior p
-                            ? p
-                            : beh.getFirst(dev.arubik.craftengine.pipe.item.ItemPipeBehavior.class);
-                    if (pipe == null) return ScriptValue.of(false);
-                    dev.arubik.craftengine.pipe.item.ItemEngine.registerSeed(m.pos(), pipe.transferPerTick());
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) {
-                    return ScriptValue.of(false);
-                }
-            })
+            .methodTyped0("pipe_register_network", TypeCodecs.BOOL,
+                (MachineRef m) -> {
+                    try {
+                        net.minecraft.world.level.block.state.BlockState state = m.level().getBlockState(m.pos());
+                        var custom = net.momirealms.craftengine.bukkit.util.BlockStateUtils
+                                .getOptionalCustomBlockState(state);
+                        if (custom.isEmpty()) return false;
+                        var beh = custom.get().behavior();
+                        dev.arubik.craftengine.pipe.item.ItemPipeBehavior pipe = beh instanceof dev.arubik.craftengine.pipe.item.ItemPipeBehavior p
+                                ? p
+                                : beh.getFirst(dev.arubik.craftengine.pipe.item.ItemPipeBehavior.class);
+                        if (pipe == null) return false;
+                        dev.arubik.craftengine.pipe.item.ItemEngine.registerSeed(m.pos(), pipe.transferPerTick());
+                        return true;
+                    } catch (Throwable ignored) {
+                        return false;
+                    }
+                })
 
             // --- Methods: Block breaking ---
-            .method("tick_break", (obj, args) -> {
-                // tick_break(block, speed) → Array of Item drops when fully broken, else NULL
-                // Progressive break: stores progress in a flag, returns drops when complete.
-                //
-                // Reads/destroys in the TARGET block's own level (blockRef.level()), not the
-                // calling machine's level (m.level()) — those differ the moment a contraption-borne
-                // drill targets a real-world block via ContraptionWorld.real_block(): the drill's
-                // own block entity lives in the contraption's virtual level, but the block it's
-                // cutting into is real. Using m.level() here would silently read/destroy air at the
-                // target's raw coordinates in the WRONG level instead. For a standalone (non-
-                // contraption) drill the two levels are the same object anyway, so this changes
-                // nothing for the common case.
-                if (args.size() < 2) return ScriptValue.NULL;
-                MachineRef m = ref(obj);
-                ScriptValue blockArg = args.get(0);
-                int speed = (int) args.get(1).asNum();
-                if (!(blockArg instanceof ScriptValue.Obj bo) || !(bo.instance() instanceof BlockType.BlockRef blockRef))
-                    return ScriptValue.NULL;
-                ServerLevel targetLevel = blockRef.level();
-                BlockPos target = blockRef.pos();
-                net.minecraft.world.level.block.state.BlockState bs = targetLevel.getBlockState(target);
-                if (bs.isAir()) return ScriptValue.NULL;
-                float hardness = bs.getDestroySpeed(targetLevel, target);
-                if (hardness < 0) return ScriptValue.NULL; // unbreakable
-                String flagName = "_break_" + target.getX() + "_" + target.getY() + "_" + target.getZ();
-                TypedKey<Integer> progressKey = TypedKey.of("polyfills", "flag" + flagName, NbtType.INTEGER);
-                PersistentBlockEntity be = m.blockEntity();
-                int progress = be != null ? (be.get(progressKey) != null ? be.get(progressKey) : 0) : 0;
-                int required = Math.max(1, (int)(hardness * 10));
-                progress += speed;
-                if (progress >= required) {
-                    // Break and drop
-                    List<ItemStack> drops = net.minecraft.world.level.block.Block.getDrops(bs, targetLevel, target, targetLevel.getBlockEntity(target));
-                    targetLevel.destroyBlock(target, false);
-                    BlockType.spawnExpDrop(targetLevel, target, bs);
-                    if (be != null) be.set(progressKey, 0);
-                    List<ScriptValue> result = new ArrayList<>(drops.size());
-                    for (ItemStack drop : drops) {
-                        result.add(ScriptValue.ofItem(drop));
+            // tick_break(block, speed) → Array of Item drops when fully broken, else NULL
+            // Progressive break: stores progress in a flag, returns drops when complete.
+            //
+            // Reads/destroys in the TARGET block's own level (blockRef.level()), not the
+            // calling machine's level (m.level()) — those differ the moment a contraption-borne
+            // drill targets a real-world block via ContraptionWorld.real_block(): the drill's
+            // own block entity lives in the contraption's virtual level, but the block it's
+            // cutting into is real. Using m.level() here would silently read/destroy air at the
+            // target's raw coordinates in the WRONG level instead. For a standalone (non-
+            // contraption) drill the two levels are the same object anyway, so this changes
+            // nothing for the common case.
+            .methodTyped2("tick_break", TypeCodecs.RAW, TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.NULL,
+                (MachineRef m, ScriptValue blockArg, Double speedArg) -> {
+                    int speed = speedArg.intValue();
+                    if (!(blockArg instanceof ScriptValue.Obj bo) || !(bo.instance() instanceof BlockType.BlockRef blockRef))
+                        return ScriptValue.NULL;
+                    ServerLevel targetLevel = blockRef.level();
+                    BlockPos target = blockRef.pos();
+                    net.minecraft.world.level.block.state.BlockState bs = targetLevel.getBlockState(target);
+                    if (bs.isAir()) return ScriptValue.NULL;
+                    float hardness = bs.getDestroySpeed(targetLevel, target);
+                    if (hardness < 0) return ScriptValue.NULL; // unbreakable
+                    String flagName = "_break_" + target.getX() + "_" + target.getY() + "_" + target.getZ();
+                    TypedKey<Integer> progressKey = TypedKey.of("polyfills", "flag" + flagName, NbtType.INTEGER);
+                    PersistentBlockEntity be = m.blockEntity();
+                    int progress = be != null ? (be.get(progressKey) != null ? be.get(progressKey) : 0) : 0;
+                    int required = Math.max(1, (int)(hardness * 10));
+                    progress += speed;
+                    if (progress >= required) {
+                        // Break and drop
+                        List<ItemStack> drops = net.minecraft.world.level.block.Block.getDrops(bs, targetLevel, target, targetLevel.getBlockEntity(target));
+                        targetLevel.destroyBlock(target, false);
+                        BlockType.spawnExpDrop(targetLevel, target, bs);
+                        if (be != null) be.set(progressKey, 0);
+                        List<ScriptValue> result = new ArrayList<>(drops.size());
+                        for (ItemStack drop : drops) {
+                            result.add(ScriptValue.ofItem(drop));
+                        }
+                        return new ScriptValue.Array(result);
+                    } else {
+                        if (be != null) be.set(progressKey, progress);
+                        // Send break animation — in the target's own level, so real-world viewers
+                        // actually see it (the machine's own level, if it's a contraption's virtual
+                        // one, has no real players in it to broadcast to).
+                        int stage = (int)((float)progress / required * 9);
+                        targetLevel.destroyBlockProgress(m.pos().hashCode(), target, stage);
+                        return ScriptValue.NULL;
                     }
-                    return new ScriptValue.Array(result);
-                } else {
-                    if (be != null) be.set(progressKey, progress);
-                    // Send break animation — in the target's own level, so real-world viewers
-                    // actually see it (the machine's own level, if it's a contraption's virtual
-                    // one, has no real players in it to broadcast to).
-                    int stage = (int)((float)progress / required * 9);
-                    targetLevel.destroyBlockProgress(m.pos().hashCode(), target, stage);
-                    return ScriptValue.NULL;
-                }
-            })
+                })
 
             // --- Methods: Contraption stall ---
             // Machine.contraption — lazy-cached contraption reference. Reconnects by UUID on restart.
@@ -837,28 +831,29 @@ public final class MachineType {
                 try { return RecipeType.wrap(dm.findMatchingRecipe()); } catch (Throwable ignored) { return ScriptValue.NULL; }
             })
             // Machine.connect_contraption() — force reconnect from str_flag UUID, returns contraption or NULL
-            .method("connect_contraption", (obj, args) -> {
-                ref(obj).invalidateContraptionCache();
-                var cl = ref(obj).getContraption();
-                return cl != null ? dev.arubik.craftengine.script.types.world.ContraptionType.wrap(cl) : ScriptValue.NULL;
-            })
-            .method("hold_contraption", (obj, args) -> {
-                // Signals the contraption system to hold this machine still
-                MachineRef m = ref(obj);
-                PersistentBlockEntity be = m.blockEntity();
-                if (be == null) return ScriptValue.of(false);
-                TypedKey<Integer> key = TypedKey.of("polyfills", "stall_contraption", NbtType.INTEGER);
-                be.set(key, 1);
-                return ScriptValue.of(true);
-            })
-            .method("release_contraption", (obj, args) -> {
-                MachineRef m = ref(obj);
-                PersistentBlockEntity be = m.blockEntity();
-                if (be == null) return ScriptValue.of(false);
-                TypedKey<Integer> key = TypedKey.of("polyfills", "stall_contraption", NbtType.INTEGER);
-                be.set(key, 0);
-                return ScriptValue.of(true);
-            })
+            .methodTyped0("connect_contraption", TypeCodecs.RAW,
+                (MachineRef m) -> {
+                    m.invalidateContraptionCache();
+                    var cl = m.getContraption();
+                    return cl != null ? dev.arubik.craftengine.script.types.world.ContraptionType.wrap(cl) : ScriptValue.NULL;
+                })
+            .methodTyped0("hold_contraption", TypeCodecs.BOOL,
+                (MachineRef m) -> {
+                    // Signals the contraption system to hold this machine still
+                    PersistentBlockEntity be = m.blockEntity();
+                    if (be == null) return false;
+                    TypedKey<Integer> key = TypedKey.of("polyfills", "stall_contraption", NbtType.INTEGER);
+                    be.set(key, 1);
+                    return true;
+                })
+            .methodTyped0("release_contraption", TypeCodecs.BOOL,
+                (MachineRef m) -> {
+                    PersistentBlockEntity be = m.blockEntity();
+                    if (be == null) return false;
+                    TypedKey<Integer> key = TypedKey.of("polyfills", "stall_contraption", NbtType.INTEGER);
+                    be.set(key, 0);
+                    return true;
+                })
 
             // --- Methods: RPM ---
             // Migrated to the typed-registration API (see get_typed/set_typed above).
@@ -950,23 +945,21 @@ public final class MachineType {
                         return true;
                     } catch (Throwable ignored) { return false; }
                 })
-            .method("has_typed", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
-                if (codec == null) return ScriptValue.of(false);
-                PersistentBlockEntity be = ref(obj).blockEntity();
-                if (be == null) return ScriptValue.of(false);
-                TypedKey<Object> key = TypedKey.of("polyfills", "tkey_" + args.get(0).asStr(), codec.storage());
-                return ScriptValue.of(be.has(key));
-            })
+            .methodTyped2("has_typed", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (MachineRef m, String keyName, String typeName) -> {
+                    dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(typeName);
+                    if (codec == null) return false;
+                    PersistentBlockEntity be = m.blockEntity();
+                    if (be == null) return false;
+                    TypedKey<Object> key = TypedKey.of("polyfills", "tkey_" + keyName, codec.storage());
+                    return be.has(key);
+                })
 
             // --- Methods: block_at(dx,dy,dz) ---
-            .method("block_at", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.NULL;
-                MachineRef m = ref(obj);
-                int dx = (int) args.get(0).asNum(), dy = (int) args.get(1).asNum(), dz = (int) args.get(2).asNum();
-                return BlockType.wrap(m.level(), m.pos().offset(dx, dy, dz));
-            })
+            .methodTyped3("block_at", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.RAW,
+                ScriptValue.NULL,
+                (MachineRef m, Double dxA, Double dyA, Double dzA) ->
+                    BlockType.wrap(m.level(), m.pos().offset(dxA.intValue(), dyA.intValue(), dzA.intValue())))
             // Belt at THIS machine's own position — for a block that sits directly over/beside a
             // conveyor segment (e.g. a saw processing items riding through its own footprint).
             // Belt itself is null-safe: it's always a valid script value even when the block there
@@ -978,37 +971,34 @@ public final class MachineType {
             })
             // belt_at(dx,dy,dz) — Belt at an arbitrary offset, for a machine whose relevant conveyor
             // segment isn't its own position (e.g. the one it's facing, or one block below it).
-            .method("belt_at", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.NULL;
-                MachineRef m = ref(obj);
-                int dx = (int) args.get(0).asNum(), dy = (int) args.get(1).asNum(), dz = (int) args.get(2).asNum();
-                return dev.arubik.craftengine.script.types.machine.BeltType.wrap(m.level(), m.pos().offset(dx, dy, dz));
-            })
+            .methodTyped3("belt_at", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.RAW,
+                ScriptValue.NULL,
+                (MachineRef m, Double dxA, Double dyA, Double dzA) ->
+                    dev.arubik.craftengine.script.types.machine.BeltType.wrap(
+                            m.level(), m.pos().offset(dxA.intValue(), dyA.intValue(), dzA.intValue())))
             // container_at(dx,dy,dz) — the generic Container (depot, chest, another machine's own
             // inventory, ...) at this offset, via the same ItemTransferHelper lookup funnels/pipes/
             // push_item_toward already use — NULL if nothing container-backed is there. Callers use
             // the returned Container's own push/pull/pull_item (see ContainerType) uniformly, same
             // as belt_at's Belt wrapper for conveyor segments.
-            .method("container_at", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.NULL;
-                MachineRef m = ref(obj);
-                int dx = (int) args.get(0).asNum(), dy = (int) args.get(1).asNum(), dz = (int) args.get(2).asNum();
-                var containerOpt = dev.arubik.craftengine.pipe.item.ItemTransferHelper.getContainer(
-                        m.level(), m.pos().offset(dx, dy, dz));
-                return dev.arubik.craftengine.script.types.util.ContainerType.wrap(containerOpt.orElse(null));
-            })
+            .methodTyped3("container_at", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.RAW,
+                ScriptValue.NULL,
+                (MachineRef m, Double dxA, Double dyA, Double dzA) -> {
+                    var containerOpt = dev.arubik.craftengine.pipe.item.ItemTransferHelper.getContainer(
+                            m.level(), m.pos().offset(dxA.intValue(), dyA.intValue(), dzA.intValue()));
+                    return dev.arubik.craftengine.script.types.util.ContainerType.wrap(containerOpt.orElse(null));
+                })
             // neighbor_block(dir) — the block adjacent to THIS machine in a named world direction
             // ("north"/"south"/"east"/"west"/"up"/"down"), same direction-name convention io_get/
             // io_set already use. Lets a pipe panel script ask "what's actually sitting on this
             // face" (see Block.is_container) instead of assuming every face is the same kind of
             // neighbour.
-            .method("neighbor_block", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                MachineRef m = ref(obj);
-                Direction dir = Direction.byName(args.get(0).asStr());
-                if (dir == null) return ScriptValue.NULL;
-                return BlockType.wrap(m.level(), m.pos().relative(dir));
-            })
+            .methodTyped1("neighbor_block", TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
+                (MachineRef m, String dirName) -> {
+                    Direction dir = Direction.byName(dirName);
+                    if (dir == null) return ScriptValue.NULL;
+                    return BlockType.wrap(m.level(), m.pos().relative(dir));
+                })
 
             // add_item/add_item_to_slot removed — hand-rolled the same merge-then-fill Container.push
             // already implements (add_item), and CE-id-then-vanilla resolution ItemType.create already
@@ -1050,21 +1040,19 @@ public final class MachineType {
                 return ScriptValue.of(Math.max(0, Math.min(72, s)));
             })
             // Machine.set_overclock(value) → set overclock fraction directly
-            .method("set_overclock", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(false);
-                dm.setOverclock((float) args.get(0).asNum());
-                return ScriptValue.of(true);
-            })
+            .methodTyped1("set_overclock", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (MachineRef m, Double value) -> {
+                    if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return false;
+                    dm.setOverclock(value.floatValue());
+                    return true;
+                })
             // Machine.bump_overclock(delta) → bump overclock by delta (clamped)
-            .method("bump_overclock", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(false);
-                dm.addOverclock((float) args.get(0).asNum());
-                return ScriptValue.of(true);
-            })
+            .methodTyped1("bump_overclock", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (MachineRef m, Double delta) -> {
+                    if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return false;
+                    dm.addOverclock(delta.floatValue());
+                    return true;
+                })
 
             // --- Methods: RPM output / relay ---
             // Migrated to the typed-registration API (see get_typed/set_typed above for the same
@@ -1085,11 +1073,6 @@ public final class MachineType {
                         return true;
                     } catch (Throwable ignored) { return false; }
                 })
-            // relay_to(block, rpm, network_id) — passes RPM from this machine to a neighbor machine.
-            // - network_id: shared string ID (e.g. motor pos "x,y,z") so all machines in chain report SU to same network
-            // - Parent tracking via str_flag "rpm_parent": first machine to relay to a target becomes its parent
-            //   The target will NOT push back to its parent → no feedback loop
-            // - Source distance prevents overwriting a better (closer to source) connection
             // relay_to(block, rpm [, ignored_network_id]) — passes RPM to neighbor machine.
             // Uses in-memory RpmNetwork (no PDC). Anti-loop via sourceDistance.
             // Conflict detection: grace period of 3 ticks before breaking conflicting block.
@@ -1110,43 +1093,43 @@ public final class MachineType {
             // machine JSON: a pipe whose faces the player configures, a machine that opens an
             // output only once a recipe finishes, and so on.
             .property("io", obj -> IoType.wrap(ref(obj)))
-            .method("rpm_out", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(0);
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm))
-                    return ScriptValue.of(0);
-                Direction face = resolveDirection(m, args.get(0).asStr());
-                if (face == null) return ScriptValue.of(0);
-                return ScriptValue.of(dm.rpmThrough(face));
-            })
+            .methodTyped1("rpm_out", TypeCodecs.STRING, TypeCodecs.DOUBLE, 0.0,
+                (MachineRef m, String faceName) -> {
+                    if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm))
+                        return 0.0;
+                    Direction face = resolveDirection(m, faceName);
+                    if (face == null) return 0.0;
+                    return (double) dm.rpmThrough(face);
+                })
             // rpm_out_faces() -> every direction this machine currently drives, as a map of
             // direction name to the RPM delivered there. Handy for debugging a build.
-            .method("rpm_out_faces", (obj, args) -> {
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm))
-                    return dev.arubik.craftengine.script.types.primitive.MapType.wrap(new java.util.LinkedHashMap<>());
-                java.util.LinkedHashMap<String, ScriptValue> out = new java.util.LinkedHashMap<>();
-                for (Direction d : Direction.values()) {
-                    float v = dm.rpmThrough(d);
-                    if (v != 0f) out.put(d.getName(), ScriptValue.of(v));
-                }
-                return dev.arubik.craftengine.script.types.primitive.MapType.wrap(out);
-            })
-            .method("relay_to", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                ScriptValue bv = args.get(0);
-                if (!(bv instanceof ScriptValue.Obj bo) || !(bo.instance() instanceof BlockType.BlockRef r)) return ScriptValue.of(false);
-                float rpm = (float) args.get(1).asNum();
-                MachineRef m = ref(obj);
+            .methodTyped0("rpm_out_faces", TypeCodecs.RAW,
+                (MachineRef m) -> {
+                    if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm))
+                        return dev.arubik.craftengine.script.types.primitive.MapType.wrap(new java.util.LinkedHashMap<>());
+                    java.util.LinkedHashMap<String, ScriptValue> out = new java.util.LinkedHashMap<>();
+                    for (Direction d : Direction.values()) {
+                        float v = dm.rpmThrough(d);
+                        if (v != 0f) out.put(d.getName(), ScriptValue.of(v));
+                    }
+                    return dev.arubik.craftengine.script.types.primitive.MapType.wrap(out);
+                })
+            // The documented third argument (network_id) is deliberately ignored by the body, so the
+            // typed registration declares only the two it actually reads — extra trailing arguments
+            // are dropped by the dispatcher exactly as before.
+            .methodTyped2("relay_to", TypeCodecs.RAW, TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (MachineRef m, ScriptValue bv, Double rpmArg) -> {
+                if (!(bv instanceof ScriptValue.Obj bo) || !(bo.instance() instanceof BlockType.BlockRef r)) return false;
+                float rpm = rpmArg.floatValue();
                 try {
                     net.momirealms.craftengine.core.block.entity.BlockEntity nbe =
                         dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(r.level(), r.pos());
-                    if (nbe == null || nbe.controller == null) return ScriptValue.of(false);
-                    if (!(nbe.controller instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity neighbor)) return ScriptValue.of(false);
-                    if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity myMachine)) return ScriptValue.of(false);
+                    if (nbe == null || nbe.controller == null) return false;
+                    if (!(nbe.controller instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity neighbor)) return false;
+                    if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity myMachine)) return false;
 
                     // Anti-loop: only push to machines farther from source
-                    if (neighbor.sourceDistance() <= myMachine.sourceDistance()) return ScriptValue.of(false);
+                    if (neighbor.sourceDistance() <= myMachine.sourceDistance()) return false;
 
                     // Conflict detection. A neighbour already carrying OUR source's value is not
                     // in conflict with us however different the number is: that is a speed change
@@ -1161,7 +1144,7 @@ public final class MachineType {
                         if (dev.arubik.craftengine.rotation.RpmPropagation.conflictShouldBreak(ct)) {
                             try { r.level().destroyBlock(r.pos(), true); } catch (Throwable ignored2) {}
                         }
-                        return ScriptValue.of(false);
+                        return false;
                     }
                     neighbor.setRpmConflictTicks(0);
 
@@ -1182,30 +1165,29 @@ public final class MachineType {
                     long stamp = myMachine.rpmSourceStamp();
                     if (!dev.arubik.craftengine.rotation.RpmPropagation.isFresh(
                             stamp, r.level().getGameTime())) {
-                        return ScriptValue.of(false);   // we are running on a stale value ourselves
+                        return false;   // we are running on a stale value ourselves
                     }
                     neighbor.acceptRelayedRpm(rpm, myMachine.sourceDistance(), stamp);
                     neighbor.setTheoreticalSpeed(rpm);
-                    return ScriptValue.of(true);
+                    return true;
                 } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
+                return false;
             })
             // relay_rpm removed — use relay_to() + set_rpm_output() in scripts instead
-            .method("push_rpm", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                ScriptValue bv = args.get(0);
-                if (!(bv instanceof ScriptValue.Obj bo) || !(bo.instance() instanceof BlockType.BlockRef r)) return ScriptValue.of(false);
-                float pushRpm = (float) args.get(1).asNum();
-                try {
-                    net.momirealms.craftengine.core.block.entity.BlockEntity be2 =
-                        dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(r.level(), r.pos());
-                    if (be2 != null && be2.controller instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity neighbor) {
-                        neighbor.setRpmSourceOutput(pushRpm);
-                        return ScriptValue.of(true);
-                    }
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
+            .methodTyped2("push_rpm", TypeCodecs.RAW, TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (MachineRef m, ScriptValue bv, Double pushRpmArg) -> {
+                    if (!(bv instanceof ScriptValue.Obj bo) || !(bo.instance() instanceof BlockType.BlockRef r)) return false;
+                    float pushRpm = pushRpmArg.floatValue();
+                    try {
+                        net.momirealms.craftengine.core.block.entity.BlockEntity be2 =
+                            dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(r.level(), r.pos());
+                        if (be2 != null && be2.controller instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity neighbor) {
+                            neighbor.setRpmSourceOutput(pushRpm);
+                            return true;
+                        }
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
             // gas_tanks → Array of Map{name, level, capacity, contents_name, color}
             .property("gas_tanks", obj -> {
                 MachineRef m = ref(obj);
@@ -1233,6 +1215,9 @@ public final class MachineType {
             })
             // --- Programmatic renderer methods (ephemeral item_display entities) ---
             // spawn_display(item, vec_pos, options_map?) → uuid string
+            // Left untyped: arg0 is REQUIRED (0 args -> NULL without running the body) while args 1-2
+            // are optional-with-default — a mixed required/optional arity the typed API can't express
+            // exactly (see to_item).
             .method("spawn_display", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.NULL;
                 MachineRef m = ref(obj);
@@ -1253,50 +1238,44 @@ public final class MachineType {
                 } catch (Throwable ignored) { return ScriptValue.NULL; }
             })
             // update_display(uuid_str, options_map) → bool
-            .method("update_display", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                MachineRef m = ref(obj);
-                String uuidStr = args.get(0).asStr();
-                ScriptValue opts = args.get(1);
-                try {
-                    java.util.UUID id = java.util.UUID.fromString(uuidStr);
-                    net.minecraft.world.entity.Entity e = m.level().getEntity(id);
-                    if (e == null) return ScriptValue.of(false);
-                    // Read pos from options map
-                    if (opts instanceof ScriptValue.Obj ov) {
-                        ScriptValue posVal = opts.getProperty("pos");
-                        if (posVal instanceof ScriptValue.Obj pv && pv.instance() instanceof org.joml.Vector3d v) {
-                            e.setPos(m.pos().getX() + 0.5 + v.x, m.pos().getY() + v.y, m.pos().getZ() + 0.5 + v.z);
+            .methodTyped2("update_display", TypeCodecs.STRING, TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                (MachineRef m, String uuidStr, ScriptValue opts) -> {
+                    try {
+                        java.util.UUID id = java.util.UUID.fromString(uuidStr);
+                        net.minecraft.world.entity.Entity e = m.level().getEntity(id);
+                        if (e == null) return false;
+                        // Read pos from options map
+                        if (opts instanceof ScriptValue.Obj ov) {
+                            ScriptValue posVal = opts.getProperty("pos");
+                            if (posVal instanceof ScriptValue.Obj pv && pv.instance() instanceof org.joml.Vector3d v) {
+                                e.setPos(m.pos().getX() + 0.5 + v.x, m.pos().getY() + v.y, m.pos().getZ() + 0.5 + v.z);
+                            }
                         }
-                    }
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
-            })
+                        return true;
+                    } catch (Throwable ignored) { return false; }
+                })
             // kill_display(uuid_str) → bool
-            .method("kill_display", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                MachineRef m = ref(obj);
-                try {
-                    java.util.UUID id = java.util.UUID.fromString(args.get(0).asStr());
-                    net.minecraft.world.entity.Entity e = m.level().getEntity(id);
-                    if (e != null) { e.remove(net.minecraft.world.entity.Entity.RemovalReason.DISCARDED); return ScriptValue.of(true); }
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
+            .methodTyped1("kill_display", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (MachineRef m, String uuidStr) -> {
+                    try {
+                        java.util.UUID id = java.util.UUID.fromString(uuidStr);
+                        net.minecraft.world.entity.Entity e = m.level().getEntity(id);
+                        if (e != null) { e.remove(net.minecraft.world.entity.Entity.RemovalReason.DISCARDED); return true; }
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
             // play_animation(anim) — attach a ScriptAnimation to this machine's tick cycle
-            .method("play_animation", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                ScriptValue animVal = args.get(0);
-                if (!(animVal instanceof ScriptValue.Obj ao) ||
-                    !(ao.instance() instanceof dev.arubik.craftengine.machine.render.ScriptAnimation anim))
-                    return ScriptValue.of(false);
-                MachineRef m = ref(obj);
-                if (m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm) {
-                    dm.setActiveAnimation(anim);
-                    return ScriptValue.of(true);
-                }
-                return ScriptValue.of(false);
-            })
+            .methodTyped1("play_animation", TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                (MachineRef m, ScriptValue animVal) -> {
+                    if (!(animVal instanceof ScriptValue.Obj ao) ||
+                        !(ao.instance() instanceof dev.arubik.craftengine.machine.render.ScriptAnimation anim))
+                        return false;
+                    if (m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm) {
+                        dm.setActiveAnimation(anim);
+                        return true;
+                    }
+                    return false;
+                })
             // fluid_tanks → Array of Map{name, level, capacity, contents_name, color}
             .property("fluid_tanks", obj -> {
                 MachineRef m = ref(obj);
@@ -1318,38 +1297,34 @@ public final class MachineType {
                 return new ScriptValue.Array(result);
             })
             // get_gas_level(tankName) → amount of gas in named tank
-            .method("get_gas_level", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(0);
-                String tankName = args.get(0).asStr();
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(0);
-                try {
-                    for (dev.arubik.craftengine.gas.GasTank tank : machine.gasTankList()) {
-                        if (tank.getName().equals(tankName)) {
-                            dev.arubik.craftengine.gas.GasStack gas = tank.getGas(m.level(), m.pos());
-                            return ScriptValue.of(gas.getAmount());
+            .methodTyped1("get_gas_level", TypeCodecs.STRING, TypeCodecs.DOUBLE, 0.0,
+                (MachineRef m, String tankName) -> {
+                    if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return 0.0;
+                    try {
+                        for (dev.arubik.craftengine.gas.GasTank tank : machine.gasTankList()) {
+                            if (tank.getName().equals(tankName)) {
+                                dev.arubik.craftengine.gas.GasStack gas = tank.getGas(m.level(), m.pos());
+                                return (double) gas.getAmount();
+                            }
                         }
-                    }
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(0);
-            })
+                    } catch (Throwable ignored) {}
+                    return 0.0;
+                })
             // consume_gas(tankName, amount) → bool
-            .method("consume_gas", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                String tankName = args.get(0).asStr();
-                int amount = (int) args.get(1).asNum();
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(false);
-                try {
-                    for (dev.arubik.craftengine.gas.GasTank tank : machine.gasTankList()) {
-                        if (tank.getName().equals(tankName)) {
-                            tank.extract(m.level(), m.pos(), amount, null);
-                            return ScriptValue.of(true);
+            .methodTyped2("consume_gas", TypeCodecs.STRING, TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (MachineRef m, String tankName, Double amountArg) -> {
+                    int amount = amountArg.intValue();
+                    if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return false;
+                    try {
+                        for (dev.arubik.craftengine.gas.GasTank tank : machine.gasTankList()) {
+                            if (tank.getName().equals(tankName)) {
+                                tank.extract(m.level(), m.pos(), amount, null);
+                                return true;
+                            }
                         }
-                    }
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
             // --- Properties/methods: live energy tuning ---
             // The JSON "energy" block is just a starting point; a script (e.g. a windmill scaling
             // its output with wind/height, or a reactor throttling under overload) needs to change
@@ -1379,15 +1354,14 @@ public final class MachineType {
             // IOConfiguration gating insertEnergy/extractEnergy enforce (setStoredEnergyRaw, the
             // same "engine apply" path the network solvers use). Returns false — and takes
             // nothing — if the buffer doesn't have enough; never partially consumes.
-            .method("consume_energy", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(false);
-                int amount = (int) args.get(0).asNum();
-                if (amount <= 0 || machine.getStoredEnergyForCarrier() < amount) return ScriptValue.of(false);
-                machine.setStoredEnergyRaw(m.level(), machine.getStoredEnergyForCarrier() - amount);
-                return ScriptValue.of(true);
-            })
+            .methodTyped1("consume_energy", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (MachineRef m, Double amountArg) -> {
+                    if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return false;
+                    int amount = amountArg.intValue();
+                    if (amount <= 0 || machine.getStoredEnergyForCarrier() < amount) return false;
+                    machine.setStoredEnergyRaw(m.level(), machine.getStoredEnergyForCarrier() - amount);
+                    return true;
+                })
             .property("energy_capacity", obj -> {
                 MachineRef m = ref(obj);
                 if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(0);
@@ -1423,85 +1397,79 @@ public final class MachineType {
                 int delta = dev.arubik.craftengine.fluid.graph.EnergyEngine.lastDelta(m.pos());
                 return ScriptValue.of(Math.max(0, -delta));
             })
-            .method("set_energy_per_tick", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(false);
-                machine.setEnergyPerTick((int) args.get(0).asNum());
-                return ScriptValue.of(true);
-            })
-            .method("set_energy_max_input", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(false);
-                machine.setEnergyMaxInput((int) args.get(0).asNum());
-                return ScriptValue.of(true);
-            })
-            .method("set_energy_max_output", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(false);
-                machine.setEnergyMaxOutput((int) args.get(0).asNum());
-                return ScriptValue.of(true);
-            })
+            .methodTyped1("set_energy_per_tick", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (MachineRef m, Double value) -> {
+                    if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return false;
+                    machine.setEnergyPerTick(value.intValue());
+                    return true;
+                })
+            .methodTyped1("set_energy_max_input", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (MachineRef m, Double value) -> {
+                    if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return false;
+                    machine.setEnergyMaxInput(value.intValue());
+                    return true;
+                })
+            .methodTyped1("set_energy_max_output", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (MachineRef m, Double value) -> {
+                    if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return false;
+                    machine.setEnergyMaxOutput(value.intValue());
+                    return true;
+                })
 
             // --- Methods: fill_fluid ---
-            .method("fill_fluid", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                MachineRef m = ref(obj);
-                PersistentBlockEntity be = m.blockEntity();
-                if (!(be instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(false);
-                String fluidId = args.get(0).asStr();
-                int amount = args.size() >= 2 ? (int) args.get(1).asNum() : 0;
-                try {
-                    FluidType ft = FluidType.byName(fluidId);
-                    if (ft == null) return ScriptValue.of(false);
-                    FluidStack stack = new FluidStack(ft, amount);
-                    return ScriptValue.of(machine.fillTank(m.level(), stack));
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
-            })
+            .methodTyped2("fill_fluid", TypeCodecs.STRING, TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (MachineRef m, String fluidId, Double amountArg) -> {
+                    PersistentBlockEntity be = m.blockEntity();
+                    if (!(be instanceof AbstractMachineBlockEntity machine)) return false;
+                    int amount = amountArg.intValue();
+                    try {
+                        FluidType ft = FluidType.byName(fluidId);
+                        if (ft == null) return false;
+                        FluidStack stack = new FluidStack(ft, amount);
+                        return machine.fillTank(m.level(), stack);
+                    } catch (Throwable ignored) { return false; }
+                })
 
             // --- Methods: blocks_in_range, break_block, place_block_at ---
-            .method("blocks_in_range", (obj, args) -> {
-                MachineRef m = ref(obj);
-                int radius = args.isEmpty() ? 3 : (int) args.get(0).asNum();
-                java.util.List<ScriptValue> blocks = new java.util.ArrayList<>();
-                BlockPos center = m.pos();
-                for (int dx = -radius; dx <= radius; dx++)
-                    for (int dy = -radius; dy <= radius; dy++)
-                        for (int dz = -radius; dz <= radius; dz++) {
-                            BlockPos p = center.offset(dx, dy, dz);
-                            if (!m.level().getBlockState(p).isAir())
-                                blocks.add(BlockType.wrap(m.level(), p));
-                        }
-                return new ScriptValue.Array(blocks);
-            })
+            .methodTypedOpt1("blocks_in_range", TypeCodecs.DOUBLE, 3.0, TypeCodecs.RAW,
+                (MachineRef m, Double radiusArg) -> {
+                    int radius = radiusArg.intValue();
+                    java.util.List<ScriptValue> blocks = new java.util.ArrayList<>();
+                    BlockPos center = m.pos();
+                    for (int dx = -radius; dx <= radius; dx++)
+                        for (int dy = -radius; dy <= radius; dy++)
+                            for (int dz = -radius; dz <= radius; dz++) {
+                                BlockPos p = center.offset(dx, dy, dz);
+                                if (!m.level().getBlockState(p).isAir())
+                                    blocks.add(BlockType.wrap(m.level(), p));
+                            }
+                    return new ScriptValue.Array(blocks);
+                })
             // break_block(block)/place_block_at(dx,dy,dz,item) removed — both hand-rolled logic that
             // now lives on the Block value itself (see BlockType.break_and_drop/place_from_item),
             // which every caller already had in hand (Machine.facing_block, World.get_block, ...):
             // use block.break_and_drop() / Machine.block_at(dx,dy,dz).place_from_item(item).
 
             // damage_entity/fire_entity/freeze_entity/apply_bone_meal removed — use entity.damage/fire/freeze and block.apply_bone_meal()
-            .method("is_player_looking_at", (obj, args) -> {
-                // Tests EVERY player in range, not just the nearest one: with getNearestPlayer a
-                // bystander standing closer than the person actually looking suppressed the signal.
-                MachineRef m = ref(obj);
-                double dist = args.isEmpty() ? 8 : args.get(0).asNum();
-                double distSq = dist * dist;
-                net.minecraft.world.phys.Vec3 center = net.minecraft.world.phys.Vec3.atCenterOf(m.pos());
-                for (var player : m.level().players()) {
-                    if (player.isSpectator()) continue;
-                    net.minecraft.world.phys.Vec3 eyePos = player.getEyePosition();
-                    if (eyePos.distanceToSqr(center) > distSq) continue;
-                    net.minecraft.world.phys.Vec3 look = player.getLookAngle().normalize();
-                    net.minecraft.world.phys.Vec3 toBlock = center.subtract(eyePos);
-                    double dot = toBlock.dot(look);
-                    if (dot <= 0 || dot > dist) continue;
-                    // Perpendicular distance from the look ray to the block centre.
-                    if (toBlock.subtract(look.scale(dot)).length() < 1.0) return ScriptValue.of(true);
-                }
-                return ScriptValue.of(false);
-            })
+            // Tests EVERY player in range, not just the nearest one: with getNearestPlayer a
+            // bystander standing closer than the person actually looking suppressed the signal.
+            .methodTypedOpt1("is_player_looking_at", TypeCodecs.DOUBLE, 8.0, TypeCodecs.BOOL,
+                (MachineRef m, Double dist) -> {
+                    double distSq = dist * dist;
+                    net.minecraft.world.phys.Vec3 center = net.minecraft.world.phys.Vec3.atCenterOf(m.pos());
+                    for (var player : m.level().players()) {
+                        if (player.isSpectator()) continue;
+                        net.minecraft.world.phys.Vec3 eyePos = player.getEyePosition();
+                        if (eyePos.distanceToSqr(center) > distSq) continue;
+                        net.minecraft.world.phys.Vec3 look = player.getLookAngle().normalize();
+                        net.minecraft.world.phys.Vec3 toBlock = center.subtract(eyePos);
+                        double dot = toBlock.dot(look);
+                        if (dot <= 0 || dot > dist) continue;
+                        // Perpendicular distance from the look ray to the block centre.
+                        if (toBlock.subtract(look.scale(dot)).length() < 1.0) return true;
+                    }
+                    return false;
+                })
             .property("owner_uuid", obj -> {
                 MachineRef m = ref(obj);
                 PersistentBlockEntity be = m.blockEntity();
@@ -1518,34 +1486,31 @@ public final class MachineType {
             // set_block/create_item removed — use World.set_block(x,y,z,id) and create_item(id,count) builtin
 
             // --- Methods: Player proximity ---
-            .method("player_in_range", (obj, args) -> {
-                MachineRef m = ref(obj);
-                double dist = args.isEmpty() ? 8 : args.get(0).asNum();
-                Vec3 center = Vec3.atCenterOf(m.pos());
-                var player = m.level().getNearestPlayer(center.x, center.y, center.z, dist, false);
-                return ScriptValue.of(player != null);
-            })
-            .method("player_facing", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                MachineRef m = ref(obj);
-                String face = args.get(0).asStr();
-                Vec3 center = Vec3.atCenterOf(m.pos());
-                var player = m.level().getNearestPlayer(center.x, center.y, center.z, 32, false);
-                if (player == null) return ScriptValue.of(false);
-                Direction playerDir = Direction.orderedByNearest(player)[0];
-                return ScriptValue.of(playerDir.getName().equalsIgnoreCase(face));
-            })
+            .methodTypedOpt1("player_in_range", TypeCodecs.DOUBLE, 8.0, TypeCodecs.BOOL,
+                (MachineRef m, Double dist) -> {
+                    Vec3 center = Vec3.atCenterOf(m.pos());
+                    var player = m.level().getNearestPlayer(center.x, center.y, center.z, dist, false);
+                    return player != null;
+                })
+            .methodTyped1("player_facing", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (MachineRef m, String face) -> {
+                    Vec3 center = Vec3.atCenterOf(m.pos());
+                    var player = m.level().getNearestPlayer(center.x, center.y, center.z, 32, false);
+                    if (player == null) return false;
+                    Direction playerDir = Direction.orderedByNearest(player)[0];
+                    return playerDir.getName().equalsIgnoreCase(face);
+                })
             // close() — closes the nearest viewer's open inventory (same @p-style nearest-player
             // heuristic as player_in_range/player_facing, since a script method has no direct
             // handle on "whoever has this machine's GUI open"). Meant for scripts like
             // teleporter.pf's do_teleport() to close the GUI before moving the player elsewhere.
-            .method("close", (obj, args) -> {
-                MachineRef m = ref(obj);
-                Vec3 center = Vec3.atCenterOf(m.pos());
-                var player = m.level().getNearestPlayer(center.x, center.y, center.z, 8, false);
-                if (player != null) player.closeContainer();
-                return ScriptValue.of(player != null);
-            })
+            .methodTyped0("close", TypeCodecs.BOOL,
+                (MachineRef m) -> {
+                    Vec3 center = Vec3.atCenterOf(m.pos());
+                    var player = m.level().getNearestPlayer(center.x, center.y, center.z, 8, false);
+                    if (player != null) player.closeContainer();
+                    return player != null;
+                })
             // update() — forces the currently-open menu (if any) to immediately re-evaluate,
             // instead of waiting up to 2 ticks for the normal periodic refresh: this re-runs the
             // page's "buttons"/"layout" generator script too (so a destination/button appearing,
@@ -1555,13 +1520,14 @@ public final class MachineType {
             // changed something a button/generator reads (a flag, a str_flag, the registry data a
             // generator scans) and wants it visible on the SAME click that changed it — a no-op if
             // nobody has this machine's menu open right now.
-            .method("update", (obj, args) -> {
-                PersistentBlockEntity be = ref(obj).blockEntity();
-                if (be instanceof dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity m) {
-                    return ScriptValue.of(m.rebuildAndReopenMenu());
-                }
-                return ScriptValue.of(false);
-            })
+            .methodTyped0("update", TypeCodecs.BOOL,
+                (MachineRef ref) -> {
+                    PersistentBlockEntity be = ref.blockEntity();
+                    if (be instanceof dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity m) {
+                        return m.rebuildAndReopenMenu();
+                    }
+                    return false;
+                })
             // rename_text — the current text typed into an ANVIL-type page's rename field (a
             // page declared with "size": "anvil" — see MachineDefinition.PageDef#inventoryType).
             // Bukkit's AnvilInventory#getRenameText() works on this inventory even though no real

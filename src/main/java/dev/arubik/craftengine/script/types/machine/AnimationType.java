@@ -58,21 +58,20 @@ public final class AnimationType {
         PolyTypeRegistry.define("Animation")
 
             // ---- Keyframe definition ----
-            // keyframe(tick, displays, easing?) — short-circuits (return false) only below 2 args,
-            // but the 3rd (easing) is separately optional with its own in-body default (LINEAR);
-            // methodTyped2/3 can't express "2 required + 1 optional with a different missing-args
-            // rule than the required ones" — a fixed arity decodes exactly N args or short-circuits
-            // for all of them uniformly. Left untyped.
-            .method("keyframe", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                int tick = (int) args.get(0).asNum();
-                ScriptAnimation.Easing easing = args.size() >= 3
-                    ? ScriptAnimation.Easing.parse(args.get(2).asStr())
-                    : ScriptAnimation.Easing.LINEAR;
-                Map<String, ScriptAnimation.DisplayState> displays = parseDisplays(args.get(1));
-                if (!displays.isEmpty()) anim(obj).addKeyframe(tick, displays, easing);
-                return ScriptValue.ofObj("Animation", obj);
-            })
+            // keyframe(tick, displays, easing?) — every slot registered as optional
+            // (methodTypedOpt3): the `displays` slot is RAW (parseDisplays inspects the ScriptValue
+            // itself) and its null default is the "fewer than 2 args" sentinel that reproduces the
+            // original's `return false` short-circuit exactly, while `easing`'s null default maps to
+            // LINEAR because Easing.parse(null) already returns LINEAR.
+            .methodTypedOpt3("keyframe", TypeCodecs.DOUBLE, (Double) null, TypeCodecs.RAW, (ScriptValue) null,
+                TypeCodecs.STRING, (String) null, TypeCodecs.RAW,
+                (ScriptAnimation a, Double tick, ScriptValue displaysArg, String easingName) -> {
+                if (displaysArg == null) return ScriptValue.of(false);
+                ScriptAnimation.Easing easing = ScriptAnimation.Easing.parse(easingName);
+                Map<String, ScriptAnimation.DisplayState> displays = parseDisplays(displaysArg);
+                if (!displays.isEmpty()) a.addKeyframe((int) (double) tick, displays, easing);
+                return ScriptValue.ofObj("Animation", a);
+                })
 
             // ---- Playback ----
             // play/stop/pause/resume/reset — migrated to the typed-registration API
@@ -84,88 +83,96 @@ public final class AnimationType {
                 return ScriptValue.ofObj("Animation", a);
             })
             // play_from/seek take an OPTIONAL arg that defaults in-body (args.isEmpty() ? 0 : ...)
-            // rather than short-circuiting to a fixed return value when absent — methodTyped1's
-            // onMissingArgs can only supply a static fallback RETURN value, not a default argument,
-            // and the actual return here is a dynamic ScriptValue.ofObj(obj) that can't be
-            // precomputed at registration time. Left untyped.
-            .method("play_from", (obj, args) -> {
-                anim(obj).playFrom(args.isEmpty() ? 0 : (int) args.get(0).asNum());
-                return ScriptValue.ofObj("Animation", obj);
-            })
+            // rather than short-circuiting — exactly methodTypedOpt1's shape (the handler ALWAYS
+            // runs, with 0.0 substituted for an absent argument).
+            .methodTypedOpt1("play_from", TypeCodecs.DOUBLE, 0.0, TypeCodecs.RAW,
+                (ScriptAnimation a, Double tick) -> {
+                a.playFrom((int) (double) tick);
+                return ScriptValue.ofObj("Animation", a);
+                })
             .methodTyped0("stop", TypeCodecs.BOOL, (ScriptAnimation a) -> { a.stop(); return false; })
             .methodTyped0("pause", TypeCodecs.RAW, (ScriptAnimation a) -> { a.pause(); return ScriptValue.ofObj("Animation", a); })
             .methodTyped0("resume", TypeCodecs.RAW, (ScriptAnimation a) -> { a.resume(); return ScriptValue.ofObj("Animation", a); })
-            .method("seek",   (obj, args) -> {
-                anim(obj).seek(args.isEmpty() ? 0 : (int) args.get(0).asNum());
-                return ScriptValue.ofObj("Animation", obj);
-            })
+            .methodTypedOpt1("seek", TypeCodecs.DOUBLE, 0.0, TypeCodecs.RAW,
+                (ScriptAnimation a, Double tick) -> {
+                a.seek((int) (double) tick);
+                return ScriptValue.ofObj("Animation", a);
+                })
             .methodTyped0("reset", TypeCodecs.RAW, (ScriptAnimation a) -> { a.reset(); return ScriptValue.ofObj("Animation", a); })
 
             // ---- Configuration ----
             // loop/max_loops/speed/interpolation, and on_end/on_loop/add_child/remove_child below,
             // all share the same shape: a single OPTIONAL arg (missing -> skip the setter, or use
-            // an in-body default) but ALWAYS return ScriptValue.ofObj("Animation", obj) — a value
-            // that depends on the live `obj` instance and so can't be expressed as a static
-            // methodTyped1 onMissingArgs fallback (that only substitutes a fixed return value, and
-            // would also skip invoking the handler entirely rather than running it with a default
-            // arg). Left untyped.
-            .method("loop", (obj, args) -> {
-                anim(obj).setLoop(args.isEmpty() || args.get(0).asBool());
-                return ScriptValue.ofObj("Animation", obj);
-            })
-            .method("max_loops", (obj, args) -> {
-                if (!args.isEmpty()) anim(obj).setMaxLoops((int) args.get(0).asNum());
-                return ScriptValue.ofObj("Animation", obj);
-            })
-            .method("speed", (obj, args) -> {
-                if (!args.isEmpty()) anim(obj).setSpeed((float) args.get(0).asNum());
-                return ScriptValue.ofObj("Animation", obj);
-            })
+            // an in-body default) but ALWAYS return ScriptValue.ofObj("Animation", obj), a value
+            // that depends on the live instance. methodTypedOpt1 is exactly that — the handler
+            // always runs (so the instance-dependent return and the setter's skip/default both stay
+            // inside the body), with a null default standing for "argument absent" where the
+            // original SKIPS the setter entirely rather than defaulting it.
+            .methodTypedOpt1("loop", TypeCodecs.BOOL, true, TypeCodecs.RAW,
+                (ScriptAnimation a, Boolean on) -> {
+                a.setLoop(on);
+                return ScriptValue.ofObj("Animation", a);
+                })
+            .methodTypedOpt1("max_loops", TypeCodecs.DOUBLE, (Double) null, TypeCodecs.RAW,
+                (ScriptAnimation a, Double n) -> {
+                if (n != null) a.setMaxLoops((int) (double) n);
+                return ScriptValue.ofObj("Animation", a);
+                })
+            .methodTypedOpt1("speed", TypeCodecs.DOUBLE, (Double) null, TypeCodecs.RAW,
+                (ScriptAnimation a, Double n) -> {
+                if (n != null) a.setSpeed((float) (double) n);
+                return ScriptValue.ofObj("Animation", a);
+                })
             // interpolation(ticks) — NMS client-side smooth interpolation
-            .method("interpolation", (obj, args) -> {
-                if (!args.isEmpty()) anim(obj).setInterpolationDuration((int) args.get(0).asNum());
-                return ScriptValue.ofObj("Animation", obj);
-            })
+            .methodTypedOpt1("interpolation", TypeCodecs.DOUBLE, (Double) null, TypeCodecs.RAW,
+                (ScriptAnimation a, Double n) -> {
+                if (n != null) a.setInterpolationDuration((int) (double) n);
+                return ScriptValue.ofObj("Animation", a);
+                })
 
             // ---- Sound events ----
-            // sound_at(tick, sound, volume?, pitch?) — 2 required + 2 further optional args beyond
-            // them (each independently defaulting to 1.0f in-body); methodTyped2 would decode only
-            // the first 2 and has no way to conditionally read args 2/3. Left untyped.
-            .method("sound_at", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                anim(obj).addSoundAt((int) args.get(0).asNum(), new ScriptAnimation.SoundSpec(
-                    args.get(1).asStr(),
-                    args.size() >= 3 ? (float) args.get(2).asNum() : 1.0f,
-                    args.size() >= 4 ? (float) args.get(3).asNum() : 1.0f));
-                return ScriptValue.ofObj("Animation", obj);
-            })
+            // sound_at(tick, sound, volume?, pitch?) — volume/pitch are genuinely optional (1.0f
+            // each), and the RAW `sound` slot's null default is the "fewer than 2 args" sentinel
+            // reproducing the original's `return false` short-circuit exactly (a present arg decodes
+            // to the ScriptValue itself, never Java null).
+            .methodTypedOpt4("sound_at", TypeCodecs.DOUBLE, (Double) null, TypeCodecs.RAW, (ScriptValue) null,
+                TypeCodecs.DOUBLE, 1.0, TypeCodecs.DOUBLE, 1.0, TypeCodecs.RAW,
+                (ScriptAnimation a, Double tick, ScriptValue sound, Double volume, Double pitch) -> {
+                if (sound == null) return ScriptValue.of(false);
+                a.addSoundAt((int) (double) tick, new ScriptAnimation.SoundSpec(
+                    sound.asStr(), (float) (double) volume, (float) (double) pitch));
+                return ScriptValue.ofObj("Animation", a);
+                })
 
             // ---- Event callbacks ----
             // Same optional-arg-with-obj-dependent-return shape as loop/max_loops/speed above.
-            .method("on_end", (obj, args) -> {
-                if (!args.isEmpty()) anim(obj).setOnEndCall(ScriptCall.parse(args.get(0).asStr()));
-                return ScriptValue.ofObj("Animation", obj);
-            })
-            .method("on_loop", (obj, args) -> {
-                if (!args.isEmpty()) anim(obj).setOnLoopCall(ScriptCall.parse(args.get(0).asStr()));
-                return ScriptValue.ofObj("Animation", obj);
-            })
+            .methodTypedOpt1("on_end", TypeCodecs.STRING, (String) null, TypeCodecs.RAW,
+                (ScriptAnimation a, String ref) -> {
+                if (ref != null) a.setOnEndCall(ScriptCall.parse(ref));
+                return ScriptValue.ofObj("Animation", a);
+                })
+            .methodTypedOpt1("on_loop", TypeCodecs.STRING, (String) null, TypeCodecs.RAW,
+                (ScriptAnimation a, String ref) -> {
+                if (ref != null) a.setOnLoopCall(ScriptCall.parse(ref));
+                return ScriptValue.ofObj("Animation", a);
+                })
 
             // ---- Child animations ----
-            // Same optional-arg-with-obj-dependent-return shape, plus the arg is only acted on
-            // after an `instanceof ScriptValue.Obj` + typeName check (not a plain codec decode).
-            .method("add_child", (obj, args) -> {
-                if (!args.isEmpty() && args.get(0) instanceof ScriptValue.Obj o
-                        && o.typeName().equals("Animation"))
-                    anim(obj).addChild((ScriptAnimation) o.instance());
-                return ScriptValue.ofObj("Animation", obj);
-            })
-            .method("remove_child", (obj, args) -> {
-                if (!args.isEmpty() && args.get(0) instanceof ScriptValue.Obj o
-                        && o.typeName().equals("Animation"))
-                    anim(obj).removeChild((ScriptAnimation) o.instance());
-                return ScriptValue.ofObj("Animation", obj);
-            })
+            // Same optional-arg-with-instance-dependent-return shape; the arg slot stays RAW since
+            // it is acted on after an `instanceof ScriptValue.Obj` + typeName check rather than a
+            // native decode, and its null default stands for "argument absent".
+            .methodTypedOpt1("add_child", TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.RAW,
+                (ScriptAnimation a, ScriptValue child) -> {
+                if (child instanceof ScriptValue.Obj o && o.typeName().equals("Animation"))
+                    a.addChild((ScriptAnimation) o.instance());
+                return ScriptValue.ofObj("Animation", a);
+                })
+            .methodTypedOpt1("remove_child", TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.RAW,
+                (ScriptAnimation a, ScriptValue child) -> {
+                if (child instanceof ScriptValue.Obj o && o.typeName().equals("Animation"))
+                    a.removeChild((ScriptAnimation) o.instance());
+                return ScriptValue.ofObj("Animation", a);
+                })
 
             // ---- Properties ----
             .property("playing",  obj -> ScriptValue.of(anim(obj).isPlaying()))

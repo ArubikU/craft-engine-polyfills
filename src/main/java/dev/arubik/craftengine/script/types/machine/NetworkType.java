@@ -44,10 +44,16 @@ public final class NetworkType {
     public static void register() {
         PolyTypeRegistry.define("Network")
             // register(channel) / register(channel, type)
-            // Not migrated: type is a default-if-missing trailing argument (args.size() >= 2 ?
-            // args.get(1).asStr() : NetworkRegistry.TYPE_SIGNAL) — the default applies to the
-            // ARGUMENT when absent, not to the return value, which onMissingArgs can't express.
-            // Left untyped (applies to every method in this file — all share this shape).
+            // Not migrated — MIXED arity, which neither typed form covers (this reasoning applies to
+            // every untyped method in this file; they all share the shape):
+            //   * `channel` is REQUIRED: args.isEmpty() short-circuits to false having done nothing,
+            //     so methodTypedOptN is wrong — it makes every argument optional and ALWAYS runs the
+            //     handler, so a no-arg call would subscribe to whatever default channel we picked.
+            //     That's a real side effect the original explicitly refuses to perform.
+            //   * `type` is a default-if-missing trailing ARGUMENT (args.size() >= 2 ?
+            //     args.get(1).asStr() : NetworkRegistry.TYPE_SIGNAL), so methodTyped2's
+            //     onMissingArgs is wrong too — it would reject the valid 1-arg call form outright.
+            // There is no "first N required, rest optional" typed overload, so this stays untyped.
             .method("register", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.of(false);
                 int channel = (int) args.get(0).asNum();
@@ -64,7 +70,9 @@ public final class NetworkType {
             // unregister(channel) / unregister(channel, type)
             // Not migrated: multi-shape dynamic dispatch — args.isEmpty() takes an entirely
             // different code path (unsubscribe-all) than the channel+type path below it, plus the
-            // same default-if-missing type argument as register() above. Left untyped.
+            // same default-if-missing type argument as register() above. methodTypedOptN can't help:
+            // it never tells the handler how many arguments were actually supplied, so the
+            // unsubscribe-all branch is unreachable from a typed registration. Left untyped.
             .method("unregister", (obj, args) -> {
                 NetworkRef r = ref(obj);
                 if (args.isEmpty()) {
@@ -83,7 +91,9 @@ public final class NetworkType {
                 return ScriptValue.of(true);
             })
             // broadcast(channel, value) / broadcast(channel, value, type)
-            // Not migrated: same default-if-missing trailing type argument as register() above.
+            // Not migrated: same mixed arity as register() above — channel+value are required (a
+            // short call returns false and broadcasts nothing, which methodTypedOpt3 would turn into
+            // a real broadcast), while the trailing type is default-if-missing.
             .method("broadcast", (obj, args) -> {
                 if (args.size() < 2) return ScriptValue.of(false);
                 int channel = (int) args.get(0).asNum();
@@ -99,7 +109,10 @@ public final class NetworkType {
                 return ScriptValue.of(true);
             })
             // listen(channel) / listen(channel, type) → ScriptValue payload or NULL
-            // Not migrated: same default-if-missing trailing type argument as register() above.
+            // Not migrated: same mixed arity as register() above — a no-arg call must return the
+            // literal 0.0 without consulting the registry at all, whereas methodTypedOpt2 would run
+            // a real lookup against whatever default channel we picked and return that channel's
+            // payload instead. The trailing type is default-if-missing.
             .method("listen", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.of(0.0);
                 int channel = (int) args.get(0).asNum();
@@ -114,7 +127,9 @@ public final class NetworkType {
                 return ScriptValue.NULL;
             })
             // has_packet(channel) / has_packet(channel, type) → bool
-            // Not migrated: same default-if-missing trailing type argument as register() above.
+            // Not migrated: same mixed arity as register() above — a no-arg call must answer false
+            // flatly, not report on some default channel, while the trailing type is
+            // default-if-missing.
             .method("has_packet", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.of(false);
                 int channel = (int) args.get(0).asNum();
@@ -134,9 +149,10 @@ public final class NetworkType {
                     return "";
                 })
             // query(channel) / query(channel, type) → Array of subscriber node UUIDs as strings
-            // Not migrated: same default-if-missing trailing type argument as register() above, plus
-            // multi-shape dispatch (args.size() < 2 branches to a completely different legacy-block
-            // return shape than the "other types" branch).
+            // Not migrated: same mixed arity as register() above, plus genuine multi-shape dispatch
+            // that reads args.size() DIRECTLY (args.size() < 2 branches to a completely different
+            // legacy-block return shape than the "other types" branch) — no typed form hands the
+            // handler an argument count at all, so that branch is inexpressible either way.
             .method("query", (obj, args) -> {
                 if (args.isEmpty()) return new ScriptValue.Array(List.of());
                 int channel = (int) args.get(0).asNum();

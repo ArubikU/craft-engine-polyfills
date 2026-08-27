@@ -40,7 +40,10 @@ public final class LocationType {
             // GROUP — `args.size() >= 3 ? args.get(n).asNum() : Math.floor(r.<n>())` is a
             // default-if-missing read (falling back to this Location's own rounded coords), not a
             // hard "missing args -> short-circuit" fail-fast a typed handler's onMissingArgs can
-            // express. Left untyped.
+            // express. methodTypedOpt3 doesn't fit either, on two counts: it defaults each argument
+            // INDEPENDENTLY (so a 1- or 2-arg call would mix a passed coord with defaulted ones,
+            // where today anything short of 3 falls back on all three), and its defaults are fixed
+            // at registration time while these are read per call off the live instance. Left untyped.
             .method("block",       (obj, args) -> {
                 LocationRef r = ref(obj);
                 if (r.level() == null) return ScriptValue.NULL;

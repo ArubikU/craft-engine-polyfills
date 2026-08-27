@@ -136,9 +136,11 @@ public final class EntityType {
             // Generic potion-effect application — usable by any script (a jetpack softening its
             // own landing with slow-falling, a trap item poisoning whoever picks it up, etc).
             // add_potion_effect(name, duration_ticks, amplifier?)
-            // Left untyped: the 3rd arg (amplifier) is genuinely OPTIONAL with a default (0) when
-            // omitted, while args 0-1 are required — methodTyped3's onMissingArgs short-circuits
-            // the WHOLE call below size 3, which would wrongly reject the valid 2-arg call form.
+            // Left untyped: MIXED arity — args 0-1 are REQUIRED (fewer than 2 returns false without
+            // touching the entity) while arg 2 (amplifier) is optional with a default of 0. Neither
+            // typed form covers that: methodTyped3's onMissingArgs short-circuits the whole call
+            // below size 3 (wrongly rejecting the valid 2-arg form), and methodTypedOpt3 makes ALL
+            // three optional, so a 0- or 1-arg call would apply a real effect the original refused.
             .method("add_potion_effect", (obj, args) -> {
                 if (args.size() < 2 || !(entity(obj) instanceof LivingEntity living)) return ScriptValue.of(false);
                 try {
@@ -211,19 +213,22 @@ public final class EntityType {
             .property("is_dead",      obj -> ScriptValue.of(!living(obj).isAlive()))
             .property("last_damage",  obj -> ScriptValue.of(living(obj).getLastDamageSource() != null ?
                 living(obj).getLastDamageSource().typeHolder().getRegisteredName() : ""))
-            // fire/freeze left untyped: an OPTIONAL arg substituted with a default (60 / 140 ticks)
-            // when omitted, then execution continues unconditionally — not a short-circuit "return
-            // fallback on missing args" shape, which is all methodTyped1's onMissingArgs covers.
-            .method("fire", (obj, args) -> {
-                int ticks = args.isEmpty() ? 60 : (int) args.get(0).asNum();
-                living(obj).setRemainingFireTicks(Math.max(living(obj).getRemainingFireTicks(), ticks));
-                return ScriptValue.of(true);
-            })
-            .method("freeze", (obj, args) -> {
-                int ticks = args.isEmpty() ? 140 : (int) args.get(0).asNum();
-                living(obj).setTicksFrozen(Math.max(living(obj).getTicksFrozen(), ticks));
-                return ScriptValue.of(true);
-            })
+            // fire/freeze take an OPTIONAL tick count substituted with a default (60 / 140) when
+            // omitted, after which execution continues unconditionally and the side effect still
+            // happens — the methodTypedOptN shape, NOT methodTypedN's onMissingArgs short-circuit
+            // (which would silently drop the mutation on the no-arg call).
+            .methodTypedOpt1("fire", TypeCodecs.DOUBLE, 60.0, TypeCodecs.BOOL,
+                (LivingEntity le, Double ticksArg) -> {
+                    int ticks = (int) (double) ticksArg;
+                    le.setRemainingFireTicks(Math.max(le.getRemainingFireTicks(), ticks));
+                    return true;
+                })
+            .methodTypedOpt1("freeze", TypeCodecs.DOUBLE, 140.0, TypeCodecs.BOOL,
+                (LivingEntity le, Double ticksArg) -> {
+                    int ticks = (int) (double) ticksArg;
+                    le.setTicksFrozen(Math.max(le.getTicksFrozen(), ticks));
+                    return true;
+                })
             .methodTyped1("damage", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
                 (LivingEntity le, Double amountArg) -> {
                     float amount = amountArg.floatValue();

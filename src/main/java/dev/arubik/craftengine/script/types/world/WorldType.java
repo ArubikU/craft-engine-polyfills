@@ -45,20 +45,25 @@ public final class WorldType {
             // ensureChunkReady already works around for contraption virtual chunks. Left opt-in
             // (default false) since forcing a load has a real one-time I/O/generation cost that a
             // frequent, non-critical get_block call shouldn't pay unconditionally.
-            // NOT migrated to a typed method: force_load is a genuinely optional 4th argument whose
-            // presence is checked via args.size() >= 4 — the handler still runs (and returns the
-            // block) when it's omitted, it just skips the getChunkAt() load; onMissingArgs would
-            // instead SKIP the handler entirely below arity, which isn't the same behavior. Left
-            // untyped (same reasoning as ContraptionType.teleport's NOT-migrated note).
-            .method("get_block", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.NULL;
-                int x = (int) args.get(0).asNum(), y = (int) args.get(1).asNum(), z = (int) args.get(2).asNum();
-                net.minecraft.core.BlockPos pos = new net.minecraft.core.BlockPos(x, y, z);
-                if (args.size() >= 4 && args.get(3).asBool()) {
-                    try { level(obj).getChunkAt(pos); } catch (Throwable ignored) {}
-                }
-                return BlockType.wrap(level(obj), pos);
-            })
+            // Migrated to methodTypedOpt4: force_load is a genuinely optional 4th argument (default
+            // false) and the handler still runs — and returns the block — when it's omitted, which
+            // is exactly methodTypedOptN's shape (methodTyped4's onMissingArgs would instead skip
+            // the handler entirely below arity). The three REQUIRED coordinates take a Java `null`
+            // default used purely as an "argument was absent" sentinel, reproducing the original
+            // `args.size() < 3` early return EXACTLY (a decoded DOUBLE is never null — asNum()
+            // always yields a real double — so null can only mean "not passed").
+            .methodTypedOpt4("get_block", TypeCodecs.DOUBLE, (Double) null,
+                TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, (Double) null,
+                TypeCodecs.BOOL, false, TypeCodecs.RAW,
+                (ServerLevel obj, Double xArg, Double yArg, Double zArg, Boolean forceLoad) -> {
+                    if (xArg == null || yArg == null || zArg == null) return ScriptValue.NULL;
+                    int x = xArg.intValue(), y = yArg.intValue(), z = zArg.intValue();
+                    net.minecraft.core.BlockPos pos = new net.minecraft.core.BlockPos(x, y, z);
+                    if (forceLoad) {
+                        try { obj.getChunkAt(pos); } catch (Throwable ignored) {}
+                    }
+                    return BlockType.wrap(obj, pos);
+                })
             .methodTyped3("get_light", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.of(0),
                 (ServerLevel obj, Double xArg, Double yArg, Double zArg) -> {
                     int x = xArg.intValue(), y = yArg.intValue(), z = zArg.intValue();
@@ -100,10 +105,12 @@ public final class WorldType {
                     for (var e : entities) result.add(EntityType.wrap(e));
                     return new ScriptValue.Array(result);
                 })
-            // NOT migrated to a typed method: volume/pitch are optional trailing args checked via
-            // args.size() >= 5 / >= 6, and the handler still runs (with in-body defaults 1.0f/1.0f)
-            // when they're omitted rather than being skipped entirely — same "default-if-missing"
-            // shape as ContraptionType.play_sound's NOT-migrated note. Left untyped.
+            // NOT migrated: volume/pitch are optional trailing args checked via args.size() >= 5 /
+            // >= 6, and the handler still runs (with in-body defaults 1.0f/1.0f) when they're
+            // omitted rather than being skipped entirely — the methodTypedOptN shape, but this
+            // method needs SIX slots and that family only goes up to methodTypedOpt5 (methodTyped6
+            // exists but its onMissingArgs would wrongly skip the whole body for the valid 4-arg
+            // call). Left untyped.
             // play_sound(x, y, z, soundId, volume?, pitch?)
             .method("play_sound", (obj, args) -> {
                 if (args.size() < 4) return ScriptValue.of(false);
@@ -123,10 +130,10 @@ public final class WorldType {
             // spawn_particle(name, x, y, z, count?, offset_x?, offset_y?, offset_z?, speed?) — vanilla
             // particle ids only (FLAME, CLOUD, SMOKE, ...); a CraftEngine custom particle isn't a
             // vanilla ParticleType and isn't resolvable here.
-            // NOT migrated to a typed method: 5 optional trailing args (count, offset_x/y/z, speed)
-            // checked via args.size() >= 5..9, each with an in-body default and the handler still
-            // running when they're omitted — same "default-if-missing" shape as play_sound above.
-            // Also more than 7 args total. Left untyped.
+            // NOT migrated: 9 argument slots — beyond BOTH typed families (methodTypedN stops at 7,
+            // methodTypedOptN at 5). Its 5 optional trailing args (count, offset_x/y/z, speed) each
+            // have an in-body default with the handler still running when they're omitted, so even
+            // at a smaller arity only the methodTypedOptN shape would fit. Left untyped.
             .method("spawn_particle", (obj, args) -> {
                 if (args.size() < 4) return ScriptValue.of(false);
                 try {
@@ -178,29 +185,37 @@ public final class WorldType {
             // broadcast_title(title, subtitle?, fade_in?, stay?, fade_out?) — sends the SAME title
             // to every player currently in THIS world (not server-wide — see Server for that scope
             // if it's ever needed). Same text/timing conventions as Player.send_title.
-            // NOT migrated to a typed method: 4 optional trailing args (subtitle, fade_in, stay,
+            // Migrated to methodTypedOpt5: 4 optional trailing args (subtitle, fade_in, stay,
             // fade_out) each with an in-body default, and the handler still runs when they're
-            // omitted — same "default-if-missing" shape as play_sound/spawn_particle above. Left
-            // untyped.
-            .method("broadcast_title", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
+            // omitted — exactly methodTypedOptN's shape. `title` takes a Java `null` default used
+            // purely as an "argument was absent" sentinel, reproducing the original
+            // `args.isEmpty()` early return EXACTLY (a decoded STRING is never null:
+            // ScriptValue.of(String) maps null to NULL, so asStr() always returns a real string).
+            // `subtitle` keeps its own null default so a PRESENT empty string still deserializes
+            // through parseComponent, exactly as before, while an absent one stays Component.empty().
+            .methodTypedOpt5("broadcast_title", TypeCodecs.STRING, (String) null,
+                TypeCodecs.STRING, (String) null, TypeCodecs.DOUBLE, 10.0,
+                TypeCodecs.DOUBLE, 70.0, TypeCodecs.DOUBLE, 20.0, TypeCodecs.BOOL,
+                (ServerLevel obj, String titleArg, String subtitleArg,
+                 Double fadeInArg, Double stayArg, Double fadeOutArg) -> {
+                if (titleArg == null) return false;
                 try {
-                    net.kyori.adventure.text.Component title = parseComponent(args.get(0).asStr());
-                    net.kyori.adventure.text.Component subtitle = args.size() > 1
-                        ? parseComponent(args.get(1).asStr()) : net.kyori.adventure.text.Component.empty();
-                    int fadeIn  = args.size() > 2 ? (int) args.get(2).asNum() : 10;
-                    int stay    = args.size() > 3 ? (int) args.get(3).asNum() : 70;
-                    int fadeOut = args.size() > 4 ? (int) args.get(4).asNum() : 20;
+                    net.kyori.adventure.text.Component title = parseComponent(titleArg);
+                    net.kyori.adventure.text.Component subtitle = subtitleArg != null
+                        ? parseComponent(subtitleArg) : net.kyori.adventure.text.Component.empty();
+                    int fadeIn  = fadeInArg.intValue();
+                    int stay    = stayArg.intValue();
+                    int fadeOut = fadeOutArg.intValue();
                     net.kyori.adventure.title.Title t = net.kyori.adventure.title.Title.title(title, subtitle,
                         net.kyori.adventure.title.Title.Times.times(
                             java.time.Duration.ofMillis(fadeIn * 50L),
                             java.time.Duration.ofMillis(stay * 50L),
                             java.time.Duration.ofMillis(fadeOut * 50L)));
-                    for (net.minecraft.server.level.ServerPlayer sp : level(obj).players()) {
+                    for (net.minecraft.server.level.ServerPlayer sp : obj.players()) {
                         sp.getBukkitEntity().showTitle(t);
                     }
-                    return ScriptValue.of(true);
-                } catch (Throwable t) { return ScriptValue.of(false); }
+                    return true;
+                } catch (Throwable t) { return false; }
             })
             // broadcast_actionbar(text) — same scope as broadcast_title (this world only).
             .methodTyped1("broadcast_actionbar", TypeCodecs.STRING, TypeCodecs.BOOL, false,

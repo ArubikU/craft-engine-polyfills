@@ -39,15 +39,11 @@ public final class VectorType {
                 }
                 return ScriptValue.NULL;
             })
-            // scale(factor?) — NOT migrated to methodTyped1: a missing arg still runs the handler
-            // with a default factor of 1 ("default-if-missing" shape) rather than short-circuiting,
-            // which methodTypedN's onMissingArgs can't express (it skips the handler body entirely).
-            // Left untyped.
-            .method("scale", (obj, args) -> {
-                Vector3d v = vec(obj);
-                double s = args.isEmpty() ? 1 : args.get(0).asNum();
-                return wrap(new Vector3d(v.x * s, v.y * s, v.z * s));
-            })
+            // scale(factor?) — a missing factor defaults to 1 and the body still runs, which is
+            // precisely the methodTypedOpt1 shape. Return slot stays RAW: it hands back a wrapped
+            // Vector object, not one of the native scalar codecs.
+            .methodTypedOpt1("scale", TypeCodecs.DOUBLE, 1.0, TypeCodecs.RAW,
+                (Vector3d v, Double s) -> wrap(new Vector3d(v.x * s, v.y * s, v.z * s)))
             .methodTyped0("normalize", TypeCodecs.RAW, (Vector3d v) -> {
                 double len = v.length();
                 if (len == 0) return wrap(new Vector3d(0, 0, 0));
@@ -58,7 +54,8 @@ public final class VectorType {
             // falling back to a default (0.0/NULL) for any other arg count including MORE than one.
             // methodTypedN's onMissingArgs only expresses a "fewer than N args" floor, not an exact-
             // arity match, so a call with extra args would behave differently (compute a real result
-            // instead of the original's default) — a real behavior change. Left untyped.
+            // instead of the original's default) — a real behavior change. methodTypedOptN is no
+            // help either: it explicitly IGNORES extra trailing args. Left untyped.
             .method("distance", (obj, args) -> {
                 Vector3d v = vec(obj);
                 if (args.size() == 1 && args.get(0) instanceof ScriptValue.Obj o) {

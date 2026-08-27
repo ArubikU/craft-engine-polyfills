@@ -136,12 +136,16 @@ public final class PluginsType {
                 (Object obj, ScriptValue p, String key) -> LuckPermsSupport.metaValue(uuidOf(p), key))
             .methodTyped2("has_permission", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.BOOL, false,
                 (Object obj, ScriptValue p, String node) -> LuckPermsSupport.hasPermission(uuidOf(p), node))
-            // add_permission(player, node, value? = true) — 3rd arg is OPTIONAL (defaults to true
-            // when omitted), so this isn't a fixed 2- or 3-arg shape methodTyped2/3 can represent;
-            // left untyped.
-            .method("add_permission", (obj, args) -> args.size() < 2 ? ScriptValue.of(false)
-                : ScriptValue.of(LuckPermsSupport.addPermission(uuidOf(args.get(0)), args.get(1).asStr(),
-                    args.size() < 3 || args.get(2).asBool())))
+            // add_permission(player, node, value? = true) — the 3rd arg is genuinely optional
+            // (defaults to true), and the `node` slot's null String default is the "fewer than 2
+            // args" sentinel reproducing the original's `false` short-circuit exactly (a present arg
+            // always decodes to a non-null String — ScriptValue.asStr never returns null).
+            .methodTypedOpt3("add_permission", TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.STRING, (String) null,
+                TypeCodecs.BOOL, true, TypeCodecs.BOOL,
+                (Object obj, ScriptValue p, String node, Boolean value) -> {
+                    if (node == null) return false;
+                    return LuckPermsSupport.addPermission(uuidOf(p), node, value);
+                })
             .methodTyped2("remove_permission", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.BOOL, false,
                 (Object obj, ScriptValue p, String node) -> LuckPermsSupport.removePermission(uuidOf(p), node))
             // ---- Group-level operations — always safe regardless of who's online (see
@@ -151,10 +155,13 @@ public final class PluginsType {
             .methodTyped2("group_has_permission", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.BOOL, false,
                 (Object obj, String group, String node) -> LuckPermsSupport.groupHasPermission(group, node))
             // set_group_permission(group, node, value? = true) — same optional-3rd-arg shape as
-            // add_permission above; left untyped for the same reason.
-            .method("set_group_permission", (obj, args) -> args.size() < 2 ? ScriptValue.of(false)
-                : ScriptValue.of(LuckPermsSupport.setGroupPermission(args.get(0).asStr(), args.get(1).asStr(),
-                    args.size() < 3 || args.get(2).asBool())))
+            // add_permission above, with the same null-`node` "fewer than 2 args" sentinel.
+            .methodTypedOpt3("set_group_permission", TypeCodecs.STRING, (String) null, TypeCodecs.STRING, (String) null,
+                TypeCodecs.BOOL, true, TypeCodecs.BOOL,
+                (Object obj, String group, String node, Boolean value) -> {
+                    if (node == null) return false;
+                    return LuckPermsSupport.setGroupPermission(group, node, value);
+                })
             .methodTyped2("remove_group_permission", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.BOOL, false,
                 (Object obj, String group, String node) -> LuckPermsSupport.removeGroupPermission(group, node))
             .methodTyped1("group_parents", TypeCodecs.STRING, TypeCodecs.RAW, new ScriptValue.Array(java.util.List.of()),
@@ -205,16 +212,20 @@ public final class PluginsType {
             .methodTyped2("fill_selection", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.BOOL, false,
                 (Object obj, ScriptValue p, String pattern) -> WorldEditSupport.fillSelection(bukkitPlayer(p), pattern))
             // paste_clipboard(player, x, y, z, includeAir? = true) — 4 required args plus an
-            // optional 5th, exceeds methodTyped0..3's 3-arg max; left untyped.
-            .method("paste_clipboard", (obj, args) -> args.size() < 4 ? ScriptValue.of(false)
-                : ScriptValue.of(WorldEditSupport.pasteClipboard(bukkitPlayer(args.get(0)),
-                    args.get(1).asNum(), args.get(2).asNum(), args.get(3).asNum(),
-                    args.size() < 5 || args.get(4).asBool())));
+            // optional 5th; methodTypedOpt5 covers it, with the `z` slot's null Double default as
+            // the "fewer than 4 args" sentinel (a present arg always decodes to a non-null Double).
+            .methodTypedOpt5("paste_clipboard", TypeCodecs.RAW, (ScriptValue) null,
+                TypeCodecs.DOUBLE, 0.0, TypeCodecs.DOUBLE, 0.0, TypeCodecs.DOUBLE, (Double) null,
+                TypeCodecs.BOOL, true, TypeCodecs.BOOL,
+                (Object obj, ScriptValue p, Double x, Double y, Double z, Boolean includeAir) -> {
+                    if (z == null) return false;
+                    return WorldEditSupport.pasteClipboard(bukkitPlayer(p), x, y, z, includeAir);
+                });
 
         PolyTypeRegistry.define("DynmapBridge")
             .property("is_available", obj -> ScriptValue.of(DynmapSupport.isAvailable()))
-            // add_marker(...) — 8 required args plus an optional 9th, exceeds methodTyped0..3's
-            // 3-arg max; left untyped.
+            // add_marker(...) — 8 required args plus an optional 9th: 9 slots, past methodTyped7's
+            // 7-arg max and past methodTypedOpt5's 5-arg max. Left untyped.
             .method("add_marker", (obj, args) -> args.size() < 8 ? ScriptValue.of(false)
                 : ScriptValue.of(DynmapSupport.addMarker(args.get(0).asStr(), args.get(1).asStr(),
                     args.get(2).asStr(), args.get(3).asStr(), args.get(4).asStr(),
@@ -225,7 +236,7 @@ public final class PluginsType {
 
         PolyTypeRegistry.define("BlueMapBridge")
             .property("is_available", obj -> ScriptValue.of(BlueMapSupport.isAvailable()))
-            // add_marker(...) — 8 args, exceeds methodTyped0..3's 3-arg max; left untyped.
+            // add_marker(...) — 8 args, past methodTyped7's 7-arg max; left untyped.
             .method("add_marker", (obj, args) -> args.size() < 8 ? ScriptValue.of(false)
                 : ScriptValue.of(BlueMapSupport.addMarker(args.get(0).asStr(), args.get(1).asStr(),
                     args.get(2).asStr(), args.get(3).asStr(), args.get(4).asStr(),
@@ -235,8 +246,9 @@ public final class PluginsType {
 
         PolyTypeRegistry.define("MythicMobsBridge")
             .property("is_available", obj -> ScriptValue.of(MythicMobsSupport.isAvailable()))
-            // spawn_mob(mobType, world, x, y, z, level?) — min 5 args (+ optional 6th) via
-            // locationArg's list-slicing helper, exceeds methodTyped0..3's 3-arg max; left untyped.
+            // spawn_mob(mobType, world, x, y, z, level?) — 5 args (via locationArg's list-slicing
+            // helper) plus an optional 6th. The optional tail rules out the fixed-arity
+            // methodTyped6, and 6 slots is one past methodTypedOpt5's 5-arg max. Left untyped.
             .method("spawn_mob", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.NULL;
                 org.bukkit.Location loc = locationArg(args, 1);

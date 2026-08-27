@@ -51,10 +51,12 @@ public final class MegRendererType {
             // play_ik(chain, target_x, target_y, target_z, time_to_arrive_seconds) -> bones applied.
             // chain is an Array of [bone_name, min_yaw, max_yaw, min_pitch, max_pitch] Arrays, base
             // bone first. time_to_arrive_seconds <= 0 snaps instantly instead of easing.
-            // NOT migrated: 5th arg (time_to_arrive_seconds) is genuinely optional, checked via
-            // args.size() > 4 inside the body — a typed handler only receives fixed-arity decoded
-            // arguments, so that conditional read can't be expressed (same reasoning as
-            // ContraptionType#teleport's un-migrated 4th-arg yaw). Left untyped.
+            // NOT migrated: mixed required/optional arity — the first 4 args are REQUIRED (a shorter
+            // call returns 0 without touching the renderer) while the 5th (time_to_arrive_seconds)
+            // is optional, read via args.size() > 4 with a 0f default. methodTyped5's onMissingArgs
+            // can't supply that per-argument default, and methodTypedOpt5 would make all five
+            // optional and still run the body — firing a real playIk() with an empty chain at
+            // (0,0,0) on a call that today does nothing at all. Left untyped.
             .method("play_ik", (obj, args) -> {
                 if (args.size() < 4) return ScriptValue.of(0);
                 List<MegRenderer.BoneRange> chain = parseChain(args.get(0));

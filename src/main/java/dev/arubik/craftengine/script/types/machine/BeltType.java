@@ -97,15 +97,18 @@ public final class BeltType {
             // they pass underneath without ever leaving the belt. Pass an empty/NULL item to just
             // remove whatever was there (same as take()). False if this segment isn't carrying
             // anything to replace.
-            // NOT migrated to a typed method: a missing arg maps to `bukkit = null` and the handler
-            // STILL RUNS belt.replaceCarried(null) — an in-body default, not an onMissingArgs
-            // short-circuit — so forcing this into methodTyped1 would change behavior. Left untyped.
-            .method("replace", (obj, args) -> {
-                ConveyorBlockEntity belt = conveyor(obj);
-                if (belt == null) return ScriptValue.of(false);
-                org.bukkit.inventory.ItemStack bukkit = args.isEmpty() ? null : bukkitStack(args.get(0));
-                return ScriptValue.of(belt.replaceCarried(bukkit));
-            })
+            // A missing arg maps to `bukkit = null` and the handler STILL RUNS
+            // belt.replaceCarried(null) — an in-body default, not an onMissingArgs short-circuit —
+            // so this is methodTypedOpt1's shape. The item is decoded with TypeCodecs.RAW (see
+            // put() below on bukkitStack's dynamic coercion) defaulting to ScriptValue.NULL, which
+            // bukkitStack maps to null exactly as the old args.isEmpty() branch did. `conveyor(obj)`
+            // is a live block-entity lookup, not a cast, so the instance stays Object here.
+            .methodTypedOpt1("replace", TypeCodecs.RAW, ScriptValue.NULL, TypeCodecs.BOOL,
+                (Object obj, ScriptValue itemArg) -> {
+                    ConveyorBlockEntity belt = conveyor(obj);
+                    if (belt == null) return false;
+                    return belt.replaceCarried(bukkitStack(itemArg));
+                })
             // take() -> Item. Removes and returns whatever this segment is carrying (an empty Item
             // if nothing was there) — for a machine that wants to pull the item off the belt
             // entirely (e.g. into Contraption.container) rather than transform it in place.

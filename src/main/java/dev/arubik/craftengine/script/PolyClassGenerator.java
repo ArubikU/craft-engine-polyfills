@@ -29,16 +29,25 @@ import static org.objectweb.asm.Opcodes.*;
  * <ul>
  *   <li>a {@code public} constructor taking the wrapped instance, plus a static {@code of(Object)}
  *       factory;
- *   <li>a private final {@code instance} field holding the real wrapped object;
+ *   <li>a {@code protected final instance} field holding the real wrapped object — declared only by
+ *       the ROOT of a generated hierarchy, since subclasses inherit it;
  *   <li>one {@code private static volatile} field per member, holding its RESOLVED handler — this
  *       is the whole point: no {@code PolyTypeRegistry.get}/{@code resolveMethod} lookup on any
  *       call, ever;
- *   <li>one real instance method per member. A {@code methodTypedN} registration whose codecs are
- *       all known {@link TypeCodecs} singletons gets a genuinely native signature ({@code double
- *       get_x()}, {@code boolean set_typed(String, double)}); every OTHER method gets the erased
- *       {@code ScriptValue name(List)} shape; every property gets {@code ScriptValue name()};
+ *   <li>one real instance method per member. A {@code methodTypedN}/{@code methodTypedOptN}
+ *       registration whose codecs are all known {@link TypeCodecs} singletons gets a genuinely
+ *       native signature ({@code double get_x()}, {@code boolean set_typed(String, double)}) AND an
+ *       erased companion shim, because a call site may legally pass fewer arguments than the fixed
+ *       native arity (per-argument defaults, or {@code onMissingArgs}) and the shim is what applies
+ *       that. Every other method gets only the erased {@code ScriptValue name(List)} shape; every
+ *       property gets {@code ScriptValue name()};
  *   <li>a static {@code refresh()} that re-resolves every one of those handler fields BY NAME.
  * </ul>
+ *
+ * <p>The generated hierarchy MIRRORS the {@link PolyType} hierarchy — {@code PC_Machine extends
+ * PC_Block} — so a child emits only the members it declares itself and inherits the rest by
+ * ordinary virtual dispatch. A child that re-registers an inherited member declares its own method,
+ * which wins.
  *
  * <h2>Staleness — the hard part, and why {@code refresh()} exists</h2>
  * A compiled {@code .pf} formula is cached forever by {@code ScriptFormula.CACHE}, keyed on the
@@ -52,8 +61,10 @@ import static org.objectweb.asm.Opcodes.*;
  * <p>Instead: {@link PolyTypeRegistry} notifies this class after EVERY mutation, and every live
  * generated class re-runs {@code refresh()}, re-resolving each handler BY NAME. A wrapper therefore
  * always dispatches to whatever is registered right now, while still costing zero lookups per call.
- * The per-name cache is also cleared, so the next compile regenerates against the current member
- * set (a member added after a wrapper was generated simply isn't specialized until then).
+ * The cache is NOT invalidated — exactly one class is ever generated per type name (see {@link
+ * #getOrGenerate}), since classes are never unloaded and minting a fresh one per registration would
+ * leak. {@link #buildAll()} builds every type's wrapper once registration is complete, so a wrapper
+ * covers its type's full member set; a member added after that simply isn't specialized.
  *
  * <p>A member can also change SHAPE, not just handler — a typed method re-registered with different
  * codecs or arity, or replaced by an untyped one, while a generated native signature is fixed
@@ -74,11 +85,11 @@ final class PolyClassGenerator {
     private static final Logger LOG = Logger.getLogger(PolyClassGenerator.class.getName());
     private static final AtomicInteger COUNTER = new AtomicInteger();
 
-    /** name -> the wrapper generated for it. Cleared on any registry mutation so the next compile
-     *  regenerates against the current member set. */
+    /** name -> the wrapper generated for it. Never invalidated: exactly one class per type name for
+     *  the life of the process (see {@link #getOrGenerate}). */
     private static final ConcurrentHashMap<String, GeneratedPolyClass> CACHE = new ConcurrentHashMap<>();
-    /** Every wrapper ever generated (they outlive CACHE clears — already-compiled formulas keep
-     *  calling them), each with a handle to its own static refresh(). */
+    /** Every wrapper ever generated, each with a handle to its own static refresh(), so a registry
+     *  mutation can re-resolve all of their handler fields. */
     private static final CopyOnWriteArrayList<MethodHandle> LIVE_REFRESHERS = new CopyOnWriteArrayList<>();
 
     static {
@@ -105,11 +116,21 @@ final class PolyClassGenerator {
      * registration is complete (end of {@code ScriptBootstrap.init()}/{@code reload()}) so every
      * type's wrapper covers its FULL member set before any script compiles against it.
      *
-     * <p>Idempotent: types already generated are skipped, never regenerated.
+     * <p>Unlike {@link #getOrGenerate}, which never regenerates, this is the one place that will
+     * rebuild a wrapper — and ONLY when the type has gained members the existing wrapper does not
+     * cover. That is what makes it a "sync" pass rather than churn: in the normal flow every type is
+     * fully registered before this runs, so each gets exactly one class and later calls are no-ops.
+     * A reload that genuinely ADDS members to a type is the only case that mints a second class,
+     * which is the correct trade — the alternative is those new members never being specialized.
      */
     static void buildAll() {
         for (String typeName : PolyTypeRegistry.typeNames()) {
-            getOrGenerate(typeName);
+            PolyType type = PolyTypeRegistry.get(typeName);
+            if (type == null) continue;
+            GeneratedPolyClass cached = CACHE.get(typeName);
+            if (cached != null && cached.memberSet().containsAll(memberSetOf(type))) continue;
+            GeneratedPolyClass fresh = generate(typeName, type);
+            if (fresh != null) CACHE.put(typeName, fresh);
         }
     }
 
@@ -299,9 +320,25 @@ final class PolyClassGenerator {
                     String desc = emitTypedMethod(cw, className, instanceOwner, javaName, typeName, methodName,
                             field, iface, argKinds, retKind);
                     typedRefs.put(methodName, new TypedMemberRef(javaName, desc, argKinds, retKind));
-                    // This type overrides an inherited member with a DIFFERENT shape — drop the
-                    // parent's untyped entry so the call site can't pick the wrong one.
-                    untypedRefs.remove(methodName);
+
+                    // ALSO emit the erased shim for a typed method. The native signature has a fixed
+                    // arity, but a call site may legitimately pass fewer arguments — every
+                    // methodTypedOptN registration is exactly that (all args optional with
+                    // defaults), and methodTypedN's onMissingArgs case likewise. Without this the
+                    // short-arg call site has nothing to dispatch to and falls all the way back to
+                    // generic memberCall. The shim calls the same MethodHandler that the typed
+                    // registration installed, so arity handling stays in one place.
+                    int uidx = counter[0]++;
+                    String ufield = "m$" + uidx;
+                    cw.visitField(ACC_PRIVATE | ACC_STATIC | ACC_VOLATILE, ufield, "L" + METHOD_HANDLER + ";", null, null).visitEnd();
+                    refresh.visitLdcInsn(typeName);
+                    refresh.visitLdcInsn(methodName);
+                    refresh.visitMethodInsn(INVOKESTATIC, RUNTIME, "resolveMethodHandler",
+                            "(Ljava/lang/String;Ljava/lang/String;)L" + METHOD_HANDLER + ";", false);
+                    refresh.visitFieldInsn(PUTSTATIC, className, ufield, "L" + METHOD_HANDLER + ";");
+                    String ujavaName = "um$" + uidx + "_" + sanitize(methodName);
+                    emitUntypedMethod(cw, className, instanceOwner, ujavaName, typeName, methodName, ufield);
+                    untypedRefs.put(methodName, ujavaName);
                 } else {
                     String field = "m$" + idx;
                     cw.visitField(ACC_PRIVATE | ACC_STATIC | ACC_VOLATILE, field, "L" + METHOD_HANDLER + ";", null, null).visitEnd();

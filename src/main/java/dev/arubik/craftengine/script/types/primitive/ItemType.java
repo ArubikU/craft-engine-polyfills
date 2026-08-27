@@ -37,10 +37,13 @@ public final class ItemType {
             // skull's owner/texture) then converted back to the NMS ItemStack this codebase's
             // ScriptValue.Item actually wraps. Only reachable through the NAMESPACE instance —
             // every other Item.* method below expects `obj` to already be a real ItemStack.
-            .method("skull", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
+            // RAW arg — extractBukkitPlayer pattern-matches the ScriptValue itself; RAW return, the
+            // result is a wrapped Item or NULL. The instance is the NAMESPACE Object (never an
+            // ItemStack), so the typed handler's first parameter stays Object.
+            .methodTyped1("skull", TypeCodecs.RAW, TypeCodecs.RAW, ScriptValue.NULL,
+                (Object obj, ScriptValue playerArg) -> {
                 try {
-                    org.bukkit.entity.Player bukkitPlayer = extractBukkitPlayer(args.get(0));
+                    org.bukkit.entity.Player bukkitPlayer = extractBukkitPlayer(playerArg);
                     if (bukkitPlayer == null) return ScriptValue.NULL;
                     org.bukkit.inventory.ItemStack bukkitStack =
                             new org.bukkit.inventory.ItemStack(org.bukkit.Material.PLAYER_HEAD);
@@ -51,16 +54,20 @@ public final class ItemType {
                     ItemStack nmsStack = org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(bukkitStack);
                     return ItemType.wrap(nmsStack);
                 } catch (Throwable t) { return ScriptValue.NULL; }
-            })
+                })
             // Item.create(id, count?) — the CraftEngine-aware counterpart to the plain-vanilla
             // create_item(...) builtin (which only ever looks up BuiltInRegistries.ITEM, so it
             // can't build e.g. "default:gui_head_size_1" or any "cml:"/"polyfills:" custom item).
             // Tries CraftEngine's own item registry first, falls back to vanilla so this can fully
             // replace create_item(...) in a script that wants ONE constructor for either kind.
-            .method("create", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                String id = args.get(0).asStr();
-                int count = args.size() >= 2 ? (int) args.get(1).asNum() : 1;
+            // Both args are optional at the registration level (methodTypedOpt2): `count` really is
+            // optional (defaults to 1), and `id`'s null default is the "argument absent" sentinel
+            // that reproduces the original args.isEmpty() -> NULL short-circuit exactly — a PRESENT
+            // argument always decodes to a non-null String (ScriptValue.asStr never returns null).
+            .methodTypedOpt2("create", TypeCodecs.STRING, (String) null, TypeCodecs.DOUBLE, 1.0, TypeCodecs.RAW,
+                (Object obj, String id, Double countArg) -> {
+                if (id == null) return ScriptValue.NULL;
+                int count = (int) (double) countArg;
                 try {
                     net.momirealms.craftengine.core.util.Key key = net.momirealms.craftengine.core.util.Key.of(id);
                     var def = net.momirealms.craftengine.bukkit.api.CraftEngineItems.byId(key);
@@ -92,7 +99,7 @@ public final class ItemType {
                     if (item == null) return ScriptValue.NULL;
                     return ItemType.wrap(new ItemStack(item, count));
                 } catch (Throwable ignored) { return ScriptValue.NULL; }
-            })
+                })
             // A CraftEngine custom item reports its CE id ("cml:crate_acacia"); only a plain
             // vanilla item falls back to the registry key. Without this, every CE item sharing a
             // base material (usually paper) had the same id and no filter could tell them apart.
@@ -246,12 +253,16 @@ public final class ItemType {
                     if (!(arg0 instanceof ScriptValue.Item other)) return false;
                     return ItemStack.isSameItemSameComponents(obj, other.stack());
                 })
-            .method("with_count", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.ofItem(stack(obj));
-                ItemStack copy = stack(obj).copy();
-                copy.setCount((int) args.get(0).asNum());
+            // Null Double default = "argument absent" (a present arg always decodes to a non-null
+            // Double), which is what reproduces the original's instance-dependent "return THIS item
+            // unchanged" fallback — a fixed methodTyped1 onMissingArgs can't express that.
+            .methodTypedOpt1("with_count", TypeCodecs.DOUBLE, (Double) null, TypeCodecs.RAW,
+                (ItemStack obj, Double countArg) -> {
+                if (countArg == null) return ScriptValue.ofItem(obj);
+                ItemStack copy = obj.copy();
+                copy.setCount((int) (double) countArg);
                 return ScriptValue.ofItem(copy);
-            })
+                })
             .methodTyped1("can_break", TypeCodecs.STRING, TypeCodecs.BOOL, false,
                 (ItemStack obj, String blockId) -> {
                     try {
@@ -278,6 +289,9 @@ public final class ItemType {
 
             // item.with_component(comp) → item copy with component set
             // Also accepts: item.with_component("name", value_or_map_of_primitives)
+            // Left untyped: two DIFFERENT call shapes dispatched on arg COUNT (1 arg = a typed
+            // component object, 2 args = name+value), which no fixed-arity typed registration
+            // (whose arg slots have one fixed meaning each) can represent.
             .method("with_component", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.ofItem(stack(obj));
                 if (args.size() == 1) {
@@ -293,49 +307,55 @@ public final class ItemType {
             })
 
             // item.remove_component("name") → item copy without that component
-            .method("remove_component", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.ofItem(stack(obj));
-                return ScriptValue.ofItem(DataComponentTypes.removeComponent(stack(obj), args.get(0).asStr()));
-            })
+            // Null String default = "argument absent" (see with_count) -> item returned unchanged.
+            .methodTypedOpt1("remove_component", TypeCodecs.STRING, (String) null, TypeCodecs.RAW,
+                (ItemStack obj, String name) -> {
+                if (name == null) return ScriptValue.ofItem(obj);
+                return ScriptValue.ofItem(DataComponentTypes.removeComponent(obj, name));
+                })
 
             // item.glow(bool?) → enchantment glint override copy
-            .method("glow", (obj, args) -> {
-                boolean g = args.isEmpty() || args.get(0).asBool();
-                ItemStack copy = stack(obj).copy();
+            // Genuinely optional arg defaulting to true — the body always runs (methodTypedOpt1).
+            .methodTypedOpt1("glow", TypeCodecs.BOOL, true, TypeCodecs.RAW,
+                (ItemStack obj, Boolean g) -> {
+                ItemStack copy = obj.copy();
                 try { copy.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, g); }
                 catch (Throwable ignored) {}
                 return ScriptValue.ofItem(copy);
-            })
+                })
 
             // item.hide_tooltip(bool?) → TooltipDisplay copy
-            .method("hide_tooltip", (obj, args) -> {
-                boolean hide = args.isEmpty() || args.get(0).asBool();
-                ItemStack copy = stack(obj).copy();
+            .methodTypedOpt1("hide_tooltip", TypeCodecs.BOOL, true, TypeCodecs.RAW,
+                (ItemStack obj, Boolean hide) -> {
+                ItemStack copy = obj.copy();
                 try { copy.set(DataComponents.TOOLTIP_DISPLAY,
                     new net.minecraft.world.item.component.TooltipDisplay(hide, new java.util.LinkedHashSet<>())); }
                 catch (Throwable ignored) {}
                 return ScriptValue.ofItem(copy);
-            })
+                })
 
             // item.with_name("<red>Foo") → item copy with a MiniMessage-parsed custom name.
             // Equivalent to with_component("custom_name", text) but named for the common case
             // (e.g. an on_render/on_shot script picking a name ad hoc) instead of needing to know
             // the raw component id. Falls back to a literal (unparsed) Component on bad MiniMessage
             // syntax rather than dropping the name entirely.
-            .method("with_name", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.ofItem(stack(obj));
-                ItemStack copy = stack(obj).copy();
-                String text = args.get(0).asStr();
+            // Null String default = "argument absent" (see with_count) -> item returned unchanged.
+            .methodTypedOpt1("with_name", TypeCodecs.STRING, (String) null, TypeCodecs.RAW,
+                (ItemStack obj, String text) -> {
+                if (text == null) return ScriptValue.ofItem(obj);
+                ItemStack copy = obj.copy();
                 try {
                     copy.set(DataComponents.CUSTOM_NAME, toDisplayComponent(text));
                 } catch (Throwable ignored) {}
                 return ScriptValue.ofItem(copy);
-            })
+                })
 
             // item.with_lore(line, line, ...) or item.with_lore([line, line, ...]) → item copy
             // with that MiniMessage-parsed lore, replacing whatever lore (if any) it already had.
             // Both call shapes work, same flexibility as event.set_drops — no array-literal syntax
             // required for the common single-or-few-lines case.
+            // Left untyped: genuinely variadic — it iterates the WHOLE arg list (flattening any
+            // array element), so there is no fixed arity to register.
             .method("with_lore", (obj, args) -> {
                 ItemStack copy = stack(obj).copy();
                 List<net.minecraft.network.chat.Component> lines = new ArrayList<>();
@@ -372,12 +392,17 @@ public final class ItemType {
                     if (codec == null) return false;
                     return hasTyped(obj, TYPED_PREFIX + key);
                 })
-            .method("with_typed", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.ofItem(stack(obj));
-                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
-                if (codec == null) return ScriptValue.ofItem(stack(obj));
-                return ScriptValue.ofItem(writeTyped(stack(obj), TYPED_PREFIX + args.get(0).asStr(), codec, args.get(2)));
-            })
+            // The RAW value slot's null default is the "fewer than 3 args" sentinel (a PRESENT arg
+            // decodes to the ScriptValue itself, never Java null), reproducing the original's
+            // instance-dependent "return THIS item unchanged" fallback exactly.
+            .methodTypedOpt3("with_typed", TypeCodecs.STRING, (String) null, TypeCodecs.STRING, (String) null,
+                TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.RAW,
+                (ItemStack obj, String key, String typeName, ScriptValue value) -> {
+                if (value == null) return ScriptValue.ofItem(obj);
+                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(typeName);
+                if (codec == null) return ScriptValue.ofItem(obj);
+                return ScriptValue.ofItem(writeTyped(obj, TYPED_PREFIX + key, codec, value));
+                })
 
             // ---- Item behavior motor API (dev.arubik.craftengine.item.ItemDefinition) ----
 
@@ -386,12 +411,13 @@ public final class ItemType {
             // custom_data) — the actual identity swap, everything else (enchantments, damage,
             // display name, ...) is intentionally NOT preserved since the target item's own
             // definition supplies its own defaults for those.
-            .method("transmutate", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.ofItem(stack(obj));
+            // Null String default = "argument absent" (see with_count) -> item returned unchanged.
+            .methodTypedOpt1("transmutate", TypeCodecs.STRING, (String) null, TypeCodecs.RAW,
+                (ItemStack self, String targetIdStr) -> {
+                if (targetIdStr == null) return ScriptValue.ofItem(self);
                 try {
-                    ItemStack self = stack(obj);
                     net.momirealms.craftengine.core.util.Key targetId =
-                            net.momirealms.craftengine.core.util.Key.of(args.get(0).asStr());
+                            net.momirealms.craftengine.core.util.Key.of(targetIdStr);
                     var def = net.momirealms.craftengine.bukkit.api.CraftEngineItems.byId(targetId);
                     if (def == null) return ScriptValue.ofItem(self);
                     org.bukkit.inventory.ItemStack bukkit = def.buildBukkitItem();
@@ -400,8 +426,8 @@ public final class ItemType {
                     var customData = self.get(DataComponents.CUSTOM_DATA);
                     if (customData != null) result.set(DataComponents.CUSTOM_DATA, customData);
                     return ScriptValue.ofItem(result);
-                } catch (Throwable ignored) { return ScriptValue.ofItem(stack(obj)); }
-            })
+                } catch (Throwable ignored) { return ScriptValue.ofItem(self); }
+                })
 
             // item.with_profile(player_or_name) — sets a REAL player-skin profile on THIS item
             // (any material Bukkit exposes as SkullMeta for, including a custom item whose
@@ -412,21 +438,25 @@ public final class ItemType {
             // templating (which only ever shows the VIEWER their own face). Accepts either a
             // wrapped Player/Entity value or a plain player-name string (works offline too, via
             // whatever skin Bukkit already has cached for that name).
-            .method("with_profile", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.ofItem(stack(obj));
+            // RAW arg — resolveProfileTarget pattern-matches the ScriptValue itself (wrapped
+            // Player/Entity OR a plain string); its null default doubles as the "argument absent"
+            // sentinel for the original's "return THIS item unchanged" fallback.
+            .methodTypedOpt1("with_profile", TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.RAW,
+                (ItemStack self, ScriptValue targetArg) -> {
+                if (targetArg == null) return ScriptValue.ofItem(self);
                 try {
-                    org.bukkit.OfflinePlayer target = resolveProfileTarget(args.get(0));
-                    if (target == null) return ScriptValue.ofItem(stack(obj));
+                    org.bukkit.OfflinePlayer target = resolveProfileTarget(targetArg);
+                    if (target == null) return ScriptValue.ofItem(self);
                     org.bukkit.inventory.ItemStack bukkitStack =
-                            org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(stack(obj));
+                            org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(self);
                     if (!(bukkitStack.getItemMeta() instanceof org.bukkit.inventory.meta.SkullMeta meta)) {
-                        return ScriptValue.ofItem(stack(obj));
+                        return ScriptValue.ofItem(self);
                     }
                     meta.setOwningPlayer(target);
                     bukkitStack.setItemMeta(meta);
                     return ItemType.wrap(org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(bukkitStack));
-                } catch (Throwable ignored) { return ScriptValue.ofItem(stack(obj)); }
-            })
+                } catch (Throwable ignored) { return ScriptValue.ofItem(self); }
+                })
             // item.tank("name") → current amount stored in that named tank buffer
             .methodTyped1("tank", TypeCodecs.STRING, TypeCodecs.DOUBLE, 0.0,
                 (ItemStack obj, String name) ->
@@ -444,29 +474,32 @@ public final class ItemType {
 
             // item.set_tank("name", amount) → item copy with that tank buffer set (clamped to
             // capacity when the item's own ItemDefinition declares one, uncapped otherwise)
-            .method("set_tank", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.ofItem(stack(obj));
-                ItemStack self = stack(obj);
-                String name = args.get(0).asStr();
-                int amount = (int) args.get(1).asNum();
+            // The amount slot's null Double default is the "fewer than 2 args" sentinel (a present
+            // arg always decodes to a non-null Double), reproducing the original's
+            // instance-dependent "return THIS item unchanged" fallback exactly.
+            .methodTypedOpt2("set_tank", TypeCodecs.STRING, (String) null, TypeCodecs.DOUBLE, (Double) null,
+                TypeCodecs.RAW,
+                (ItemStack self, String name, Double amountArg) -> {
+                if (amountArg == null) return ScriptValue.ofItem(self);
+                int amount = (int) (double) amountArg;
                 var def = dev.arubik.craftengine.item.ItemDefinition.byId(ceKey(self));
                 var tank = def != null ? def.tank(name) : null;
                 int capacity = tank != null ? tank.capacity() : Integer.MAX_VALUE;
                 return ScriptValue.ofItem(dev.arubik.craftengine.item.ItemStateData.setTankAmount(self, name, amount, capacity));
-            })
+                })
 
             // item.add_tank("name", delta) → set_tank(name, tank(name) + delta), clamped as above
-            .method("add_tank", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.ofItem(stack(obj));
-                ItemStack self = stack(obj);
-                String name = args.get(0).asStr();
-                int delta = (int) args.get(1).asNum();
+            .methodTypedOpt2("add_tank", TypeCodecs.STRING, (String) null, TypeCodecs.DOUBLE, (Double) null,
+                TypeCodecs.RAW,
+                (ItemStack self, String name, Double deltaArg) -> {
+                if (deltaArg == null) return ScriptValue.ofItem(self);
+                int delta = (int) (double) deltaArg;
                 var def = dev.arubik.craftengine.item.ItemDefinition.byId(ceKey(self));
                 var tank = def != null ? def.tank(name) : null;
                 int capacity = tank != null ? tank.capacity() : Integer.MAX_VALUE;
                 int current = dev.arubik.craftengine.item.ItemStateData.tankAmount(self, name);
                 return ScriptValue.ofItem(dev.arubik.craftengine.item.ItemStateData.setTankAmount(self, name, current + delta, capacity));
-            })
+                })
 
             // item.has_definition() → true if this is a polyfills:data_item-backed item with an
             // items/*.json ItemDefinition (as opposed to a plain vanilla item or some other CE

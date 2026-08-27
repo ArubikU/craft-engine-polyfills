@@ -332,16 +332,20 @@ public final class BlockType {
             // play_sound(soundId, vol?, pitch?)
             // --- Facing / direction methods (CE + vanilla aware) ---
             // facing(fallback?) — reads "facing" from CE custom OR vanilla block state
-            // Left untyped: the single arg is an optional fallback that's only consulted when no
-            // facing property was found — methodTyped1's onMissingArgs short-circuits BEFORE that
-            // check runs, so a facing()-with-no-arg call on a block that DOES have a facing would
-            // wrongly return onMissingArgs instead of the real facing value. Doesn't fit the
-            // "missing args -> fixed early return" shape the typed API models.
-            .method("facing", (obj, args) -> {
+            // Migrated to methodTypedOpt1: the single arg is an optional fallback that's only
+            // consulted when no facing property was found, so the body must still run on a no-arg
+            // call (methodTyped1's onMissingArgs would short-circuit BEFORE that lookup and wrongly
+            // return its constant for a block that DOES have a facing) — exactly what
+            // methodTypedOptN expresses. Arg stays TypeCodecs.RAW: it's returned verbatim, so it
+            // must not be coerced to any one native type. Its default IS the old missing-arg
+            // result (ScriptValue.NULL), so no sentinel is needed here.
+            // Instance stays Object (see glue_structure's note on ref()).
+            .methodTypedOpt1("facing", TypeCodecs.RAW, ScriptValue.NULL, TypeCodecs.RAW,
+                (Object obj, ScriptValue fallback) -> {
                 String val = readProperty(ref(obj).state(), "facing");
                 if (val == null) val = readProperty(ref(obj).state(), "horizontal_facing");
                 if (val != null) return ScriptValue.of(val);
-                return args.isEmpty() ? ScriptValue.NULL : args.get(0);
+                return fallback;
             })
             // relative(direction) — block adjacent in given direction ("north","south","east","west","up","down")
             // Migrated to methodTyped1.
@@ -481,12 +485,13 @@ public final class BlockType {
                 return u >= u0 && u <= u1 && v >= v0 && v <= v1;
             })
             // entities(radius?) — all entities near this block
-            // Left untyped: radius is optional WITH a real default (4) that's used to compute an
-            // actual result when omitted, not an early-return sentinel — doesn't fit
-            // methodTyped1's onMissingArgs short-circuit shape.
-            .method("entities", (obj, args) -> {
+            // Migrated to methodTypedOpt1: radius is optional WITH a real default (4) used to
+            // compute an actual result when omitted, not an early-return sentinel — precisely the
+            // methodTypedOptN shape (methodTyped1's onMissingArgs would short-circuit instead).
+            .methodTypedOpt1("entities", TypeCodecs.DOUBLE, 4.0, TypeCodecs.RAW,
+                (Object obj, Double radiusArg) -> {
                 BlockRef r = ref(obj);
-                double radius = args.isEmpty() ? 4 : args.get(0).asNum();
+                double radius = radiusArg;
                 net.minecraft.world.phys.Vec3 center = net.minecraft.world.phys.Vec3.atCenterOf(r.pos());
                 net.minecraft.world.phys.AABB box = net.minecraft.world.phys.AABB.ofSize(center, radius*2, radius*2, radius*2);
                 java.util.List<net.minecraft.world.entity.Entity> found = r.level().getEntities((net.minecraft.world.entity.Entity)null, box, e -> true);
@@ -513,22 +518,28 @@ public final class BlockType {
             // make_map("facing", "north")) — the generic primitive a "place a different custom
             // block depending on which face was clicked" item script needs (see
             // ItemActionEvent.clicked_block/clicked_face).
-            // Left untyped: the optional 2nd arg (props map) is inspected via args.size()>=2 and,
-            // when present, iterated as a raw Map — a shape methodTypedN's fixed per-slot codecs
-            // can't express without either forcing the map required (methodTyped2, breaking the
-            // valid 1-arg call) or losing the ability to tell "arg omitted" from "arg present but
-            // empty" once decoded through a codec.
-            .method("place_custom", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
+            // Migrated to methodTypedOpt2: the optional 2nd arg (props map) must leave the 1-arg
+            // call working, which methodTyped2's onMissingArgs would break — methodTypedOptN always
+            // runs the body instead. The map slot stays TypeCodecs.RAW (it's iterated as a raw Map
+            // after an instanceof narrowing, not one fixed native type) with a Java `null` default,
+            // and `id` likewise takes a null default as an "argument was absent" sentinel so the
+            // original `args.isEmpty()` early return is reproduced EXACTLY — a decoded STRING is
+            // never null (ScriptValue.of(String) maps null to NULL, so asStr() always returns a
+            // real string), so null can only mean "not passed". An absent map is null and simply
+            // fails the same instanceof check a present-but-non-map argument does.
+            .methodTypedOpt2("place_custom", TypeCodecs.STRING, (String) null,
+                TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.BOOL,
+                (Object obj, String idArg, ScriptValue propsArg) -> {
+                if (idArg == null) return false;
                 BlockRef r = ref(obj);
                 try {
                     net.momirealms.craftengine.core.util.Key id =
-                            net.momirealms.craftengine.core.util.Key.of(args.get(0).asStr());
+                            net.momirealms.craftengine.core.util.Key.of(idArg);
                     net.momirealms.craftengine.core.block.BlockDefinition def =
                             net.momirealms.craftengine.bukkit.api.CraftEngineBlocks.byId(id);
-                    if (def == null) return ScriptValue.of(false);
+                    if (def == null) return false;
                     net.momirealms.craftengine.core.block.ImmutableBlockState state = def.defaultState();
-                    if (args.size() >= 2 && args.get(1) instanceof ScriptValue.Obj mo
+                    if (propsArg instanceof ScriptValue.Obj mo
                             && mo.instance() instanceof java.util.Map<?, ?> map) {
                         for (var entry : map.entrySet()) {
                             String propName = String.valueOf(entry.getKey());
@@ -543,9 +554,8 @@ public final class BlockType {
                     }
                     org.bukkit.World world = r.level().getWorld();
                     org.bukkit.Location loc = new org.bukkit.Location(world, r.pos().getX(), r.pos().getY(), r.pos().getZ());
-                    boolean placed = net.momirealms.craftengine.bukkit.api.CraftEngineBlocks.place(loc, state, 3, false);
-                    return ScriptValue.of(placed);
-                } catch (Throwable e) { return ScriptValue.of(false); }
+                    return net.momirealms.craftengine.bukkit.api.CraftEngineBlocks.place(loc, state, 3, false);
+                } catch (Throwable e) { return false; }
             })
             // ---- Fluid properties ----
             // has_fluid → true if the block has any non-empty fluid (water, lava, etc.)
@@ -583,24 +593,28 @@ public final class BlockType {
                     return VectorType.wrap(flow.x, flow.y, flow.z);
                 } catch (Throwable ignored) { return VectorType.wrap(0, 0, 0); }
             })
-            // Left untyped: only soundId is required — vol/pitch are optional trailing args each
-            // with their own real default (1.0f) computed from args.size(), not an early-return
-            // sentinel — doesn't fit methodTypedN's fixed-arity onMissingArgs shape.
-            .method("play_sound", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
+            // Migrated to methodTypedOpt3: only soundId is required — vol/pitch are optional
+            // trailing args each with their own real default (1.0f) and the body still runs when
+            // they're omitted, which is methodTypedOptN's shape (methodTyped3's onMissingArgs would
+            // break the valid 1-arg call). soundId takes a Java `null` default as an "argument was
+            // absent" sentinel so the original `args.isEmpty()` early return is reproduced EXACTLY
+            // (a decoded STRING is never null — see place_custom's note above).
+            .methodTypedOpt3("play_sound", TypeCodecs.STRING, (String) null,
+                TypeCodecs.DOUBLE, 1.0, TypeCodecs.DOUBLE, 1.0, TypeCodecs.BOOL,
+                (Object obj, String soundId, Double volArg, Double pitchArg) -> {
+                if (soundId == null) return false;
                 try {
                     BlockRef r = ref(obj);
-                    String soundId = args.get(0).asStr();
-                    float vol   = args.size() >= 2 ? (float) args.get(1).asNum() : 1.0f;
-                    float pitch = args.size() >= 3 ? (float) args.get(2).asNum() : 1.0f;
+                    float vol   = volArg.floatValue();
+                    float pitch = pitchArg.floatValue();
                     Identifier id = Identifier.tryParse(soundId.contains(":") ? soundId : "minecraft:" + soundId);
-                    if (id == null) return ScriptValue.of(false);
+                    if (id == null) return false;
                     r.level().playSeededSound(null,
                         r.pos().getX() + 0.5, r.pos().getY() + 0.5, r.pos().getZ() + 0.5,
                         Holder.direct(SoundEvent.createVariableRangeEvent(id)),
                         SoundSource.BLOCKS, vol, pitch, 0L);
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
+                    return true;
+                } catch (Throwable ignored) { return false; }
             });
     }
 

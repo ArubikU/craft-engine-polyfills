@@ -3,6 +3,7 @@ package dev.arubik.craftengine.script.types.machine;
 import dev.arubik.craftengine.crafting.WorkbenchDefinition;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import net.minecraft.world.item.ItemStack;
 
 public final class WorkbenchType {
@@ -17,33 +18,33 @@ public final class WorkbenchType {
             .property("height",        obj -> ScriptValue.of(ref(obj).def().layout().gridHeight()))
             .property("total_inputs",  obj -> ScriptValue.of(ref(obj).def().layout().inputSlots().length))
             .property("total_outputs", obj -> ScriptValue.of(ref(obj).def().layout().outputSlots().size()))
-            // Not migrated to methodTyped1: idx defaults to 0 when the arg is omitted
-            // (args.isEmpty() ? 0 : ...) — a "default-if-missing" shape a typed handler's
-            // onMissingArgs (a single fixed fallback RETURN value) can't express, since here the
-            // default applies to an ARGUMENT, not the return. Left untyped.
-            .method("input", (obj, args) -> {
-                WorkbenchRef r = ref(obj);
-                int idx = args.isEmpty() ? 0 : (int) args.get(0).asNum();
-                int[] inputSlots = r.def().layout().inputSlots();
-                if (idx < 0 || idx >= inputSlots.length) return ScriptValue.NULL;
-                return getSlot(r.slots(), inputSlots[idx]);
-            })
-            // Not migrated: same default-if-missing idx shape as input() above.
-            .method("output", (obj, args) -> {
-                WorkbenchRef r = ref(obj);
-                int idx = args.isEmpty() ? 0 : (int) args.get(0).asNum();
-                java.util.List<Integer> outputSlots = r.def().layout().outputSlots();
-                if (idx < 0 || idx >= outputSlots.size()) return ScriptValue.NULL;
-                return getSlot(r.slots(), outputSlots.get(idx));
-            })
-            // Not migrated: same default-if-missing idx shape as input() above.
-            .method("tool", (obj, args) -> {
-                WorkbenchRef r = ref(obj);
-                int idx = args.isEmpty() ? 0 : (int) args.get(0).asNum();
-                java.util.List<Integer> toolSlots = r.def().toolSlots();
-                if (idx < 0 || idx >= toolSlots.size()) return ScriptValue.NULL;
-                return getSlot(r.slots(), toolSlots.get(idx));
-            });
+            // Migrated to methodTypedOpt1: idx is a single OPTIONAL argument defaulting to 0 when
+            // omitted (the old `args.isEmpty() ? 0 : ...`) with the body still running — exactly
+            // what methodTypedOptN models (methodTyped1's onMissingArgs would instead skip the body
+            // entirely). Instance parameter is WorkbenchRef because ref(obj) is a plain cast.
+            .methodTypedOpt1("input", TypeCodecs.DOUBLE, 0.0, TypeCodecs.RAW,
+                (WorkbenchRef r, Double idxArg) -> {
+                    int idx = idxArg.intValue();
+                    int[] inputSlots = r.def().layout().inputSlots();
+                    if (idx < 0 || idx >= inputSlots.length) return ScriptValue.NULL;
+                    return getSlot(r.slots(), inputSlots[idx]);
+                })
+            // Same default-if-missing idx shape as input() above.
+            .methodTypedOpt1("output", TypeCodecs.DOUBLE, 0.0, TypeCodecs.RAW,
+                (WorkbenchRef r, Double idxArg) -> {
+                    int idx = idxArg.intValue();
+                    java.util.List<Integer> outputSlots = r.def().layout().outputSlots();
+                    if (idx < 0 || idx >= outputSlots.size()) return ScriptValue.NULL;
+                    return getSlot(r.slots(), outputSlots.get(idx));
+                })
+            // Same default-if-missing idx shape as input() above.
+            .methodTypedOpt1("tool", TypeCodecs.DOUBLE, 0.0, TypeCodecs.RAW,
+                (WorkbenchRef r, Double idxArg) -> {
+                    int idx = idxArg.intValue();
+                    java.util.List<Integer> toolSlots = r.def().toolSlots();
+                    if (idx < 0 || idx >= toolSlots.size()) return ScriptValue.NULL;
+                    return getSlot(r.slots(), toolSlots.get(idx));
+                });
     }
 
     public static ScriptValue wrap(WorkbenchDefinition def, ItemStack[] slots) {

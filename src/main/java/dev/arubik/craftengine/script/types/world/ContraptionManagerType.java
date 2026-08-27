@@ -54,26 +54,32 @@ public final class ContraptionManagerType {
                     return ScriptValue.NULL;
                 })
             // --- Creation ---
-            // create(world, x, y, z[, type]) — NOT migrated: the trailing `type` argument is
-            // genuinely optional, checked via args.size() >= 5 inside the body — a typed handler
-            // only receives its fixed-arity decoded arguments, not the original args list/size, so
-            // that conditional read can't be expressed (same reasoning as ContraptionType's
-            // teleport()/play_sound() NOT-migrated notes). Left untyped.
-            .method("create", (obj, args) -> {
-                if (args.size() < 4) return ScriptValue.NULL;
-                try {
-                    ScriptValue worldVal = args.get(0);
-                    if (!(worldVal instanceof ScriptValue.Obj wo) || !(wo.instance() instanceof ServerLevel level)) return ScriptValue.NULL;
-                    int x = (int) args.get(1).asNum(), y = (int) args.get(2).asNum(), z = (int) args.get(3).asNum();
-                    BlockPos pos = new BlockPos(x, y, z);
-                    Key type = args.size() >= 5 ? Key.of(args.get(4).asStr()) : MachineContraptionType.KEY;
-                    org.bukkit.World bukkit = ((CraftWorld) level.getWorld());
-                    ContraptionEntity entity = ContraptionAssembler.assemble(bukkit, pos, type);
-                    if (entity == null) return ScriptValue.NULL;
-                    return entity.state().level() instanceof dev.arubik.craftengine.contraption.core.ContraptionLevel cl
-                            ? ContraptionType.wrap(cl) : ScriptValue.NULL;
-                } catch (Throwable e) { return ScriptValue.NULL; }
-            })
+            // create(world, x, y, z[, type]) — migrated to methodTypedOpt5: the trailing `type`
+            // argument is genuinely optional and the body must still assemble when it's omitted,
+            // which is methodTypedOptN's shape (methodTyped5's onMissingArgs would skip the whole
+            // assembly for the valid 4-arg call). Every REQUIRED slot takes a Java `null` default
+            // used purely as an "argument was absent" sentinel, so the original `args.size() < 4`
+            // early return is reproduced EXACTLY (a decoded DOUBLE/STRING is never null — asNum()/
+            // asStr() always yield a real value — and a decoded RAW is never null, so null can only
+            // mean "not passed"), and no assembly side effect can fire on a short call.
+            // `world` stays TypeCodecs.RAW: it needs an instanceof narrowing to a wrapped ServerLevel.
+            .methodTypedOpt5("create", TypeCodecs.RAW, (ScriptValue) null,
+                TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, (Double) null,
+                TypeCodecs.STRING, (String) null, TypeCodecs.RAW,
+                (Object obj, ScriptValue worldVal, Double xArg, Double yArg, Double zArg, String typeArg) -> {
+                    if (xArg == null || yArg == null || zArg == null) return ScriptValue.NULL;
+                    try {
+                        if (!(worldVal instanceof ScriptValue.Obj wo) || !(wo.instance() instanceof ServerLevel level)) return ScriptValue.NULL;
+                        int x = xArg.intValue(), y = yArg.intValue(), z = zArg.intValue();
+                        BlockPos pos = new BlockPos(x, y, z);
+                        Key type = typeArg != null ? Key.of(typeArg) : MachineContraptionType.KEY;
+                        org.bukkit.World bukkit = ((CraftWorld) level.getWorld());
+                        ContraptionEntity entity = ContraptionAssembler.assemble(bukkit, pos, type);
+                        if (entity == null) return ScriptValue.NULL;
+                        return entity.state().level() instanceof dev.arubik.craftengine.contraption.core.ContraptionLevel cl
+                                ? ContraptionType.wrap(cl) : ScriptValue.NULL;
+                    } catch (Throwable e) { return ScriptValue.NULL; }
+                })
             // create_at(block_value) — assemble at a Block script value
             // create_bearing(seed, pivot [, type]) — assemble the structure grown from `seed`,
             // pivoting on `pivot`, which is left standing in the world.
@@ -84,18 +90,20 @@ public final class ContraptionManagerType {
             // graph, gluing a windmill to its bearing pulled the bearing into the contraption —
             // the block was then removed from the world, so the contraption was anchored to air,
             // never moved, and left the build looking like it had simply vanished.
-            // NOT migrated: trailing `type` argument is optional (args.size() >= 3) — same reason
-            // as create() above. Left untyped.
-            .method("create_bearing", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.NULL;
+            // Migrated to methodTypedOpt3: trailing `type` argument is optional (was args.size()
+            // >= 3) — same reasoning as create() above, including the null "absent" sentinels. The
+            // old `args.size() < 2` guard needs no explicit replacement here: an absent seed/pivot
+            // decodes to null, which fails the very same instanceof narrowing the body already does
+            // and returns NULL before any assembly.
+            .methodTypedOpt3("create_bearing", TypeCodecs.RAW, (ScriptValue) null,
+                TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.STRING, (String) null, TypeCodecs.RAW,
+                (Object obj, ScriptValue sv, ScriptValue pv, String typeArg) -> {
                 try {
-                    ScriptValue sv = args.get(0);
-                    ScriptValue pv = args.get(1);
                     if (!(sv instanceof ScriptValue.Obj so) || !(so.instance() instanceof BlockType.BlockRef seed))
                         return ScriptValue.NULL;
                     if (!(pv instanceof ScriptValue.Obj po) || !(po.instance() instanceof BlockType.BlockRef pivot))
                         return ScriptValue.NULL;
-                    Key type = args.size() >= 3 ? Key.of(args.get(2).asStr()) : MachineContraptionType.KEY;
+                    Key type = typeArg != null ? Key.of(typeArg) : MachineContraptionType.KEY;
                     org.bukkit.World bukkit = ((CraftWorld) seed.level().getWorld());
                     ContraptionEntity entity = ContraptionAssembler.assembleFrom(
                             bukkit, pivot.pos(), seed.pos(), type, 0.0, 0.0, null);
@@ -104,14 +112,15 @@ public final class ContraptionManagerType {
                             ? ContraptionType.wrap(cl) : ScriptValue.NULL;
                 } catch (Throwable e) { return ScriptValue.NULL; }
             })
-            // NOT migrated: trailing `type` argument is optional (args.size() >= 2) — same reason
-            // as create() above. Left untyped.
-            .method("create_at", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
+            // Migrated to methodTypedOpt2: trailing `type` argument is optional (was args.size()
+            // >= 2) — same reasoning as create_bearing() above, and the old `args.isEmpty()` guard
+            // is likewise subsumed by the block argument's own instanceof narrowing.
+            .methodTypedOpt2("create_at", TypeCodecs.RAW, (ScriptValue) null,
+                TypeCodecs.STRING, (String) null, TypeCodecs.RAW,
+                (Object obj, ScriptValue bv, String typeArg) -> {
                 try {
-                    ScriptValue bv = args.get(0);
                     if (!(bv instanceof ScriptValue.Obj bo) || !(bo.instance() instanceof BlockType.BlockRef ref)) return ScriptValue.NULL;
-                    Key type = args.size() >= 2 ? Key.of(args.get(1).asStr()) : MachineContraptionType.KEY;
+                    Key type = typeArg != null ? Key.of(typeArg) : MachineContraptionType.KEY;
                     org.bukkit.World bukkit = ((CraftWorld) ref.level().getWorld());
                     ContraptionEntity entity = ContraptionAssembler.assemble(bukkit, ref.pos(), type);
                     if (entity == null) return ScriptValue.NULL;

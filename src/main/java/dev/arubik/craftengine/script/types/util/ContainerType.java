@@ -77,16 +77,14 @@ public final class ContainerType {
                     container.clearContent();
                     return true;
                 })
-            // NOT migrated: "pull" defaults its count argument to 64 when omitted
-            // (args.isEmpty() ? 64 : asNum()) — a "default-if-missing" shape a typed handler can't
-            // express (see RedstoneType.on()'s identical note). Left untyped.
             // pull(count) -> takes up to `count` (default a full stack) from the FIRST non-empty
             // slot found, whatever item it is — the untargeted "just give me something" pull a
             // hopper-alike would do. Returns an empty Item if the container had nothing at all.
-            .method("pull", (obj, args) -> {
-                int count = args.isEmpty() ? 64 : (int) args.get(0).asNum();
-                return ScriptValue.ofItem(pullAny(c(obj), count));
-            })
+            // `count` is optional-with-default (64 when omitted) and the body still runs either
+            // way, which is exactly methodTypedOpt1's shape.
+            .methodTypedOpt1("pull", TypeCodecs.DOUBLE, 64.0, TypeCodecs.RAW,
+                (Container container, Double countArg) ->
+                    ScriptValue.ofItem(pullAny(container, countArg.intValue())))
             // pull_item(spec, count) -> takes up to `count` matching `spec`, merging across however
             // many slots hold it — the targeted counterpart of pull(). `spec` accepts:
             //   - an Item/ItemStack value  -> exact id + data-component match
@@ -97,11 +95,12 @@ public final class ContainerType {
             //                                 own "tags" config
             // Useful e.g. for a Portable Storage Interface only pulling logs, or a sawmill only
             // pulling planks back out of contraption storage.
-            // NOT migrated: `count` is an optional trailing argument defaulted via
-            // args.size() > 1 ? asNum() : 64 — the same optional-trailing-argument shape as
-            // ContraptionType's teleport()/play_sound() notes (a typed handler only receives its
-            // fixed-arity decoded arguments, not the original args list/size, so that conditional
-            // read can't be expressed). Left untyped.
+            // NOT migrated: `spec` is REQUIRED (no args at all returns NULL without touching the
+            // container) while `count` is optional-with-default — a mixed required/optional shape
+            // neither methodTypedN (which would skip the body entirely) nor methodTypedOptN (which
+            // would run the body with a defaulted `spec`; ScriptValue.NULL.asStr() is the literal
+            // "null", so ItemMatch.predicateFor would build a real never-matching id predicate and
+            // return an empty Item instead of NULL) can reproduce exactly. Left untyped.
             .method("pull_item", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.NULL;
                 java.util.function.Predicate<ItemStack> filter = ItemMatch.predicateFor(args.get(0));

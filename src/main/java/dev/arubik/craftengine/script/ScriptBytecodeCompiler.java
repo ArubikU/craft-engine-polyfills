@@ -1532,11 +1532,13 @@ final class ScriptBytecodeCompiler {
             String untypedCandidate = null;
             if (generated != null) {
                 PolyClassGenerator.TypedMemberRef t = generated.typedMethods().get(method);
-                // Arity must match the generated native signature exactly — a call site passing
-                // fewer args still needs the untyped wrapper's onMissingArgs handling, which only
-                // the erased MethodHandler knows how to apply.
+                // Arity must match the generated native signature exactly. A call site passing
+                // FEWER args still needs the registration's own missing-args handling (a
+                // methodTypedOptN's per-argument defaults, or methodTypedN's onMissingArgs), which
+                // only the erased MethodHandler applies — so fall to the untyped shim, which every
+                // typed method also generates, rather than all the way to generic memberCall.
                 if (t != null && t.argKinds().length == arity) typedCandidate = t;
-                else if (t == null) untypedCandidate = generated.untypedMethods().get(method);
+                else untypedCandidate = generated.untypedMethods().get(method);
             }
             PolyClassGenerator.TypedMemberRef typedRef = typedCandidate;
             String untypedJavaName = untypedCandidate;

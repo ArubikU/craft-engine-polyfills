@@ -4,6 +4,7 @@ import dev.arubik.craftengine.chainery.Chain;
 import dev.arubik.craftengine.chainery.ChainEngine;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import dev.arubik.craftengine.script.types.primitive.VectorType;
 import org.bukkit.Bukkit;
 
@@ -37,14 +38,14 @@ public final class ChainType {
             // convenience getters/setters (see Chain#getInt/getString) rather than a second store.
             // break(drop_items?) — severs this chain. drop_items defaults to false: a script-triggered
             // break didn't necessarily come with items consumed on creation, so refunding is opt-in.
-            // Not migrated to methodTyped1: drop_items has a default-if-missing shape
-            // (!args.isEmpty() && args.get(0).asBool()) — the default applies to the ARGUMENT when
-            // absent, not to the return value, which onMissingArgs can't express. Left untyped.
-            .method("break", (obj, args) -> {
-                boolean drop = !args.isEmpty() && args.get(0).asBool();
-                ChainEngine.breakChain(chain(obj), drop);
-                return ScriptValue.of(true);
-            });
+            // drop_items has a default-if-missing shape (!args.isEmpty() && args.get(0).asBool()):
+            // the default applies to the ARGUMENT when absent while the body still runs, which is
+            // methodTypedOpt1, not onMissingArgs.
+            .methodTypedOpt1("break", TypeCodecs.BOOL, false, TypeCodecs.BOOL,
+                (Chain chain, Boolean drop) -> {
+                    ChainEngine.breakChain(chain, drop);
+                    return true;
+                });
     }
 
     public static ScriptValue wrap(Chain chain) {

@@ -40,14 +40,12 @@ public final class MultiBlockType {
             .methodTyped3("is_at", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
                 (MultiBlockRef r, Double x, Double y, Double z) ->
                     (int) (double) x == r.relX() && (int) (double) y == r.relY() && (int) (double) z == r.relZ())
-            // side(side_name) — NOT migrated to methodTyped1: a missing arg still runs the handler
-            // with a default of "" ("default-if-missing" shape) rather than short-circuiting, which
-            // methodTypedN's onMissingArgs can't express (it skips the handler body entirely). Left
-            // untyped.
-            .method("side", (obj, args) -> {
-                String side = args.isEmpty() ? "" : args.get(0).asStr().toLowerCase();
-                MultiBlockRef r = ref(obj);
-                return ScriptValue.of(switch (side) {
+            // side(side_name) — a missing arg still runs the handler with a "" default rather than
+            // short-circuiting, which is exactly methodTypedOpt1's shape (STRING's decode is the
+            // same asStr() the old body did; "" lower-cases to "" and falls through to `default`,
+            // as before).
+            .methodTypedOpt1("side", TypeCodecs.STRING, "", TypeCodecs.BOOL,
+                (MultiBlockRef r, String sideArg) -> switch (sideArg.toLowerCase()) {
                     case "left"   -> r.relX() < 0;
                     case "right"  -> r.relX() > 0;
                     case "front"  -> r.relZ() < 0;
@@ -56,8 +54,7 @@ public final class MultiBlockType {
                     case "bottom" -> r.relY() < 0;
                     case "center" -> r.relX() == 0 && r.relZ() == 0;
                     default       -> false;
-                });
-            })
+                })
             // get_part_block(schemaRelX, schemaRelY, schemaRelZ)
             // Returns the world-space block at the given schema-relative offset,
             // rotated according to the core's facing direction.

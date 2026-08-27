@@ -1,7 +1,6 @@
 package dev.arubik.craftengine.script.types.menu;
 
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.bukkit.Bukkit;
@@ -41,47 +40,60 @@ public final class MenuType {
             // Menu.create(size, title) — size is rounded up to the next multiple of 9 and clamped
             // to a legal chest inventory (9..54). A future nicety could accept an InventoryType
             // name instead of a bare size; skipped for now since a chest grid covers the main case.
-            // NOT migrated to methodTyped: `title` is an optional trailing argument with a default
-            // ("Menu") that only applies when present alongside a REQUIRED size arg — a typed
-            // handler's onMissingArgs fallback would trigger on args.size()<2 too, which changes
-            // behavior for a caller passing just size (currently valid: title defaults to "Menu").
-            // Left untyped.
-            .method("create", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                int size = normalizeSize((int) args.get(0).asNum());
-                String title = args.size() >= 2 ? args.get(1).asStr() : "Menu";
-                Inventory inv = Bukkit.createInventory(null, size, toDisplayComponent(title));
-                return ScriptValue.ofObj("MenuBuilder", new ScriptMenu(inv));
-            });
+            // Migrated to methodTypedOpt2: `title` is an optional trailing argument defaulting to
+            // "Menu", so a 1-arg call must still build the menu — methodTyped2's onMissingArgs
+            // would wrongly short-circuit it, but methodTypedOptN always runs the body. `size`
+            // takes a Java `null` default used purely as an "argument was absent" sentinel,
+            // reproducing the original `args.isEmpty()` early return EXACTLY (a decoded DOUBLE is
+            // never null — asNum() always yields a real double — so null can only mean "not
+            // passed").
+            .methodTypedOpt2("create", TypeCodecs.DOUBLE, (Double) null,
+                TypeCodecs.STRING, "Menu", TypeCodecs.RAW,
+                (Object obj, Double sizeArg, String title) -> {
+                    if (sizeArg == null) return ScriptValue.NULL;
+                    int size = normalizeSize(sizeArg.intValue());
+                    Inventory inv = Bukkit.createInventory(null, size, toDisplayComponent(title));
+                    return ScriptValue.ofObj("MenuBuilder", new ScriptMenu(inv));
+                });
 
         PolyTypeRegistry.define("MenuBuilder")
             // set_item(slot, item, click_script?, click_data?) — click_script is an optional
             // "file.pf:function" ref (omit for a purely decorative item); click_data is an optional
             // make_map(...) value handed back as MenuClick.get(...) when that slot is clicked.
-            // NOT migrated to methodTyped: click_script/click_data are optional trailing arguments
-            // (args.size() checks decide whether to apply them) — not expressible with a typed
-            // handler's fixed-arity decoded arguments. Left untyped.
-            .method("set_item", (obj, args) -> {
-                ScriptMenu menu = menu(obj);
-                if (args.size() < 2 || !(args.get(1) instanceof ScriptValue.Item itemVal) || itemVal.stack() == null) {
+            // Migrated to methodTypedOpt4: click_script/click_data are optional trailing arguments
+            // and the body still runs (and still returns the live builder) when they're omitted,
+            // which is methodTypedOptN's shape. Java `null` defaults act as "argument was absent"
+            // sentinels — a decoded DOUBLE/STRING is never null and a decoded RAW is never null, so
+            // each null reproduces exactly one of the original args.size() branches: slot/item
+            // absent -> the unchanged builder, click_script absent -> null (what setItem expects),
+            // click_data absent -> null (NOT dataMap's Map.of(), which is what a PRESENT non-map
+            // argument yields — that distinction is preserved).
+            // `item` stays TypeCodecs.RAW: it needs an instanceof narrowing to ScriptValue.Item.
+            .methodTypedOpt4("set_item", TypeCodecs.DOUBLE, (Double) null,
+                TypeCodecs.RAW, (ScriptValue) null,
+                TypeCodecs.STRING, (String) null,
+                TypeCodecs.RAW, (ScriptValue) null,
+                TypeCodecs.RAW,
+                (ScriptMenu menu, Double slotArg, ScriptValue itemArg, String clickScript, ScriptValue dataArg) -> {
+                    if (slotArg == null || !(itemArg instanceof ScriptValue.Item itemVal) || itemVal.stack() == null) {
+                        return ScriptValue.ofObj("MenuBuilder", menu);
+                    }
+                    int slot = slotArg.intValue();
+                    org.bukkit.inventory.ItemStack bukkitItem = CraftItemStack.asBukkitCopy(itemVal.stack());
+                    Map<String, ScriptValue> data = dataArg == null ? null : dataMap(dataArg);
+                    menu.setItem(slot, bukkitItem, clickScript, data);
                     return ScriptValue.ofObj("MenuBuilder", menu);
-                }
-                int slot = (int) args.get(0).asNum();
-                org.bukkit.inventory.ItemStack bukkitItem = CraftItemStack.asBukkitCopy(itemVal.stack());
-                String clickScript = args.size() >= 3 ? args.get(2).asStr() : null;
-                Map<String, ScriptValue> data = args.size() >= 4 ? dataMap(args, 3) : null;
-                menu.setItem(slot, bukkitItem, clickScript, data);
-                return ScriptValue.ofObj("MenuBuilder", menu);
-            })
-            // NOT migrated to methodTyped: on a missing arg this still returns the live
+                })
+            // Migrated to methodTypedOpt1: on a missing arg this still returns the live
             // ScriptValue.ofObj("MenuBuilder", menu) wrapping THIS call's own instance — an
-            // instance-dependent fallback a typed handler's onMissingArgs (a fixed value chosen at
-            // registration time) cannot express. Left untyped.
-            .method("set_close_script", (obj, args) -> {
-                ScriptMenu menu = menu(obj);
-                if (!args.isEmpty()) menu.setCloseScript(args.get(0).asStr());
-                return ScriptValue.ofObj("MenuBuilder", menu);
-            })
+            // instance-dependent fallback methodTyped1's fixed onMissingArgs can't express, but
+            // methodTypedOptN always runs the body so the instance is in hand. The null default is
+            // the "argument was absent" sentinel (see set_item above).
+            .methodTypedOpt1("set_close_script", TypeCodecs.STRING, (String) null, TypeCodecs.RAW,
+                (ScriptMenu menu, String script) -> {
+                    if (script != null) menu.setCloseScript(script);
+                    return ScriptValue.ofObj("MenuBuilder", menu);
+                })
             // open(player) — shows the inventory THEN tracks it, so a failed openInventory (closed
             // world, invalid state, whatever) never leaves a tracked-but-never-shown menu behind.
             // Argument decoded as TypeCodecs.RAW (not a plain asStr()/asNum()/asBool() coercion) —
@@ -132,19 +144,15 @@ public final class MenuType {
         return bukkit instanceof Player p ? p : null;
     }
 
-    /** Copied from {@code TaskManagerType#dataMap} — same "optional trailing make_map(...) value"
-     *  extraction, adjusted for this method's own arg position. */
+    /** Copied from {@code TaskManagerType#dataMap} — same "make_map(...) value" extraction, taking
+     *  the already-decoded argument now that set_item is a typed registration. Only called for an
+     *  argument that was actually PRESENT (a missing one is null and never reaches here), so this
+     *  keeps the old list form's "present but not a Map -> Map.of()" behaviour. */
     @SuppressWarnings("unchecked")
-    private static Map<String, ScriptValue> dataMap(List<ScriptValue> args, int index) {
-        if (args.size() <= index) return Map.of();
-        ScriptValue v = args.get(index);
+    private static Map<String, ScriptValue> dataMap(ScriptValue v) {
         if (v instanceof ScriptValue.Obj o && "Map".equals(o.typeName()) && o.instance() instanceof Map<?, ?> m) {
             return new LinkedHashMap<>((Map<String, ScriptValue>) m);
         }
         return Map.of();
-    }
-
-    private static ScriptMenu menu(Object obj) {
-        return (ScriptMenu) obj;
     }
 }

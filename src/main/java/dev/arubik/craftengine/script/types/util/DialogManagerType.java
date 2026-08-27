@@ -98,11 +98,14 @@ public final class DialogManagerType {
 
     public static void register() {
         PolyTypeRegistry.define("Dialog")
-            // base(title) — NOT migrated to methodTyped1: the DialogSupport.isAvailable() warning log
-            // must fire even when called with zero args (it's checked BEFORE the args.isEmpty() check,
-            // independent of arg count), but methodTypedN's onMissingArgs shortcut returns immediately
-            // for a too-short args list WITHOUT ever entering the handler body — so that log line would
-            // silently stop firing for a 0-arg call on an unavailable server. Left untyped.
+            // base(title) — NOT migrated. methodTyped1 is out: the DialogSupport.isAvailable()
+            // warning log must fire even for a 0-arg call (it is checked BEFORE the args.isEmpty()
+            // check), but onMissingArgs returns without ever entering the handler body, so that log
+            // line would silently stop firing. methodTypedOpt1 doesn't fit either: the only sentinel
+            // it could use for "no title given" is null, and the title slot must stay TypeCodecs.RAW
+            // (it accepts an Array of glyph parts), where an explicitly passed ScriptValue.NULL is a
+            // legal value that today builds a Builder — a null default could not tell the two apart.
+            // Left untyped.
             .method("base", (obj, args) -> {
                 if (!DialogSupport.isAvailable()) {
                     LOG.warning("[Dialog] Dialog.base() called but DialogSupport.isAvailable() is false — "
@@ -115,14 +118,14 @@ public final class DialogManagerType {
             });
 
         PolyTypeRegistry.define("DialogBuilder")
-            // can_close_with_escape(bool) — NOT migrated to methodTyped1: a missing arg still runs
-            // the handler with a default of true ("default-if-missing" shape) rather than short-
-            // circuiting, which methodTypedN's onMissingArgs can't express. Left untyped.
-            .method("can_close_with_escape", (obj, args) -> {
-                Builder b = builder(obj);
-                b.canCloseWithEscape = args.isEmpty() || args.get(0).asBool();
-                return ScriptValue.ofObj("DialogBuilder", b);
-            })
+            // can_close_with_escape(bool) — methodTypedOpt1 with default TRUE reproduces the
+            // original's "args.isEmpty() || args.get(0).asBool()" exactly: the handler always runs,
+            // and an omitted argument reads as true.
+            .methodTypedOpt1("can_close_with_escape", TypeCodecs.BOOL, true, TypeCodecs.RAW,
+                (Builder b, Boolean value) -> {
+                    b.canCloseWithEscape = value;
+                    return ScriptValue.ofObj("DialogBuilder", b);
+                })
             // on_close(action_ref) — called after ANY button action finishes (or, once Escape can be
             // told apart from a real button click, on Escape too), in place of the default "reopen
             // the machine's own menu" behavior. Call before .as_notice/.as_confirmation/
@@ -131,68 +134,68 @@ public final class DialogManagerType {
             // ui:false pull-amount slider) should set this instead of relying on flags.ui to suppress
             // the reopen — flags.ui only happens to be false for every dialog-outside-a-menu case so
             // far, not because it's actually what determines this.
-            // NOT migrated to methodTyped1: a missing arg still runs the handler and just skips the
-            // assignment ("default-if-missing" shape) rather than short-circuiting. Left untyped.
-            .method("on_close", (obj, args) -> {
-                Builder b = builder(obj);
-                if (!args.isEmpty()) b.onCloseRef = args.get(0).asStr();
-                return ScriptValue.ofObj("DialogBuilder", b);
-            })
+            // methodTypedOpt1 with a NULL default: no TypeCodec ever decodes a PRESENT argument to
+            // Java null, so "ref == null" is exactly the original's args.isEmpty(), and the skipped
+            // assignment (leaving any previously set ref alone) is preserved.
+            .methodTypedOpt1("on_close", TypeCodecs.STRING, (String) null, TypeCodecs.RAW,
+                (Builder b, String ref) -> {
+                    if (ref != null) b.onCloseRef = ref;
+                    return ScriptValue.ofObj("DialogBuilder", b);
+                })
             // body(text) — a plain message line, OR an Array mixing plain strings with
             // Images.from(id)/Images.shift(n) parts (same convention a machine's title uses — see
             // DataMachineBlockEntity#scriptValueToTitleComponent) for a line that embeds a
             // CraftEngine font glyph. Call multiple times for multiple paragraphs.
-            // NOT migrated to methodTyped1: a missing arg still runs the handler and just skips the
-            // append ("default-if-missing" shape) rather than short-circuiting. Left untyped.
-            .method("body", (obj, args) -> {
-                Builder b = builder(obj);
-                if (!args.isEmpty()) b.body.add(DialogBody.plainMessage(partsToComponent(args.get(0))));
-                return ScriptValue.ofObj("DialogBuilder", b);
-            })
+            // methodTypedOpt1 over TypeCodecs.RAW (the argument may be a string OR an Array of
+            // parts), null default standing in for the original's args.isEmpty() skip.
+            .methodTypedOpt1("body", TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.RAW,
+                (Builder b, ScriptValue text) -> {
+                    if (text != null) b.body.add(DialogBody.plainMessage(partsToComponent(text)));
+                    return ScriptValue.ofObj("DialogBuilder", b);
+                })
             // body_item(item, show_tooltip?) — shows an ItemStack in the dialog body.
-            // NOT migrated to methodTyped: "default-if-missing" shape (missing/wrong-shape args just
-            // skip the append instead of short-circuiting) plus a dynamic instanceof-typed arg. Left
-            // untyped.
-            .method("body_item", (obj, args) -> {
-                Builder b = builder(obj);
-                if (!args.isEmpty() && args.get(0) instanceof ScriptValue.Item it) {
-                    try {
-                        ItemStack bukkit = org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(it.stack());
-                        addItemBody(b, bukkit, args.size() >= 2 ? args.get(1) : null);
-                    } catch (Throwable ignored) {}
-                }
-                return ScriptValue.ofObj("DialogBuilder", b);
-            })
+            // methodTypedOpt2, both slots RAW with null defaults: an absent item is null and so
+            // fails the instanceof exactly like the original's args.isEmpty() did, and an absent
+            // show_tooltip is the same null addItemBody already treats as "not specified".
+            .methodTypedOpt2("body_item", TypeCodecs.RAW, (ScriptValue) null,
+                    TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.RAW,
+                (Builder b, ScriptValue item, ScriptValue showTooltip) -> {
+                    if (item instanceof ScriptValue.Item it) {
+                        try {
+                            ItemStack bukkit = org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(it.stack());
+                            addItemBody(b, bukkit, showTooltip);
+                        } catch (Throwable ignored) {}
+                    }
+                    return ScriptValue.ofObj("DialogBuilder", b);
+                })
             // body_head(owner_name_or_uuid, show_tooltip?) — shows a player-head ItemStack, owned by
             // that name/UUID, in the dialog body (Bukkit#getOfflinePlayer, no texture support).
-            // NOT migrated to methodTyped: "default-if-missing" shape (a missing arg just skips the
-            // append instead of short-circuiting), plus an optional trailing show_tooltip arg. Left
-            // untyped.
-            .method("body_head", (obj, args) -> {
-                Builder b = builder(obj);
-                if (!args.isEmpty()) {
-                    try {
-                        String ownerStr = args.get(0).asStr();
-                        OfflinePlayer owner;
+            // methodTypedOpt2 with null defaults — "ownerStr == null" is exactly the original's
+            // args.isEmpty(), and an absent show_tooltip stays the null addItemBody expects.
+            .methodTypedOpt2("body_head", TypeCodecs.STRING, (String) null,
+                    TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.RAW,
+                (Builder b, String ownerStr, ScriptValue showTooltip) -> {
+                    if (ownerStr != null) {
                         try {
-                            owner = org.bukkit.Bukkit.getOfflinePlayer(java.util.UUID.fromString(ownerStr));
-                        } catch (IllegalArgumentException notUuid) {
-                            owner = org.bukkit.Bukkit.getOfflinePlayer(ownerStr);
-                        }
-                        ItemStack head = new ItemStack(org.bukkit.Material.PLAYER_HEAD);
-                        if (head.getItemMeta() instanceof SkullMeta meta) {
-                            meta.setOwningPlayer(owner);
-                            head.setItemMeta(meta);
-                        }
-                        addItemBody(b, head, args.size() >= 2 ? args.get(1) : null);
-                    } catch (Throwable ignored) {}
-                }
-                return ScriptValue.ofObj("DialogBuilder", b);
-            })
+                            OfflinePlayer owner;
+                            try {
+                                owner = org.bukkit.Bukkit.getOfflinePlayer(java.util.UUID.fromString(ownerStr));
+                            } catch (IllegalArgumentException notUuid) {
+                                owner = org.bukkit.Bukkit.getOfflinePlayer(ownerStr);
+                            }
+                            ItemStack head = new ItemStack(org.bukkit.Material.PLAYER_HEAD);
+                            if (head.getItemMeta() instanceof SkullMeta meta) {
+                                meta.setOwningPlayer(owner);
+                                head.setItemMeta(meta);
+                            }
+                            addItemBody(b, head, showTooltip);
+                        } catch (Throwable ignored) {}
+                    }
+                    return ScriptValue.ofObj("DialogBuilder", b);
+                })
             // input_text(key, label, initial?, width?, multiline?, max_lines?)
-            // NOT migrated to methodTyped: "default-if-missing" shape (missing args just skip the
-            // append instead of short-circuiting) with several optional trailing args (initial, width,
-            // multiline, max_lines). Left untyped.
+            // NOT migrated: 6 argument slots, past methodTypedOpt5's ceiling (methodTyped6 doesn't
+            // help — it would force all six required and reject the legal 2-arg call). Left untyped.
             .method("input_text", (obj, args) -> {
                 Builder b = builder(obj);
                 if (args.size() >= 2) {
@@ -210,23 +213,23 @@ public final class DialogManagerType {
                 return ScriptValue.ofObj("DialogBuilder", b);
             })
             // input_bool(key, label, initial?)
-            // NOT migrated to methodTyped: "default-if-missing" shape (missing args just skip the
-            // append instead of short-circuiting) with an optional trailing initial arg. Left untyped.
-            .method("input_bool", (obj, args) -> {
-                Builder b = builder(obj);
-                if (args.size() >= 2) {
-                    String key = args.get(0).asStr();
-                    var bb = DialogInput.bool(key, mm(args.get(1).asStr()));
-                    if (args.size() >= 3) bb.initial(args.get(2).asBool());
-                    b.inputs.add(bb.build());
-                    b.specs.add(new InputSpec(key, Kind.BOOL));
-                }
-                return ScriptValue.ofObj("DialogBuilder", b);
-            })
+            // methodTypedOpt3 with null defaults throughout. Arguments are positional, so
+            // "label != null" is exactly the original's args.size() >= 2, and "initial != null" is
+            // its args.size() >= 3.
+            .methodTypedOpt3("input_bool", TypeCodecs.STRING, (String) null, TypeCodecs.STRING, (String) null,
+                    TypeCodecs.BOOL, (Boolean) null, TypeCodecs.RAW,
+                (Builder b, String key, String label, Boolean initial) -> {
+                    if (label != null) {
+                        var bb = DialogInput.bool(key, mm(label));
+                        if (initial != null) bb.initial(initial);
+                        b.inputs.add(bb.build());
+                        b.specs.add(new InputSpec(key, Kind.BOOL));
+                    }
+                    return ScriptValue.ofObj("DialogBuilder", b);
+                })
             // input_number(key, label, min, max, step?, initial?)
-            // NOT migrated to methodTyped: "default-if-missing" shape (missing args just skip the
-            // append instead of short-circuiting) with optional trailing step/initial args. Left
-            // untyped.
+            // NOT migrated: 6 argument slots, past methodTypedOpt5's ceiling (methodTyped6 would
+            // force all six required and reject the legal 4-arg call). Left untyped.
             .method("input_number", (obj, args) -> {
                 Builder b = builder(obj);
                 if (args.size() >= 4) {
@@ -242,51 +245,54 @@ public final class DialogManagerType {
             })
             // input_single_option(key, label, options) — options is an Array of maps built with
             // make_map("id", "...", "label", "...", "initial", true/false) (initial optional).
-            // NOT migrated to methodTyped: "default-if-missing" shape (missing/wrong-shape args just
-            // skip the append instead of short-circuiting), plus a dynamic Array-of-maps arg. Left
-            // untyped.
-            .method("input_single_option", (obj, args) -> {
-                Builder b = builder(obj);
-                if (args.size() >= 3 && args.get(2) instanceof ScriptValue.Array arr) {
-                    String key = args.get(0).asStr();
-                    List<SingleOptionDialogInput.OptionEntry> entries = new ArrayList<>();
-                    for (ScriptValue v : arr.elements()) {
-                        if (!(v instanceof ScriptValue.Obj mo) || !(mo.instance() instanceof java.util.Map<?, ?> map)) continue;
-                        Object idV = map.get("id");
-                        Object labelV = map.get("label");
-                        Object initV = map.get("initial");
-                        String id = idV instanceof ScriptValue sv ? sv.asStr() : String.valueOf(idV);
-                        String label = labelV instanceof ScriptValue sv ? sv.asStr() : String.valueOf(labelV);
-                        boolean initial = initV instanceof ScriptValue sv && sv.asBool();
-                        entries.add(SingleOptionDialogInput.OptionEntry.create(id, mm(label), initial));
+            // methodTypedOpt3 with null defaults: the options slot stays RAW (an Array of maps), and
+            // an absent one is null, failing the instanceof exactly as the original's
+            // args.size() >= 3 guard did.
+            .methodTypedOpt3("input_single_option", TypeCodecs.STRING, (String) null,
+                    TypeCodecs.STRING, (String) null, TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.RAW,
+                (Builder b, String key, String label, ScriptValue options) -> {
+                    if (options instanceof ScriptValue.Array arr) {
+                        List<SingleOptionDialogInput.OptionEntry> entries = new ArrayList<>();
+                        for (ScriptValue v : arr.elements()) {
+                            if (!(v instanceof ScriptValue.Obj mo) || !(mo.instance() instanceof java.util.Map<?, ?> map)) continue;
+                            Object idV = map.get("id");
+                            Object labelV = map.get("label");
+                            Object initV = map.get("initial");
+                            String id = idV instanceof ScriptValue sv ? sv.asStr() : String.valueOf(idV);
+                            String optionLabel = labelV instanceof ScriptValue sv ? sv.asStr() : String.valueOf(labelV);
+                            boolean initial = initV instanceof ScriptValue sv && sv.asBool();
+                            entries.add(SingleOptionDialogInput.OptionEntry.create(id, mm(optionLabel), initial));
+                        }
+                        b.inputs.add(DialogInput.singleOption(key, mm(label), entries).build());
+                        b.specs.add(new InputSpec(key, Kind.OPTION));
                     }
-                    b.inputs.add(DialogInput.singleOption(key, mm(args.get(1).asStr()), entries).build());
-                    b.specs.add(new InputSpec(key, Kind.OPTION));
-                }
-                return ScriptValue.ofObj("DialogBuilder", b);
-            })
+                    return ScriptValue.ofObj("DialogBuilder", b);
+                })
             // as_notice(machine, button_label, action_ref, tooltip?, width?) — single-button dialog.
             // Accept calls action_ref with every declared input's value appended, in declaration order.
-            // NOT migrated to methodTyped3: has genuinely optional 4th/5th args (tooltip, width) past
-            // the required 3, same reasoning as ContraptionType's teleport()/play_sound() — a typed
-            // handler only receives its fixed-arity decoded arguments, not the original args
-            // list/size, so that conditional read can't be expressed. Left untyped.
-            .method("as_notice", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.NULL;
-                Builder b = builder(obj);
-                DialogAction action = buildAction(args.get(0), args.get(2).asStr(), b);
-                var buttonB = ActionButton.builder(mm(args.get(1).asStr())).action(action);
-                if (args.size() >= 4 && !args.get(3).asStr().isBlank()) buttonB.tooltip(mm(args.get(3).asStr()));
-                if (args.size() >= 5) buttonB.width((int) args.get(4).asNum());
-                DialogBase base = base(b);
-                DialogType type = DialogType.notice(buttonB.build());
-                return wrapDialog(base, type);
-            })
+            // methodTypedOpt5 (exactly at the arity ceiling) with null defaults everywhere: the
+            // required prefix is owner/button_label/action_ref, and since args are positional
+            // "actionRef == null" is exactly the original's args.size() < 3 — so the same NULL comes
+            // back with nothing built. tooltip/width keep their own args.size() >= 4 / >= 5 reads as
+            // plain null checks.
+            .methodTypedOpt5("as_notice", TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.STRING, (String) null,
+                    TypeCodecs.STRING, (String) null, TypeCodecs.STRING, (String) null,
+                    TypeCodecs.DOUBLE, (Double) null, TypeCodecs.RAW,
+                (Builder b, ScriptValue owner, String buttonLabel, String actionRef, String tooltip, Double width) -> {
+                    if (actionRef == null) return ScriptValue.NULL;
+                    DialogAction action = buildAction(owner, actionRef, b);
+                    var buttonB = ActionButton.builder(mm(buttonLabel)).action(action);
+                    if (tooltip != null && !tooltip.isBlank()) buttonB.tooltip(mm(tooltip));
+                    if (width != null) buttonB.width(width.intValue());
+                    DialogBase base = base(b);
+                    DialogType type = DialogType.notice(buttonB.build());
+                    return wrapDialog(base, type);
+                })
             // as_confirmation(owner, accept_label, cancel_label, accept_action_ref, cancel_action_ref?,
             // accept_tooltip?, cancel_tooltip?, accept_width?, cancel_width?)
-            // NOT migrated to methodTyped: has multiple genuinely optional args past the required 4
-            // (cancel_action_ref, tooltips, widths), same reasoning as as_notice() above. Also 9 total
-            // args, past methodTypedN's arity-7 ceiling. Left untyped.
+            // NOT migrated: 9 argument slots — past methodTypedN's arity-7 ceiling AND past
+            // methodTypedOpt5's, so neither the all-required nor the all-optional family can carry
+            // this signature. Left untyped.
             .method("as_confirmation", (obj, args) -> {
                 if (args.size() < 4) return ScriptValue.NULL;
                 Builder b = builder(obj);
@@ -313,12 +319,13 @@ public final class DialogManagerType {
             // integer, Paper's own MultiActionType#columns()) wraps buttons into rows of that width
             // instead of Paper's default 2 — the ONLY way to lay out a fixed grid (e.g. a game
             // board) that isn't just "however many buttons fit at their declared per-button width".
-            // NOT migrated to methodTyped2: has a genuinely optional 3rd arg (columns), same reasoning
-            // as as_notice() above. Left untyped.
-            .method("as_multi_action", (obj, args) -> {
-                if (args.size() < 2 || !(args.get(1) instanceof ScriptValue.Array arr)) return ScriptValue.NULL;
-                Builder b = builder(obj);
-                ScriptValue owner = args.get(0);
+            // methodTypedOpt3 with null defaults: an absent buttons array is null and fails the
+            // instanceof, matching the original's "args.size() < 2 || !(… instanceof Array)" guard
+            // exactly, and the optional columns read becomes a plain null check.
+            .methodTypedOpt3("as_multi_action", TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.RAW, (ScriptValue) null,
+                    TypeCodecs.DOUBLE, (Double) null, TypeCodecs.RAW,
+                (Builder b, ScriptValue owner, ScriptValue buttonsArg, Double columns) -> {
+                if (!(buttonsArg instanceof ScriptValue.Array arr)) return ScriptValue.NULL;
                 List<ActionButton> buttons = new ArrayList<>();
                 for (ScriptValue v : arr.elements()) {
                     if (!(v instanceof ScriptValue.Obj mo) || !(mo.instance() instanceof java.util.Map<?, ?> map)) continue;
@@ -335,8 +342,8 @@ public final class DialogManagerType {
                     buttons.add(btnB.build());
                 }
                 DialogBase base = base(b);
-                DialogType type = args.size() >= 3 && args.get(2).asNum() > 0
-                        ? DialogType.multiAction(buttons, null, (int) args.get(2).asNum())
+                DialogType type = columns != null && columns > 0
+                        ? DialogType.multiAction(buttons, null, columns.intValue())
                         : DialogType.multiAction(buttons).build();
                 return wrapDialog(base, type);
             })
@@ -363,63 +370,66 @@ public final class DialogManagerType {
 
         PolyTypeRegistry.define("BuiltDialog")
             // show(player) — display to that player.
-            // NOT migrated to methodTyped1: the missing-arg branch logs a warning before returning
-            // false, but methodTypedN's onMissingArgs shortcut returns immediately without ever
-            // entering the handler body, so that log line would silently stop firing. Left untyped.
-            .method("show", (obj, args) -> {
-                if (args.isEmpty()) {
-                    LOG.warning("[Dialog] BuiltDialog.show() called with no player argument.");
-                    return ScriptValue.of(false);
-                }
-                Player p = playerOf(args.get(0));
-                if (p == null) {
-                    LOG.warning("[Dialog] BuiltDialog.show(" + args.get(0) + ") — playerOf() couldn't resolve a "
-                        + "Bukkit Player from that argument (was it really a Player value, e.g. from the "
-                        + "bare \"Player\" binding?).");
-                    return ScriptValue.of(false);
-                }
-                if (!(dialogOf(obj) instanceof Dialog d)) {
-                    LOG.warning("[Dialog] BuiltDialog.show() — the receiver wasn't a built Dialog (did the "
-                        + ".as_notice/.as_confirmation/.as_multi_action call before it return NULL?).");
-                    return ScriptValue.of(false);
-                }
-                try {
-                    p.showDialog(d);
-                    markReshownIfClicker(p.getUniqueId());
-                    return ScriptValue.of(true);
-                } catch (Throwable t) {
-                    LOG.log(java.util.logging.Level.WARNING, "[Dialog] Player#showDialog threw", t);
-                    return ScriptValue.of(false);
-                }
-            })
-            // show_many(players) — display to every resolvable Player in that Array, skipping nulls.
-            // Returns the count of players actually shown.
-            // NOT migrated to methodTyped1: the missing/wrong-type-arg branch logs a warning before
-            // returning 0, same log-loss issue as show() above. Left untyped.
-            .method("show_many", (obj, args) -> {
-                if (args.isEmpty() || !(args.get(0) instanceof ScriptValue.Array arr)) {
-                    LOG.warning("[Dialog] BuiltDialog.show_many() called with no players array argument.");
-                    return ScriptValue.of(0.0);
-                }
-                if (!(dialogOf(obj) instanceof Dialog d)) {
-                    LOG.warning("[Dialog] BuiltDialog.show_many() — the receiver wasn't a built Dialog (did the "
-                        + ".as_notice/.as_confirmation/.as_multi_action call before it return NULL?).");
-                    return ScriptValue.of(0.0);
-                }
-                int shown = 0;
-                for (ScriptValue v : arr.elements()) {
-                    Player p = playerOf(v);
-                    if (p == null) continue;
+            // methodTypedOpt1, NOT methodTyped1: the missing-arg branch logs a warning before
+            // returning false, and onMissingArgs would skip the handler (and the log) entirely.
+            // Opt1's null default always runs the body, so the log still fires. The receiver stays
+            // Object because dialogOf() is instanceof-checked rather than cast.
+            .methodTypedOpt1("show", TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.BOOL,
+                (Object obj, ScriptValue playerArg) -> {
+                    if (playerArg == null) {
+                        LOG.warning("[Dialog] BuiltDialog.show() called with no player argument.");
+                        return false;
+                    }
+                    Player p = playerOf(playerArg);
+                    if (p == null) {
+                        LOG.warning("[Dialog] BuiltDialog.show(" + playerArg + ") — playerOf() couldn't resolve a "
+                            + "Bukkit Player from that argument (was it really a Player value, e.g. from the "
+                            + "bare \"Player\" binding?).");
+                        return false;
+                    }
+                    if (!(dialogOf(obj) instanceof Dialog d)) {
+                        LOG.warning("[Dialog] BuiltDialog.show() — the receiver wasn't a built Dialog (did the "
+                            + ".as_notice/.as_confirmation/.as_multi_action call before it return NULL?).");
+                        return false;
+                    }
                     try {
                         p.showDialog(d);
                         markReshownIfClicker(p.getUniqueId());
-                        shown++;
+                        return true;
                     } catch (Throwable t) {
                         LOG.log(java.util.logging.Level.WARNING, "[Dialog] Player#showDialog threw", t);
+                        return false;
                     }
-                }
-                return ScriptValue.of((double) shown);
-            });
+                })
+            // show_many(players) — display to every resolvable Player in that Array, skipping nulls.
+            // Returns the count of players actually shown.
+            // methodTypedOpt1 for the same reason as show() above — the handler must still run on a
+            // missing/wrong-typed argument so its warning keeps firing.
+            .methodTypedOpt1("show_many", TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.DOUBLE,
+                (Object obj, ScriptValue playersArg) -> {
+                    if (!(playersArg instanceof ScriptValue.Array arr)) {
+                        LOG.warning("[Dialog] BuiltDialog.show_many() called with no players array argument.");
+                        return 0.0;
+                    }
+                    if (!(dialogOf(obj) instanceof Dialog d)) {
+                        LOG.warning("[Dialog] BuiltDialog.show_many() — the receiver wasn't a built Dialog (did the "
+                            + ".as_notice/.as_confirmation/.as_multi_action call before it return NULL?).");
+                        return 0.0;
+                    }
+                    int shown = 0;
+                    for (ScriptValue v : arr.elements()) {
+                        Player p = playerOf(v);
+                        if (p == null) continue;
+                        try {
+                            p.showDialog(d);
+                            markReshownIfClicker(p.getUniqueId());
+                            shown++;
+                        } catch (Throwable t) {
+                            LOG.log(java.util.logging.Level.WARNING, "[Dialog] Player#showDialog threw", t);
+                        }
+                    }
+                    return (double) shown;
+                });
     }
 
     /** Flags {@link #RESHOWN} when {@code shownTo} is the player whose OWN click is currently

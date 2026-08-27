@@ -26,20 +26,27 @@ public final class TaskManagerType {
 
     public static void register() {
         PolyTypeRegistry.define("TaskManager")
-            // NOT migrated to methodTyped: `data` is a genuinely optional trailing make_map(...)
-            // argument (dataMap checks args.size()/index itself) — a typed handler only receives
-            // its fixed-arity decoded arguments, not the original args list/size, so that
-            // conditional read can't be expressed. Left untyped (schedule/repeat/schedule_async).
-            .method("schedule", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of("");
-                String id = TaskManagerRegistry.schedule(args.get(0).asStr(), (long) args.get(1).asNum(), dataMap(args, 2));
-                return ScriptValue.of(id);
-            })
-            .method("repeat", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.of("");
-                String id = TaskManagerRegistry.repeat(args.get(0).asStr(), (long) args.get(1).asNum(), (long) args.get(2).asNum(), dataMap(args, 3));
-                return ScriptValue.of(id);
-            })
+            // Migrated to methodTypedOpt3/Opt4 (schedule/repeat/schedule_async): `data` is a
+            // genuinely optional trailing make_map(...) argument and the body still runs when it's
+            // omitted, which is methodTypedOptN's shape (methodTypedN's onMissingArgs would instead
+            // skip the scheduling side effect entirely). The REQUIRED slots take a Java `null`
+            // default used purely as an "argument was absent" sentinel, reproducing the original
+            // args.size() guards EXACTLY: a decoded STRING is never null (ScriptValue.of(String)
+            // maps null to NULL, so asStr() always returns a real string) and a decoded DOUBLE is
+            // never null, so null can only mean "not passed".
+            .methodTypedOpt3("schedule", TypeCodecs.STRING, (String) null,
+                TypeCodecs.DOUBLE, (Double) null, TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.STRING,
+                (Object obj, String ref, Double delay, ScriptValue data) -> {
+                    if (ref == null || delay == null) return "";
+                    return TaskManagerRegistry.schedule(ref, delay.longValue(), dataMap(data));
+                })
+            .methodTypedOpt4("repeat", TypeCodecs.STRING, (String) null,
+                TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, (Double) null,
+                TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.STRING,
+                (Object obj, String ref, Double delay, Double period, ScriptValue data) -> {
+                    if (ref == null || delay == null || period == null) return "";
+                    return TaskManagerRegistry.repeat(ref, delay.longValue(), period.longValue(), dataMap(data));
+                })
             // schedule_async(file.pf:fn, delay_ticks, data?) — SAME signature as schedule(...), but
             // fn runs on a background thread pool (Bukkit's runTaskLaterAsynchronously), not the
             // main server thread. ONLY safe for a function that touches NOTHING backed by Bukkit or
@@ -52,19 +59,22 @@ public final class TaskManagerType {
             // bot_move/bot_compute_move/bot_apply_move split for the reference pattern this exists
             // for: the bot's minimax-ish search is pure string/array/number work with zero Bukkit
             // touches, so it runs off-thread instead of freezing a server tick.
-            .method("schedule_async", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of("");
-                String id = TaskManagerRegistry.scheduleAsync(args.get(0).asStr(), (long) args.get(1).asNum(), dataMap(args, 2));
-                return ScriptValue.of(id);
-            })
+            // Migrated to methodTypedOpt3 — same shape as schedule(...) above.
+            .methodTypedOpt3("schedule_async", TypeCodecs.STRING, (String) null,
+                TypeCodecs.DOUBLE, (Double) null, TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.STRING,
+                (Object obj, String ref, Double delay, ScriptValue data) -> {
+                    if (ref == null || delay == null) return "";
+                    return TaskManagerRegistry.scheduleAsync(ref, delay.longValue(), dataMap(data));
+                })
             .methodTyped1("cancel", TypeCodecs.STRING, TypeCodecs.BOOL, false,
                 (Object obj, String handle) -> TaskManagerRegistry.cancel(handle));
     }
 
+    /** {@code null} means the optional {@code data} argument wasn't passed at all — same empty-map
+     *  result the old {@code dataMap(args, index)} produced for an out-of-range index. */
     @SuppressWarnings("unchecked")
-    private static Map<String, ScriptValue> dataMap(java.util.List<ScriptValue> args, int index) {
-        if (args.size() <= index) return Map.of();
-        ScriptValue v = args.get(index);
+    private static Map<String, ScriptValue> dataMap(ScriptValue v) {
+        if (v == null) return Map.of();
         if (v instanceof ScriptValue.Obj o && "Map".equals(o.typeName()) && o.instance() instanceof Map<?, ?> m) {
             return new LinkedHashMap<>((Map<String, ScriptValue>) m);
         }

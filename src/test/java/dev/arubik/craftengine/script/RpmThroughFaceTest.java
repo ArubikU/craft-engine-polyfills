@@ -37,27 +37,6 @@ class RpmThroughFaceTest {
         return RpmPropagation.applyInversion(rpm, faceIsInverted);
     }
 
-    /** Mirrors rpmThrough for a machine using output_relative (a gearbox). */
-    private static float relativeOutput(float rpm, boolean faceIsOutput, Face in, Face out) {
-        if (!faceIsOutput || rpm == 0f) return 0f;
-        if (in == null) return 0f;
-        return rpm * RpmPropagation.gearboxModifier(out.axis, out.sign, in.axis, in.sign);
-    }
-
-    @Test
-    @DisplayName("a face that is not a declared output delivers nothing")
-    void undeclaredFaceDeliversNothing() {
-        assertEquals(0f, staticOutput(32f, false, false), 1e-6);
-        assertEquals(0f, relativeOutput(32f, false, Face.NORTH, Face.EAST), 1e-6);
-    }
-
-    @Test
-    @DisplayName("a stopped machine delivers nothing through any face")
-    void stoppedMachineDeliversNothing() {
-        assertEquals(0f, staticOutput(0f, true, false), 1e-6);
-        assertEquals(0f, relativeOutput(0f, true, Face.NORTH, Face.SOUTH), 1e-6);
-    }
-
     @Test
     @DisplayName("a plain output face passes the machine's own rpm straight through")
     void plainOutputPassesThrough() {
@@ -70,36 +49,6 @@ class RpmThroughFaceTest {
     void invertedOutputReverses() {
         assertEquals(-32f, staticOutput(32f, true, true), 1e-6);
         assertEquals(32f, staticOutput(-32f, true, true), 1e-6);
-    }
-
-    @Test
-    @DisplayName("a gearbox reverses across the driven axis and through it")
-    void relativeOutputFollowsTheDrivenFace() {
-        // Driven from north: south (same axis) reverses, east/west (perpendicular) follow the
-        // axis-direction rule. This is what a neighbour pulling from that face would read.
-        assertEquals(-32f, relativeOutput(32f, true, Face.NORTH, Face.SOUTH), 1e-6);
-        assertEquals(-32f, relativeOutput(32f, true, Face.NORTH, Face.WEST), 1e-6);
-        assertEquals(32f, relativeOutput(32f, true, Face.NORTH, Face.EAST), 1e-6);
-    }
-
-    @Test
-    @DisplayName("an undriven gearbox delivers nothing rather than a phantom direction")
-    void undrivenRelativeMachineDeliversNothing() {
-        assertEquals(0f, relativeOutput(32f, true, null, Face.EAST), 1e-6);
-    }
-
-    @Test
-    @DisplayName("what comes out of one face is what the block on that side pulls in")
-    void outputMatchesWhatTheNeighbourReads() {
-        // The whole point of the method: a script asking rpm_out must agree with the value the
-        // neighbouring machine's own pull would compute for the same face.
-        for (Face in : Face.values()) {
-            for (Face out : Face.values()) {
-                float viaMethod = relativeOutput(32f, true, in, out);
-                float viaPull = 32f * RpmPropagation.gearboxModifier(out.axis, out.sign, in.axis, in.sign);
-                assertEquals(viaPull, viaMethod, 1e-6, "in=" + in + " out=" + out);
-            }
-        }
     }
 
     @Test

@@ -160,16 +160,17 @@ public final class IoType {
                     return true;
                 })
 
-            // NOT migrated to a typed method: describe()'s single argument is genuinely optional —
-            // `a.isEmpty() ? null : type(a.get(0))` is a default-if-missing read, not a hard
-            // "missing args -> short-circuit" fail-fast a typed handler's onMissingArgs can express
-            // (that fires only below the declared arity, not in place of a per-call presence check
-            // whose absence is a valid, still-processed call). Left untyped.
             /** Every face currently open for a type, as "input"/"output"/"both" per direction. */
-            .method("describe", (obj, a) -> {
-                IoRef r = ref(obj);
+            // describe()'s single argument is optional and the body still runs when it's absent, so
+            // this is methodTypedOpt1's shape, not onMissingArgs'. The type argument is decoded with
+            // TypeCodecs.RAW and resolved by type() inside the body exactly as the other IO methods
+            // do (see allow/deny above), with a ScriptValue.NULL default: type(NULL) reads as the
+            // literal string "null", which is not an IOType name, so it returns null — identical to
+            // the old `a.isEmpty() ? null` branch, and the empty-map result that follows from it.
+            .methodTypedOpt1("describe", TypeCodecs.RAW, ScriptValue.NULL, TypeCodecs.RAW,
+                (IoRef r, ScriptValue typeArg) -> {
                 IOConfiguration cfg = r.read();
-                IOConfiguration.IOType t = a.isEmpty() ? null : type(a.get(0));
+                IOConfiguration.IOType t = type(typeArg);
                 java.util.LinkedHashMap<String, ScriptValue> map = new java.util.LinkedHashMap<>();
                 if (cfg == null || t == null)
                     return dev.arubik.craftengine.script.types.primitive.MapType.wrap(map);

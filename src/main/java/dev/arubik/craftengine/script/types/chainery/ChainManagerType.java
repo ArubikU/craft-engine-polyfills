@@ -60,17 +60,18 @@ public final class ChainManagerType {
                 return ChainType.wrap(chain);
             })
             // break_chain(id, drop_items?) -> bool
-            // Not migrated to methodTyped2: drop_items has a default-if-missing shape
-            // (args.size() > 1 && args.get(1).asBool()) — the default applies to the ARGUMENT when
-            // absent, not to the return value, which onMissingArgs can't express. Left untyped.
-            .method("break_chain", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                Chain chain = lookup(args.get(0).asStr());
-                if (chain == null) return ScriptValue.of(false);
-                boolean drop = args.size() > 1 && args.get(1).asBool();
-                ChainEngine.breakChain(chain, drop);
-                return ScriptValue.of(true);
-            })
+            // methodTypedOpt2: drop_items defaults to false when absent (exactly what
+            // `args.size() > 1 && args.get(1).asBool()` meant). `id` gets an "" default rather than
+            // an onMissingArgs short-circuit, which reproduces the old no-args behaviour exactly:
+            // lookup("") can't parse as a UUID, so it returns null and the body returns false
+            // without touching anything — lookup is pure, so running it costs nothing observable.
+            .methodTypedOpt2("break_chain", TypeCodecs.STRING, "", TypeCodecs.BOOL, false, TypeCodecs.BOOL,
+                (Object obj, String id, Boolean drop) -> {
+                    Chain chain = lookup(id);
+                    if (chain == null) return false;
+                    ChainEngine.breakChain(chain, drop);
+                    return true;
+                })
             // get(id) -> Chain or null
             .methodTyped1("get", TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
                 (Object obj, String id) -> ChainType.wrap(lookup(id)))

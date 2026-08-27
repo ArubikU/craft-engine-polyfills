@@ -69,12 +69,17 @@ public final class LayoutType {
                 return new ScriptValue.Array(out);
             })
 
-            // NOT migrated: "lock"/"unlock" accept EITHER a single slot number OR an Array of them
-            // (see setLock's `a.get(0) instanceof ScriptValue.Array` branch) — a multi-shape dynamic
-            // dispatch on the argument's own runtime type, which a typed handler (one fixed TypeCodec
-            // per argument) can't express. Left untyped.
-            .method("lock", (obj, a) -> setLock(obj, a, true))
-            .method("unlock", (obj, a) -> setLock(obj, a, false))
+            // "lock"/"unlock" accept EITHER a single slot number OR an Array of them (see setLock's
+            // `slot instanceof ScriptValue.Array` branch), so the slot argument is decoded with
+            // TypeCodecs.RAW (identity passthrough) and dispatched on its own runtime type inside
+            // setLock exactly as before — same treatment ContainerType.set_item gives its item
+            // argument. The old `a.isEmpty() -> false` short-circuit is now onMissingArgs=false;
+            // that's observably identical because ref.layout() is a pure getter, so skipping it on
+            // the no-args path changes nothing.
+            .methodTyped1("lock", TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                (LayoutRef ref, ScriptValue slot) -> setLock(ref, slot, true))
+            .methodTyped1("unlock", TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                (LayoutRef ref, ScriptValue slot) -> setLock(ref, slot, false))
 
             .methodTyped1("is_locked", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
                 (LayoutRef ref, Double slot) -> {
@@ -133,16 +138,16 @@ public final class LayoutType {
                 });
     }
 
-    private static ScriptValue setLock(Object obj, List<ScriptValue> a, boolean lock) {
-        MachineLayout l = ref(obj).layout();
-        if (l == null || a.isEmpty()) return ScriptValue.of(false);
+    private static boolean setLock(LayoutRef ref, ScriptValue slot, boolean lock) {
+        MachineLayout l = ref.layout();
+        if (l == null) return false;
         // Accept a single slot or an array of them, so a script can pin a whole bay in one call.
-        if (a.get(0) instanceof ScriptValue.Array arr) {
+        if (slot instanceof ScriptValue.Array arr) {
             for (ScriptValue v : arr.elements()) l.setLocked((int) v.asNum(), lock);
-            return ScriptValue.of(true);
+            return true;
         }
-        l.setLocked((int) a.get(0).asNum(), lock);
-        return ScriptValue.of(true);
+        l.setLocked((int) slot.asNum(), lock);
+        return true;
     }
 
     // setLockByType(Object, List<ScriptValue>, boolean) — the old lock_type/unlock_type helper —

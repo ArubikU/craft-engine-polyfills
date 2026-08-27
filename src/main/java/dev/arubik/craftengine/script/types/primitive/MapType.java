@@ -31,36 +31,49 @@ public final class MapType {
                 (Map<String, ScriptValue> m, String key) -> m.getOrDefault(key, ScriptValue.NULL))
             .methodTyped1("has", TypeCodecs.STRING, TypeCodecs.BOOL, false,
                 (Map<String, ScriptValue> m, String key) -> m.containsKey(key))
-            // switch(key[, default]) — left untyped: the 2nd arg is a genuinely optional
-            // "default if key missing" value, so a 1-arg call must still run the lookup normally
-            // (not short-circuit like methodTypedN's "args.size() < N -> onMissingArgs" would force).
-            .method("switch", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                String key = args.get(0).asStr();
-                ScriptValue result = map(obj).get(key);
-                if (result != null) return result;
-                return args.size() >= 2 ? args.get(1) : ScriptValue.NULL;
-            })
+            // switch(key[, default]) — migrated to methodTypedOpt2. The 2nd arg is a genuinely
+            // optional "default if key missing" value, so a 1-arg call must still run the lookup
+            // normally, which is exactly methodTypedOptN's shape (methodTyped2's onMissingArgs
+            // would instead short-circuit the whole body). Both slots take a Java `null` default,
+            // used purely as an "argument was absent" sentinel so the original's
+            // `args.isEmpty()` / `args.size() >= 2` branches are reproduced EXACTLY: a decoded
+            // STRING is never null (ScriptValue.of(String) maps null to NULL, so asStr() always
+            // returns a real string) and a decoded RAW is never null (identity over a non-null
+            // args element), so null can only ever mean "not passed".
+            .methodTypedOpt2("switch", TypeCodecs.STRING, (String) null,
+                TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.RAW,
+                (Map<String, ScriptValue> m, String key, ScriptValue fallback) -> {
+                    if (key == null) return ScriptValue.NULL;
+                    ScriptValue result = m.get(key);
+                    if (result != null) return result;
+                    return fallback != null ? fallback : ScriptValue.NULL;
+                })
             // map.with(key, value) -> a NEW map with that key set/overwritten — same "returns a
             // copy" idiom as Item's with_component/with_name, since there's no in-place mutator on
             // this type. Lets a script build a dynamic-sized Map incrementally (m = m.with(k, v) in
             // a loop) instead of needing every key/value known upfront at a single make_map(...) call.
-            // Left untyped: missing-args fallback is instance-dependent (returns a copy of `obj`
-            // itself), not a fixed onMissingArgs constant methodTypedN can express.
-            .method("with", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.ofObj("Map", map(obj));
-                LinkedHashMap<String, ScriptValue> copy = new LinkedHashMap<>(map(obj));
-                copy.put(args.get(0).asStr(), args.get(1));
-                return ScriptValue.ofObj("Map", copy);
-            })
+            // Migrated to methodTypedOpt2: the missing-args fallback is instance-dependent (it
+            // returns THIS map re-wrapped), which methodTyped2's fixed onMissingArgs constant can't
+            // express — but methodTypedOptN always runs the body, so the instance is in hand. Null
+            // defaults are the "absent" sentinel, same reasoning as switch(...) above.
+            .methodTypedOpt2("with", TypeCodecs.STRING, (String) null,
+                TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.RAW,
+                (Map<String, ScriptValue> m, String key, ScriptValue value) -> {
+                    if (key == null || value == null) return ScriptValue.ofObj("Map", m);
+                    LinkedHashMap<String, ScriptValue> copy = new LinkedHashMap<>(m);
+                    copy.put(key, value);
+                    return ScriptValue.ofObj("Map", copy);
+                })
             // map.without(key) -> a NEW map with that key removed (no-op if absent).
-            // Left untyped: same instance-dependent missing-args fallback as with(...) above.
-            .method("without", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.ofObj("Map", map(obj));
-                LinkedHashMap<String, ScriptValue> copy = new LinkedHashMap<>(map(obj));
-                copy.remove(args.get(0).asStr());
-                return ScriptValue.ofObj("Map", copy);
-            });
+            // Migrated to methodTypedOpt1: same instance-dependent missing-args fallback as
+            // with(...) above, expressible now that the body always runs.
+            .methodTypedOpt1("without", TypeCodecs.STRING, (String) null, TypeCodecs.RAW,
+                (Map<String, ScriptValue> m, String key) -> {
+                    if (key == null) return ScriptValue.ofObj("Map", m);
+                    LinkedHashMap<String, ScriptValue> copy = new LinkedHashMap<>(m);
+                    copy.remove(key);
+                    return ScriptValue.ofObj("Map", copy);
+                });
     }
 
     /** Dynamic property resolution for map keys — allows tank.contents_name etc. */

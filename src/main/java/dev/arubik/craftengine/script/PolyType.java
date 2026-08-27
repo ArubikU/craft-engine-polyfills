@@ -204,6 +204,22 @@ public final class PolyType {
     //
     // Extra trailing arguments are ignored, and missing ones take their default — matching what the
     // hand-written bodies above already do.
+    //
+    // A `null` DEFAULT IS SUPPORTED AND LOAD-BEARING. Many registrations need "argument absent"
+    // to mean "don't touch this field" or "take the branch that returns the instance unchanged",
+    // rather than "substitute some value" — they pass a null default and branch on `param == null`
+    // inside the body. That test is exact, because a PRESENT argument can never decode to Java
+    // null: TypeCodecs.DOUBLE/BOOL return primitives, TypeCodecs.STRING's asStr() is total (it
+    // yields the literal "null" for a NULL ScriptValue, never a Java null), TypeCodecs.RAW yields
+    // the ScriptValue itself, and the args list never holds nulls.
+    //
+    // Therefore the defaults below MUST be stored in a null-permitting list — Collections
+    // .singletonList / Arrays.asList. Switching them to List.of(...) would throw at REGISTRATION
+    // time for every null-default method, i.e. at plugin startup.
+    //
+    // (Sharp edge worth knowing when choosing a non-null String default: ScriptValue.NULL.asStr()
+    // is the string "null", not "". A defaulted string flowing into an id/name lookup looks up
+    // "null" rather than blank.)
 
     public <I, A1, R> PolyType methodTypedOpt1(String name, TypeCodec<A1> a1, A1 def1, TypeCodec<R> ret,
                                                 TypedMethodHandler1<I, A1, R> handler) {
@@ -269,6 +285,44 @@ public final class PolyType {
                 args.size() > 4 ? a5.decode(args.get(4)) : def5)));
         typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2, a3, a4, a5), ret, handler,
                 java.util.Arrays.asList(def1, def2, def3, def4, def5)));
+        PolyTypeRegistry.notifyMutation();
+        return this;
+    }
+
+    public <I, A1, A2, A3, A4, A5, A6, R> PolyType methodTypedOpt6(String name, TypeCodec<A1> a1, A1 def1,
+                                                                    TypeCodec<A2> a2, A2 def2, TypeCodec<A3> a3, A3 def3,
+                                                                    TypeCodec<A4> a4, A4 def4, TypeCodec<A5> a5, A5 def5,
+                                                                    TypeCodec<A6> a6, A6 def6, TypeCodec<R> ret,
+                                                                    TypedMethodHandler6<I, A1, A2, A3, A4, A5, A6, R> handler) {
+        methods.put(name, (instance, args) -> ret.encode(handler.call(cast(instance),
+                args.size() > 0 ? a1.decode(args.get(0)) : def1,
+                args.size() > 1 ? a2.decode(args.get(1)) : def2,
+                args.size() > 2 ? a3.decode(args.get(2)) : def3,
+                args.size() > 3 ? a4.decode(args.get(3)) : def4,
+                args.size() > 4 ? a5.decode(args.get(4)) : def5,
+                args.size() > 5 ? a6.decode(args.get(5)) : def6)));
+        typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2, a3, a4, a5, a6), ret, handler,
+                java.util.Arrays.asList(def1, def2, def3, def4, def5, def6)));
+        PolyTypeRegistry.notifyMutation();
+        return this;
+    }
+
+    public <I, A1, A2, A3, A4, A5, A6, A7, R> PolyType methodTypedOpt7(String name, TypeCodec<A1> a1, A1 def1,
+                                                                        TypeCodec<A2> a2, A2 def2, TypeCodec<A3> a3, A3 def3,
+                                                                        TypeCodec<A4> a4, A4 def4, TypeCodec<A5> a5, A5 def5,
+                                                                        TypeCodec<A6> a6, A6 def6, TypeCodec<A7> a7, A7 def7,
+                                                                        TypeCodec<R> ret,
+                                                                        TypedMethodHandler7<I, A1, A2, A3, A4, A5, A6, A7, R> handler) {
+        methods.put(name, (instance, args) -> ret.encode(handler.call(cast(instance),
+                args.size() > 0 ? a1.decode(args.get(0)) : def1,
+                args.size() > 1 ? a2.decode(args.get(1)) : def2,
+                args.size() > 2 ? a3.decode(args.get(2)) : def3,
+                args.size() > 3 ? a4.decode(args.get(3)) : def4,
+                args.size() > 4 ? a5.decode(args.get(4)) : def5,
+                args.size() > 5 ? a6.decode(args.get(5)) : def6,
+                args.size() > 6 ? a7.decode(args.get(6)) : def7)));
+        typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2, a3, a4, a5, a6, a7), ret, handler,
+                java.util.Arrays.asList(def1, def2, def3, def4, def5, def6, def7)));
         PolyTypeRegistry.notifyMutation();
         return this;
     }

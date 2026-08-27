@@ -25,7 +25,10 @@ public final class EventManagerType {
             // NOT migrated to methodTyped: `timeout_ticks` is an optional trailing argument with a
             // default (0) that only applies when present alongside the 2 required args — a typed
             // handler forced to arity 3 would treat a legitimate 2-arg call as "missing args" and
-            // return the fixed onMissingArgs fallback instead of actually registering. Left untyped.
+            // return the fixed onMissingArgs fallback instead of actually registering.
+            // methodTypedOpt3 is wrong too, in the other direction: it would run the body on a 0- or
+            // 1-arg call and really subscribe a listener for the defaulted event/handler names,
+            // where today such a call returns "" having registered nothing. Left untyped.
             .method("register", (obj, args) -> {
                 if (args.size() < 2) return ScriptValue.of("");
                 int timeout = args.size() > 2 ? (int) args.get(2).asNum() : 0;
