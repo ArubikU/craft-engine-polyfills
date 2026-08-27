@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v2
+ *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -16,7 +16,7 @@
 package dev.arubik.craftengine.script.gen.kinetics.generators;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v2;
+import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -408,138 +408,135 @@ public final class WaterWheel {
             for (ScriptValue scriptValue20 : list) {
                 Object object;
                 builder.val("o", scriptValue20);
-                ScriptValue scriptValue21 = scriptContext.getClassOrVar("o");
-                ScriptValue scriptValue22 = scriptValue21 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue21, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", WaterWheel.class, "dx")), (ScriptContext)scriptContext) : ScriptValue.NULL;
-                builder.val("dx", scriptValue22);
-                scriptValue14 = scriptValue22;
-                ScriptValue scriptValue23 = scriptContext.getClassOrVar("o");
-                ScriptValue scriptValue24 = scriptValue23 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue23, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", WaterWheel.class, "dy")), (ScriptContext)scriptContext) : ScriptValue.NULL;
-                builder.val("dy", scriptValue24);
-                scriptValue17 = scriptValue24;
-                ScriptValue scriptValue25 = scriptContext.getClassOrVar("o");
-                ScriptValue scriptValue26 = scriptValue25 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue25, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", WaterWheel.class, "dz")), (ScriptContext)scriptContext) : ScriptValue.NULL;
-                builder.val("dz", scriptValue26);
-                scriptValue18 = scriptValue26;
-                ScriptValue scriptValue27 = scriptContext.getClassOrVar("Machine");
-                if (scriptValue27 != ScriptValue.NULL) {
+                ScriptValue scriptValue21 = scriptValue20 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue20, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", WaterWheel.class, "dx")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+                builder.val("dx", scriptValue21);
+                scriptValue14 = scriptValue21;
+                ScriptValue scriptValue22 = scriptValue20 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue20, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", WaterWheel.class, "dy")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+                builder.val("dy", scriptValue22);
+                scriptValue17 = scriptValue22;
+                ScriptValue scriptValue23 = scriptValue20 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue20, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", WaterWheel.class, "dz")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+                builder.val("dz", scriptValue23);
+                scriptValue18 = scriptValue23;
+                ScriptValue scriptValue24 = scriptContext.getClassOrVar("Machine");
+                if (scriptValue24 != ScriptValue.NULL) {
                     ScriptValue.Obj obj;
                     Object object2;
-                    ScriptValue scriptValue28 = scriptValue14;
-                    ScriptValue scriptValue29 = scriptValue17;
-                    ScriptValue scriptValue30 = scriptValue18;
-                    if (scriptValue27 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue27).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                        PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object2);
-                        object = polyClassMachine_v2.tm$68_block_at(scriptValue28.asNum(), scriptValue29.asNum(), scriptValue30.asNum());
+                    ScriptValue scriptValue25 = scriptValue14;
+                    ScriptValue scriptValue26 = scriptValue17;
+                    ScriptValue scriptValue27 = scriptValue18;
+                    if (scriptValue24 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue24).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                        PolyClassMachine polyClassMachine = new PolyClassMachine(object2);
+                        object = polyClassMachine.tm$68_block_at(scriptValue25.asNum(), scriptValue26.asNum(), scriptValue27.asNum());
                     } else {
-                        object = PolyDispatch.bootstrapCall("memberCall", "block_at", (ScriptValue)scriptValue27, (ScriptValue)scriptValue28, (ScriptValue)scriptValue29, (ScriptValue)scriptValue30, (ScriptContext)scriptContext);
+                        object = PolyDispatch.bootstrapCall("memberCall", "block_at", (ScriptValue)scriptValue24, (ScriptValue)scriptValue25, (ScriptValue)scriptValue26, (ScriptValue)scriptValue27, (ScriptContext)scriptContext);
                     }
                 } else {
                     object = ScriptValue.NULL;
                 }
-                ScriptValue scriptValue31 = object;
-                builder.val("b", scriptValue31);
-                scriptValue3 = scriptValue31;
+                ScriptValue scriptValue28 = object;
+                builder.val("b", scriptValue28);
+                scriptValue3 = scriptValue28;
                 if ((scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "has_fluid", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL).asBool() ^ true) continue;
-                ScriptValue scriptValue32 = scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "fluid_flow", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL;
-                builder.val("flow", scriptValue32);
-                scriptValue19 = scriptValue32;
-                ScriptValue scriptValue33 = scriptContext.getStr("axis").equals("x") ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", WaterWheel.class, 0.0)) : (scriptValue19 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "x", (ScriptValue)scriptValue19, (ScriptContext)scriptContext) : ScriptValue.NULL);
-                builder.val("fx", scriptValue33);
-                scriptValue12 = scriptValue33;
-                ScriptValue scriptValue34 = scriptContext.getStr("axis").equals("y") ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", WaterWheel.class, 0.0)) : (scriptValue19 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)scriptValue19, (ScriptContext)scriptContext) : ScriptValue.NULL);
-                builder.val("fy", scriptValue34);
-                scriptValue13 = scriptValue34;
-                ScriptValue scriptValue35 = scriptContext.getStr("axis").equals("z") ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", WaterWheel.class, 0.0)) : (scriptValue19 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)scriptValue19, (ScriptContext)scriptContext) : ScriptValue.NULL);
-                builder.val("fz", scriptValue35);
-                scriptValue15 = scriptValue35;
+                ScriptValue scriptValue29 = scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "fluid_flow", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL;
+                builder.val("flow", scriptValue29);
+                scriptValue19 = scriptValue29;
+                ScriptValue scriptValue30 = scriptContext.getStr("axis").equals("x") ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", WaterWheel.class, 0.0)) : (scriptValue19 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "x", (ScriptValue)scriptValue19, (ScriptContext)scriptContext) : ScriptValue.NULL);
+                builder.val("fx", scriptValue30);
+                scriptValue12 = scriptValue30;
+                ScriptValue scriptValue31 = scriptContext.getStr("axis").equals("y") ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", WaterWheel.class, 0.0)) : (scriptValue19 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)scriptValue19, (ScriptContext)scriptContext) : ScriptValue.NULL);
+                builder.val("fy", scriptValue31);
+                scriptValue13 = scriptValue31;
+                ScriptValue scriptValue32 = scriptContext.getStr("axis").equals("z") ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", WaterWheel.class, 0.0)) : (scriptValue19 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)scriptValue19, (ScriptContext)scriptContext) : ScriptValue.NULL);
+                builder.val("fz", scriptValue32);
+                scriptValue15 = scriptValue32;
                 double d2 = Math.sqrt(scriptValue12.asNum() * scriptValue12.asNum() + scriptValue13.asNum() * scriptValue13.asNum() + scriptValue15.asNum() * scriptValue15.asNum());
-                ScriptValue scriptValue36 = ScriptValue.of((double)d2);
-                builder.val("flen", scriptValue36);
-                scriptValue2 = scriptValue36;
+                ScriptValue scriptValue33 = ScriptValue.of((double)d2);
+                builder.val("flen", scriptValue33);
+                scriptValue2 = scriptValue33;
                 if (scriptValue2.asNum() <= 0.0) continue;
                 double d3 = scriptValue2.asNum();
                 double d4 = d3 == 0.0 ? 0.0 : scriptValue12.asNum() / d3;
-                ScriptValue scriptValue37 = ScriptValue.of((double)d4);
-                builder.val("fx", scriptValue37);
-                scriptValue12 = scriptValue37;
+                ScriptValue scriptValue34 = ScriptValue.of((double)d4);
+                builder.val("fx", scriptValue34);
+                scriptValue12 = scriptValue34;
                 double d5 = scriptValue2.asNum();
                 double d6 = d5 == 0.0 ? 0.0 : scriptValue13.asNum() / d5;
-                ScriptValue scriptValue38 = ScriptValue.of((double)d6);
-                builder.val("fy", scriptValue38);
-                scriptValue13 = scriptValue38;
+                ScriptValue scriptValue35 = ScriptValue.of((double)d6);
+                builder.val("fy", scriptValue35);
+                scriptValue13 = scriptValue35;
                 double d7 = scriptValue2.asNum();
                 double d8 = d7 == 0.0 ? 0.0 : scriptValue15.asNum() / d7;
-                ScriptValue scriptValue39 = ScriptValue.of((double)d8);
-                builder.val("fz", scriptValue39);
-                scriptValue15 = scriptValue39;
+                ScriptValue scriptValue36 = ScriptValue.of((double)d8);
+                builder.val("fz", scriptValue36);
+                scriptValue15 = scriptValue36;
                 double d9 = Math.sqrt(scriptValue14.asNum() * scriptValue14.asNum() + scriptValue17.asNum() * scriptValue17.asNum() + scriptValue18.asNum() * scriptValue18.asNum());
-                ScriptValue scriptValue40 = ScriptValue.of((double)d9);
-                builder.val("nlen", scriptValue40);
-                scriptValue16 = scriptValue40;
+                ScriptValue scriptValue37 = ScriptValue.of((double)d9);
+                builder.val("nlen", scriptValue37);
+                scriptValue16 = scriptValue37;
                 if (scriptValue16.asNum() <= 0.0) continue;
                 double d10 = scriptValue16.asNum();
                 double d11 = d10 == 0.0 ? 0.0 : scriptValue14.asNum() / d10;
-                ScriptValue scriptValue41 = ScriptValue.of((double)d11);
-                builder.val("nx", scriptValue41);
-                scriptValue7 = scriptValue41;
+                ScriptValue scriptValue38 = ScriptValue.of((double)d11);
+                builder.val("nx", scriptValue38);
+                scriptValue7 = scriptValue38;
                 double d12 = scriptValue16.asNum();
                 double d13 = d12 == 0.0 ? 0.0 : scriptValue17.asNum() / d12;
-                ScriptValue scriptValue42 = ScriptValue.of((double)d13);
-                builder.val("ny", scriptValue42);
-                scriptValue9 = scriptValue42;
+                ScriptValue scriptValue39 = ScriptValue.of((double)d13);
+                builder.val("ny", scriptValue39);
+                scriptValue9 = scriptValue39;
                 double d14 = scriptValue16.asNum();
                 double d15 = d14 == 0.0 ? 0.0 : scriptValue18.asNum() / d14;
-                ScriptValue scriptValue43 = ScriptValue.of((double)d15);
-                builder.val("nz", scriptValue43);
-                scriptValue10 = scriptValue43;
+                ScriptValue scriptValue40 = ScriptValue.of((double)d15);
+                builder.val("nz", scriptValue40);
+                scriptValue10 = scriptValue40;
                 if (scriptContext.getStr("axis").equals("x")) {
-                    ScriptValue scriptValue44 = scriptValue7;
+                    ScriptValue scriptValue41 = scriptValue7;
+                    builder.val("px", scriptValue41);
+                    scriptValue4 = scriptValue41;
+                    double d16 = -scriptValue10.asNum();
+                    ScriptValue scriptValue42 = ScriptValue.of((double)d16);
+                    builder.val("py", scriptValue42);
+                    scriptValue6 = scriptValue42;
+                    ScriptValue scriptValue43 = scriptValue9;
+                    builder.val("pz", scriptValue43);
+                    scriptValue8 = scriptValue43;
+                } else if (scriptContext.getStr("axis").equals("y")) {
+                    ScriptValue scriptValue44 = scriptValue10;
                     builder.val("px", scriptValue44);
                     scriptValue4 = scriptValue44;
-                    double d16 = -scriptValue10.asNum();
-                    ScriptValue scriptValue45 = ScriptValue.of((double)d16);
+                    ScriptValue scriptValue45 = scriptValue9;
                     builder.val("py", scriptValue45);
                     scriptValue6 = scriptValue45;
-                    ScriptValue scriptValue46 = scriptValue9;
+                    double d17 = -scriptValue7.asNum();
+                    ScriptValue scriptValue46 = ScriptValue.of((double)d17);
                     builder.val("pz", scriptValue46);
                     scriptValue8 = scriptValue46;
-                } else if (scriptContext.getStr("axis").equals("y")) {
-                    ScriptValue scriptValue47 = scriptValue10;
-                    builder.val("px", scriptValue47);
-                    scriptValue4 = scriptValue47;
-                    ScriptValue scriptValue48 = scriptValue9;
-                    builder.val("py", scriptValue48);
-                    scriptValue6 = scriptValue48;
-                    double d17 = -scriptValue7.asNum();
-                    ScriptValue scriptValue49 = ScriptValue.of((double)d17);
-                    builder.val("pz", scriptValue49);
-                    scriptValue8 = scriptValue49;
                 } else {
                     double d18 = -scriptValue9.asNum();
-                    ScriptValue scriptValue50 = ScriptValue.of((double)d18);
-                    builder.val("px", scriptValue50);
-                    scriptValue4 = scriptValue50;
-                    ScriptValue scriptValue51 = scriptValue7;
-                    builder.val("py", scriptValue51);
-                    scriptValue6 = scriptValue51;
-                    ScriptValue scriptValue52 = scriptValue10;
-                    builder.val("pz", scriptValue52);
-                    scriptValue8 = scriptValue52;
+                    ScriptValue scriptValue47 = ScriptValue.of((double)d18);
+                    builder.val("px", scriptValue47);
+                    scriptValue4 = scriptValue47;
+                    ScriptValue scriptValue48 = scriptValue7;
+                    builder.val("py", scriptValue48);
+                    scriptValue6 = scriptValue48;
+                    ScriptValue scriptValue49 = scriptValue10;
+                    builder.val("pz", scriptValue49);
+                    scriptValue8 = scriptValue49;
                 }
                 double d19 = scriptValue12.asNum() * scriptContext.getNum("px") + scriptValue13.asNum() * scriptContext.getNum("py") + scriptValue15.asNum() * scriptContext.getNum("pz");
-                ScriptValue scriptValue53 = ScriptValue.of((double)d19);
-                builder.val("dot", scriptValue53);
-                scriptValue5 = scriptValue53;
+                ScriptValue scriptValue50 = ScriptValue.of((double)d19);
+                builder.val("dot", scriptValue50);
+                scriptValue5 = scriptValue50;
                 if (scriptValue5.asNum() > 0.5) {
-                    ScriptValue scriptValue54 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue11, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", WaterWheel.class, 1.0)));
-                    builder.val("score", scriptValue54);
-                    scriptValue11 = scriptValue54;
+                    ScriptValue scriptValue51 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue11, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", WaterWheel.class, 1.0)));
+                    builder.val("score", scriptValue51);
+                    scriptValue11 = scriptValue51;
                 }
                 if (!(scriptValue5.asNum() < -0.5)) continue;
                 double d20 = scriptContext.getNum("score") - 1.0;
-                ScriptValue scriptValue55 = ScriptValue.of((double)d20);
-                builder.val("score", scriptValue55);
-                scriptValue11 = scriptValue55;
+                ScriptValue scriptValue52 = ScriptValue.of((double)d20);
+                builder.val("score", scriptValue52);
+                scriptValue11 = scriptValue52;
             }
         }
         return scriptValue11;
@@ -549,8 +546,8 @@ public final class WaterWheel {
         ScriptValue scriptValue;
         ScriptValue scriptValue2;
         ScriptContext scriptContext = builder.peek();
-        PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
-        ScriptValue scriptValue3 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$127_axis() : ((scriptValue2 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "axis", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL);
+        PolyClassMachine polyClassMachine = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+        ScriptValue scriptValue3 = polyClassMachine != null ? polyClassMachine.pg$127_axis() : ((scriptValue2 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "axis", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL);
         builder.val("axis", scriptValue3);
         if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)scriptContext.getClassOrVar("null"))) {
             ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", WaterWheel.class, "z");
@@ -585,8 +582,8 @@ public final class WaterWheel {
             Object object;
             double d2 = d;
             if (scriptValue10 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v22 = new PolyClassMachine_v2(object);
-                v1 = ScriptValue.of((boolean)polyClassMachine_v22.tm$106_set_rpm_output(d2));
+                PolyClassMachine polyClassMachine2 = new PolyClassMachine(object);
+                v1 = ScriptValue.of((boolean)polyClassMachine2.tm$106_set_rpm_output(d2));
             } else {
                 v1 = PolyDispatch.bootstrapCall("memberCall", "set_rpm_output", (ScriptValue)scriptValue10, (ScriptValue)ScriptValue.of((double)d2), (ScriptContext)scriptContext);
             }
@@ -600,8 +597,8 @@ public final class WaterWheel {
                 Object object;
                 double d3 = 0.0;
                 if (scriptValue11 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue11).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v2 polyClassMachine_v23 = new PolyClassMachine_v2(object);
-                    v2 = ScriptValue.of((boolean)polyClassMachine_v23.tm$56_report_su(d3));
+                    PolyClassMachine polyClassMachine3 = new PolyClassMachine(object);
+                    v2 = ScriptValue.of((boolean)polyClassMachine3.tm$56_report_su(d3));
                 } else {
                     v2 = PolyDispatch.bootstrapCall("memberCall", "report_su", (ScriptValue)scriptValue11, (ScriptValue)ScriptValue.of((double)d3), (ScriptContext)scriptContext);
                 }
@@ -615,8 +612,8 @@ public final class WaterWheel {
                 Object object;
                 double d4 = -scriptValue8.asNum();
                 if (scriptValue12 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v2 polyClassMachine_v24 = new PolyClassMachine_v2(object);
-                    v3 = ScriptValue.of((boolean)polyClassMachine_v24.tm$56_report_su(d4));
+                    PolyClassMachine polyClassMachine4 = new PolyClassMachine(object);
+                    v3 = ScriptValue.of((boolean)polyClassMachine4.tm$56_report_su(d4));
                 } else {
                     v3 = PolyDispatch.bootstrapCall("memberCall", "report_su", (ScriptValue)scriptValue12, (ScriptValue)ScriptValue.of((double)d4), (ScriptContext)scriptContext);
                 }
@@ -656,8 +653,8 @@ public final class WaterWheel {
             Object object;
             double d = 0.0;
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object);
-                v0 = ScriptValue.of((boolean)polyClassMachine_v2.tm$106_set_rpm_output(d));
+                PolyClassMachine polyClassMachine = new PolyClassMachine(object);
+                v0 = ScriptValue.of((boolean)polyClassMachine.tm$106_set_rpm_output(d));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "set_rpm_output", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
             }
@@ -670,8 +667,8 @@ public final class WaterWheel {
             Object object;
             double d = 0.0;
             if (scriptValue2 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object);
-                v1 = ScriptValue.of((boolean)polyClassMachine_v2.tm$56_report_su(d));
+                PolyClassMachine polyClassMachine = new PolyClassMachine(object);
+                v1 = ScriptValue.of((boolean)polyClassMachine.tm$56_report_su(d));
             } else {
                 v1 = PolyDispatch.bootstrapCall("memberCall", "report_su", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
             }

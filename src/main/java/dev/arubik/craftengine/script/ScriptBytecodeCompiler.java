@@ -2200,15 +2200,15 @@ final class ScriptBytecodeCompiler {
                 CachedVarRef hinted = varHint.get(name);
                 if (hinted != null && hinted.polyType() != null) receiverType = hinted.polyType();
             }
-            return dotMethodCall(null, name, receiverType, method, rawArgs);
+            return dotMethodCall(null, name, receiverType, method, rawArgs, varHint);
         }
 
         private static Expr dotMethodCall(Expr base, String name, String method, List<Expr> rawArgs) {
-            return dotMethodCall(base, name, name, method, rawArgs);
+            return dotMethodCall(base, name, name, method, rawArgs, null);
         }
 
         private static Expr dotMethodCall(Expr base, String name, String receiverType, String method,
-                                           List<Expr> rawArgs) {
+                                           List<Expr> rawArgs, VarTypeHint varHint) {
             List<Expr> args = rawArgs.stream().map(ScriptBytecodeCompiler::toAny).toList();
             int arity = args.size();
 
@@ -2263,14 +2263,18 @@ final class ScriptBytecodeCompiler {
             }
             ArgSlotKind[] finalArgSlotKinds = argSlotKinds;
 
+            // The receiver may already be in a local — see PropRead#receiverSlot. Then there is
+            // nothing to read: the call site loads it, which is both one map lookup and several
+            // instructions less than resolving the name again.
+            Integer cachedSlot = base == null ? cachedReceiverSlot(varHint, name) : null;
             Expr call = new BaseExpr(Type.ANY) {
                 @Override public void emit(MethodVisitor mv, Ctx c) {
-                    int svSlot = c.allocRef();
+                    int svSlot = cachedSlot != null ? cachedSlot : c.allocRef();
                     // First hop: resolve the name, and return NULL for a NULL receiver. Chained
                     // hop: evaluate the base, no guard — see PropRead#emitAs for why they differ.
                     Label isNullL = new Label(), endL = new Label();
                     if (base == null) {
-                        emitResolveInstanceOrVar(mv, c, name, svSlot);
+                        if (cachedSlot == null) emitResolveInstanceOrVar(mv, c, name, svSlot);
                         mv.visitVarInsn(ALOAD, svSlot);
                         emitGetNull(mv);
                         mv.visitJumpInsn(IF_ACMPEQ, isNullL);

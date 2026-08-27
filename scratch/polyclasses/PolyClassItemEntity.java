@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassEntity;
+import dev.arubik.craftengine.script.PolyClassEntity_v3;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -23,7 +23,7 @@ import dev.arubik.craftengine.script.ScriptValue;
 import java.util.List;
 
 public class PolyClassItemEntity
-extends PolyClassEntity {
+extends PolyClassEntity_v3 {
     private static volatile PolyType.TypedMethodHandler1 h$0;
     private static volatile PolyType.MethodHandler m$1;
     private static volatile PolyType.PropertyHandler p$2;

@@ -4,7 +4,7 @@
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassContainer
- *  dev.arubik.craftengine.script.PolyClassMachine_v2
+ *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -17,7 +17,7 @@ package dev.arubik.craftengine.script.gen.farming;
 
 import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassContainer;
-import dev.arubik.craftengine.script.PolyClassMachine_v2;
+import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -125,8 +125,8 @@ public final class AutoComposter {
             String string = "compost_level";
             String string2 = "int";
             if (scriptValue2 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object2);
-                object = polyClassMachine_v2.tm$34_get_typed(string, string2);
+                PolyClassMachine polyClassMachine = new PolyClassMachine(object2);
+                object = polyClassMachine.tm$34_get_typed(string, string2);
             } else {
                 object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
             }
@@ -154,8 +154,8 @@ public final class AutoComposter {
                 ScriptValue scriptValue10;
                 builder.val("i", scriptValue8);
                 if (!(scriptValue6.asBool() ^ true)) continue;
-                PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
-                ScriptValue scriptValue11 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$120_container() : ((scriptValue10 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue10, (ScriptContext)scriptContext) : ScriptValue.NULL);
+                PolyClassMachine polyClassMachine = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+                ScriptValue scriptValue11 = polyClassMachine != null ? polyClassMachine.pg$120_container() : ((scriptValue10 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue10, (ScriptContext)scriptContext) : ScriptValue.NULL);
                 ScriptValue scriptValue12 = scriptValue8;
                 if (scriptValue11 instanceof ScriptValue.Obj && (object5 = (obj2 = (ScriptValue.Obj)scriptValue11).instance()) != null && !(object5 instanceof PolyClass) && obj2.typeName().equals("Container")) {
                     PolyClassContainer polyClassContainer = new PolyClassContainer(object5);
@@ -167,62 +167,61 @@ public final class AutoComposter {
                 builder.val("item", (ScriptValue)callSite2);
                 object3 = callSite2;
                 if (!(ScriptFormula.callBuiltin1((String)"is_empty", (ScriptValue)object3, (ScriptContext)scriptContext).asBool() ^ true)) continue;
-                ScriptValue scriptValue13 = scriptContext.getClassOrVar("COMPOST_VALUES");
-                ScriptValue scriptValue14 = scriptValue13 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "switch", (ScriptValue)scriptValue13, (ScriptValue)(object3 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)object3, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", AutoComposter.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
-                builder.val("compost_value", scriptValue14);
-                scriptValue5 = scriptValue14;
+                ScriptValue scriptValue13 = scriptValue != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "switch", (ScriptValue)scriptValue, (ScriptValue)(object3 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)object3, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", AutoComposter.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+                builder.val("compost_value", scriptValue13);
+                scriptValue5 = scriptValue13;
                 if (!(scriptValue5.asNum() > 0.0)) continue;
-                PolyClassMachine_v2 polyClassMachine_v22 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
-                ScriptValue scriptValue15 = polyClassMachine_v22 != null ? polyClassMachine_v22.pg$120_container() : ((scriptValue9 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue9, (ScriptContext)scriptContext) : ScriptValue.NULL);
-                ScriptValue scriptValue16 = scriptValue8;
+                PolyClassMachine polyClassMachine2 = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+                ScriptValue scriptValue14 = polyClassMachine2 != null ? polyClassMachine2.pg$120_container() : ((scriptValue9 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue9, (ScriptContext)scriptContext) : ScriptValue.NULL);
+                ScriptValue scriptValue15 = scriptValue8;
                 double d = 1.0;
-                if (scriptValue15 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue15).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Container")) {
+                if (scriptValue14 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue14).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Container")) {
                     PolyClassContainer polyClassContainer = new PolyClassContainer(object4);
-                    v2 = polyClassContainer.tm$6_remove_item(scriptValue16.asNum(), d);
+                    v2 = polyClassContainer.tm$6_remove_item(scriptValue15.asNum(), d);
                 } else {
-                    v2 = PolyDispatch.bootstrapCall("memberCall", "remove_item", (ScriptValue)scriptValue15, (ScriptValue)scriptValue16, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
+                    v2 = PolyDispatch.bootstrapCall("memberCall", "remove_item", (ScriptValue)scriptValue14, (ScriptValue)scriptValue15, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
                 }
-                ScriptValue scriptValue17 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue7, (ScriptValue)scriptValue5);
-                builder.val("level", scriptValue17);
-                scriptValue7 = scriptValue17;
+                ScriptValue scriptValue16 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue7, (ScriptValue)scriptValue5);
+                builder.val("level", scriptValue16);
+                scriptValue7 = scriptValue16;
                 boolean bl2 = true;
-                ScriptValue scriptValue18 = ScriptValue.of((boolean)true);
-                builder.val("found", scriptValue18);
-                scriptValue6 = scriptValue18;
+                ScriptValue scriptValue17 = ScriptValue.of((boolean)true);
+                builder.val("found", scriptValue17);
+                scriptValue6 = scriptValue17;
             }
         }
         if (scriptValue6.asBool()) {
-            ScriptValue scriptValue19;
+            ScriptValue scriptValue18;
             if (scriptValue7.asNum() >= 8.0) {
                 ScriptValue.Obj obj;
                 Object object6;
-                ScriptValue scriptValue20;
-                ScriptValue scriptValue21 = ScriptFormula.callBuiltin2((String)"create_item", (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", AutoComposter.class, "minecraft:bone_meal")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", AutoComposter.class, 1.0)), (ScriptContext)scriptContext);
-                builder.val("bonemeal", scriptValue21);
-                PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
-                ScriptValue scriptValue22 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$120_container() : ((scriptValue20 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue20, (ScriptContext)scriptContext) : ScriptValue.NULL);
-                ScriptValue scriptValue23 = scriptValue21;
-                if (scriptValue22 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue22).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Container")) {
+                ScriptValue scriptValue19;
+                ScriptValue scriptValue20 = ScriptFormula.callBuiltin2((String)"create_item", (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", AutoComposter.class, "minecraft:bone_meal")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", AutoComposter.class, 1.0)), (ScriptContext)scriptContext);
+                builder.val("bonemeal", scriptValue20);
+                PolyClassMachine polyClassMachine = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+                ScriptValue scriptValue21 = polyClassMachine != null ? polyClassMachine.pg$120_container() : ((scriptValue19 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue19, (ScriptContext)scriptContext) : ScriptValue.NULL);
+                ScriptValue scriptValue22 = scriptValue20;
+                if (scriptValue21 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue21).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Container")) {
                     PolyClassContainer polyClassContainer = new PolyClassContainer(object6);
-                    v3 = polyClassContainer.tm$12_push(scriptValue23);
+                    v3 = polyClassContainer.tm$12_push(scriptValue22);
                 } else {
-                    v3 = PolyDispatch.bootstrapCall("memberCall", "push", (ScriptValue)scriptValue22, (ScriptValue)scriptValue23, (ScriptContext)scriptContext);
+                    v3 = PolyDispatch.bootstrapCall("memberCall", "push", (ScriptValue)scriptValue21, (ScriptValue)scriptValue22, (ScriptContext)scriptContext);
                 }
                 double d = 0.0;
-                ScriptValue scriptValue24 = ScriptValue.of((double)0.0);
-                builder.val("level", scriptValue24);
+                ScriptValue scriptValue23 = ScriptValue.of((double)0.0);
+                builder.val("level", scriptValue23);
             }
-            if ((scriptValue19 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL) {
+            if ((scriptValue18 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL) {
                 ScriptValue.Obj obj;
                 Object object7;
                 String string = "compost_level";
                 String string3 = "int";
-                ScriptValue scriptValue25 = scriptContext.getClassOrVar("level");
-                if (scriptValue19 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue19).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object7);
-                    v4 = ScriptValue.of((boolean)polyClassMachine_v2.tm$82_set_typed(string, string3, scriptValue25));
+                ScriptValue scriptValue24 = scriptContext.getClassOrVar("level");
+                if (scriptValue18 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue18).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                    PolyClassMachine polyClassMachine = new PolyClassMachine(object7);
+                    v4 = ScriptValue.of((boolean)polyClassMachine.tm$82_set_typed(string, string3, scriptValue24));
                 } else {
-                    v4 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue19, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue25, (ScriptContext)scriptContext);
+                    v4 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue18, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue24, (ScriptContext)scriptContext);
                 }
             } else {
                 v4 = ScriptValue.NULL;

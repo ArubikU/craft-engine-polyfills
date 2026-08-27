@@ -2,7 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  dev.arubik.craftengine.script.PolyClassMachine_v2
+ *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -12,7 +12,7 @@
  */
 package dev.arubik.craftengine.script.gen.block_interaction;
 
-import dev.arubik.craftengine.script.PolyClassMachine_v2;
+import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -37,15 +37,14 @@ public final class GasInfo {
     public static ScriptValue _getTank(ScriptContext.Builder builder) {
         ScriptValue scriptValue;
         ScriptContext scriptContext = builder.peek();
-        PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
-        ScriptValue scriptValue2 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$138_gas_tanks() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "gas_tanks", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
+        PolyClassMachine polyClassMachine = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+        ScriptValue scriptValue2 = polyClassMachine != null ? polyClassMachine.pg$138_gas_tanks() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "gas_tanks", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
         builder.val("tanks", scriptValue2);
         Object object = scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "length", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL;
         if (object.asNum() <= 0.0) {
             return scriptContext.getClassOrVar("null");
         }
-        ScriptValue scriptValue3 = scriptContext.getClassOrVar("tanks");
-        return scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", GasInfo.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        return scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", GasInfo.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
     }
 
     public static ScriptValue item(ScriptContext.Builder builder) {
@@ -61,13 +60,12 @@ public final class GasInfo {
         if (ScriptFormula.valuesEqual((ScriptValue)scriptValue, (ScriptValue)scriptContext.getClassOrVar("null"))) {
             return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasInfo.class, "<gray>No gas tank");
         }
-        ScriptValue scriptValue2 = scriptContext.getClassOrVar("tank");
-        ScriptValue scriptValue3 = scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasInfo.class, "contents_name")), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        builder.val("gas_name", scriptValue3);
-        if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue3, (String)"")) {
+        ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasInfo.class, "contents_name")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        builder.val("gas_name", scriptValue2);
+        if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"")) {
             return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasInfo.class, "<gray>Gas Tank (empty)");
         }
-        return ScriptValue.of((String)("<aqua>" + scriptValue3.asStr()));
+        return ScriptValue.of((String)("<aqua>" + scriptValue2.asStr()));
     }
 
     public static ScriptValue lore(ScriptContext.Builder builder) {
@@ -81,17 +79,15 @@ public final class GasInfo {
             arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasInfo.class, "<gray>No gas tank"));
             return new ScriptValue.Array(arrayList);
         }
-        ScriptValue scriptValue2 = scriptContext.getClassOrVar("tank");
-        ScriptValue scriptValue3 = scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasInfo.class, "level")), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        builder.val("level", scriptValue3);
-        ScriptValue scriptValue4 = scriptContext.getClassOrVar("tank");
-        ScriptValue scriptValue5 = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasInfo.class, "capacity")), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        builder.val("cap", scriptValue5);
-        double d2 = scriptValue5.asNum() > 0.0 ? Math.floor(((d = scriptValue5.asNum()) == 0.0 ? 0.0 : scriptValue3.asNum() / d) * 100.0) : 0.0;
-        ScriptValue scriptValue6 = ScriptValue.of((double)d2);
-        builder.val("pct", scriptValue6);
+        ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasInfo.class, "level")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        builder.val("level", scriptValue2);
+        ScriptValue scriptValue3 = scriptValue != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasInfo.class, "capacity")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        builder.val("cap", scriptValue3);
+        double d2 = scriptValue3.asNum() > 0.0 ? Math.floor(((d = scriptValue3.asNum()) == 0.0 ? 0.0 : scriptValue2.asNum() / d) * 100.0) : 0.0;
+        ScriptValue scriptValue4 = ScriptValue.of((double)d2);
+        builder.val("pct", scriptValue4);
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-        arrayList.add(ScriptValue.of((String)("<gray>Level: <white>" + scriptValue3.asStr() + " / " + scriptValue5.asStr() + " mB")));
+        arrayList.add(ScriptValue.of((String)("<gray>Level: <white>" + scriptValue2.asStr() + " / " + scriptValue3.asStr() + " mB")));
         arrayList.add(ScriptValue.of((String)("<gray>Fill: <yellow>" + ScriptFormula.numToStr((double)d2) + "%")));
         return new ScriptValue.Array(arrayList);
     }

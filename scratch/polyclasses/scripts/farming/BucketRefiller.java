@@ -3,10 +3,10 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassBlock_v2
+ *  dev.arubik.craftengine.script.PolyClassBlock_v4
  *  dev.arubik.craftengine.script.PolyClassContainer
  *  dev.arubik.craftengine.script.PolyClassItem
- *  dev.arubik.craftengine.script.PolyClassMachine_v2
+ *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyClassVector
  *  dev.arubik.craftengine.script.PolyClassWorld
  *  dev.arubik.craftengine.script.PolyDispatch
@@ -19,10 +19,10 @@
 package dev.arubik.craftengine.script.gen.farming;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassBlock_v2;
+import dev.arubik.craftengine.script.PolyClassBlock_v4;
 import dev.arubik.craftengine.script.PolyClassContainer;
 import dev.arubik.craftengine.script.PolyClassItem;
-import dev.arubik.craftengine.script.PolyClassMachine_v2;
+import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyClassVector;
 import dev.arubik.craftengine.script.PolyClassWorld;
 import dev.arubik.craftengine.script.PolyDispatch;
@@ -48,15 +48,15 @@ public final class BucketRefiller {
     }
 
     public static void run(ScriptContext.Builder builder) {
-        PolyClassBlock_v2 polyClassBlock_v2;
+        PolyClassBlock_v4 polyClassBlock_v4;
         ScriptValue scriptValue;
         CallSite callSite;
         ScriptValue.Obj obj;
         Object object;
         ScriptValue scriptValue2;
         ScriptContext scriptContext = builder.peek();
-        PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
-        ScriptValue scriptValue3 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$120_container() : ((scriptValue2 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL);
+        PolyClassMachine polyClassMachine = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+        ScriptValue scriptValue3 = polyClassMachine != null ? polyClassMachine.pg$120_container() : ((scriptValue2 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL);
         double d = 3.0;
         if (scriptValue3 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Container")) {
             PolyClassContainer polyClassContainer = new PolyClassContainer(object);
@@ -70,10 +70,10 @@ public final class BucketRefiller {
             builder.val("__return__", ScriptValue.NULL);
             return;
         }
-        PolyClassMachine_v2 polyClassMachine_v22 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
-        ScriptValue scriptValue4 = polyClassMachine_v22 != null ? polyClassMachine_v22.pg$137_facing_block() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_block", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
+        PolyClassMachine polyClassMachine2 = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+        ScriptValue scriptValue4 = polyClassMachine2 != null ? polyClassMachine2.pg$137_facing_block() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_block", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
         builder.val("front", scriptValue4);
-        ScriptValue scriptValue5 = scriptValue4 != ScriptValue.NULL ? ((polyClassBlock_v2 = PolyClassBlock_v2.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassBlock_v2.pg$53_id() : PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        ScriptValue scriptValue5 = scriptValue4 != ScriptValue.NULL ? ((polyClassBlock_v4 = PolyClassBlock_v4.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassBlock_v4.pg$53_id() : PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         builder.val("front_id", scriptValue5);
         if (ScriptFormula.valuesEqualStr((ScriptValue)(callSite2 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)callSite2, (ScriptContext)scriptContext) : ScriptValue.NULL), (String)"minecraft:bucket")) {
             if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue5, (String)"minecraft:water")) {
@@ -86,21 +86,21 @@ public final class BucketRefiller {
                 ScriptValue scriptValue7;
                 ScriptValue.Obj obj4;
                 Object object5;
-                PolyClassBlock_v2 polyClassBlock_v22;
+                PolyClassBlock_v4 polyClassBlock_v42;
                 Object object6;
-                PolyClassBlock_v2 polyClassBlock_v23;
+                PolyClassBlock_v4 polyClassBlock_v43;
                 Object object7;
-                PolyClassBlock_v2 polyClassBlock_v24;
+                PolyClassBlock_v4 polyClassBlock_v44;
                 ScriptValue scriptValue8;
-                PolyClassBlock_v2 polyClassBlock_v25;
-                Object object8 = scriptValue4 != ScriptValue.NULL ? ((polyClassBlock_v25 = PolyClassBlock_v2.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassBlock_v25.pg$46_world() : PolyDispatch.bootstrapGet("memberGet", "world", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : (scriptValue8 = ScriptValue.NULL);
-                ScriptValue scriptValue9 = scriptValue4 != ScriptValue.NULL ? ((polyClassBlock_v24 = PolyClassBlock_v2.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassBlock_v24.pg$47_pos() : PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+                PolyClassBlock_v4 polyClassBlock_v45;
+                Object object8 = scriptValue4 != ScriptValue.NULL ? ((polyClassBlock_v45 = PolyClassBlock_v4.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassBlock_v45.pg$46_world() : PolyDispatch.bootstrapGet("memberGet", "world", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : (scriptValue8 = ScriptValue.NULL);
+                ScriptValue scriptValue9 = scriptValue4 != ScriptValue.NULL ? ((polyClassBlock_v44 = PolyClassBlock_v4.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassBlock_v44.pg$47_pos() : PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL;
                 PolyClassVector polyClassVector = PolyClassVector.ofGuarded((ScriptValue)scriptValue9);
                 Object object9 = object7 = polyClassVector != null ? polyClassVector.pg$10_x() : PolyDispatch.bootstrapGet("memberGet", "x", (ScriptValue)scriptValue9, (ScriptContext)scriptContext);
-                ScriptValue scriptValue10 = scriptValue4 != ScriptValue.NULL ? ((polyClassBlock_v23 = PolyClassBlock_v2.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassBlock_v23.pg$47_pos() : PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+                ScriptValue scriptValue10 = scriptValue4 != ScriptValue.NULL ? ((polyClassBlock_v43 = PolyClassBlock_v4.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassBlock_v43.pg$47_pos() : PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL;
                 PolyClassVector polyClassVector2 = PolyClassVector.ofGuarded((ScriptValue)scriptValue10);
                 Object object10 = object6 = polyClassVector2 != null ? polyClassVector2.pg$14_y() : PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)scriptValue10, (ScriptContext)scriptContext);
-                ScriptValue scriptValue11 = scriptValue4 != ScriptValue.NULL ? ((polyClassBlock_v22 = PolyClassBlock_v2.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassBlock_v22.pg$47_pos() : PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+                ScriptValue scriptValue11 = scriptValue4 != ScriptValue.NULL ? ((polyClassBlock_v42 = PolyClassBlock_v4.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassBlock_v42.pg$47_pos() : PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL;
                 PolyClassVector polyClassVector3 = PolyClassVector.ofGuarded((ScriptValue)scriptValue11);
                 Object object11 = polyClassVector3 != null ? polyClassVector3.pg$16_z() : PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)scriptValue11, (ScriptContext)scriptContext);
                 String string = "minecraft:air";
@@ -110,8 +110,8 @@ public final class BucketRefiller {
                 } else {
                     v4 = PolyDispatch.bootstrapCall("memberCall", "set_block", (ScriptValue)scriptValue8, (ScriptValue)object7, (ScriptValue)object6, (ScriptValue)object11, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }
-                PolyClassMachine_v2 polyClassMachine_v23 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
-                ScriptValue scriptValue12 = polyClassMachine_v23 != null ? polyClassMachine_v23.pg$120_container() : ((scriptValue7 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL);
+                PolyClassMachine polyClassMachine3 = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+                ScriptValue scriptValue12 = polyClassMachine3 != null ? polyClassMachine3.pg$120_container() : ((scriptValue7 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL);
                 double d2 = 3.0;
                 double d3 = 1.0;
                 if (scriptValue12 instanceof ScriptValue.Obj && (object4 = (obj3 = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object4 instanceof PolyClass) && obj3.typeName().equals("Container")) {
@@ -120,8 +120,8 @@ public final class BucketRefiller {
                 } else {
                     v5 = PolyDispatch.bootstrapCall("memberCall", "remove_item", (ScriptValue)scriptValue12, (ScriptValue)ScriptValue.of((double)d2), (ScriptValue)ScriptValue.of((double)d3), (ScriptContext)scriptContext);
                 }
-                PolyClassMachine_v2 polyClassMachine_v24 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
-                ScriptValue scriptValue13 = polyClassMachine_v24 != null ? polyClassMachine_v24.pg$120_container() : ((scriptValue6 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL);
+                PolyClassMachine polyClassMachine4 = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+                ScriptValue scriptValue13 = polyClassMachine4 != null ? polyClassMachine4.pg$120_container() : ((scriptValue6 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL);
                 double d4 = 5.0;
                 ScriptValue scriptValue14 = scriptContext.getClassOrVar("Item");
                 if (scriptValue14 != ScriptValue.NULL) {
@@ -151,21 +151,21 @@ public final class BucketRefiller {
                 ScriptValue scriptValue16;
                 ScriptValue.Obj obj8;
                 Object object16;
-                PolyClassBlock_v2 polyClassBlock_v26;
+                PolyClassBlock_v4 polyClassBlock_v46;
                 Object object17;
-                PolyClassBlock_v2 polyClassBlock_v27;
+                PolyClassBlock_v4 polyClassBlock_v47;
                 Object object18;
-                PolyClassBlock_v2 polyClassBlock_v28;
+                PolyClassBlock_v4 polyClassBlock_v48;
                 ScriptValue scriptValue17;
-                PolyClassBlock_v2 polyClassBlock_v29;
-                Object object19 = scriptValue4 != ScriptValue.NULL ? ((polyClassBlock_v29 = PolyClassBlock_v2.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassBlock_v29.pg$46_world() : PolyDispatch.bootstrapGet("memberGet", "world", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : (scriptValue17 = ScriptValue.NULL);
-                ScriptValue scriptValue18 = scriptValue4 != ScriptValue.NULL ? ((polyClassBlock_v28 = PolyClassBlock_v2.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassBlock_v28.pg$47_pos() : PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+                PolyClassBlock_v4 polyClassBlock_v49;
+                Object object19 = scriptValue4 != ScriptValue.NULL ? ((polyClassBlock_v49 = PolyClassBlock_v4.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassBlock_v49.pg$46_world() : PolyDispatch.bootstrapGet("memberGet", "world", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : (scriptValue17 = ScriptValue.NULL);
+                ScriptValue scriptValue18 = scriptValue4 != ScriptValue.NULL ? ((polyClassBlock_v48 = PolyClassBlock_v4.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassBlock_v48.pg$47_pos() : PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL;
                 PolyClassVector polyClassVector = PolyClassVector.ofGuarded((ScriptValue)scriptValue18);
                 Object object20 = object18 = polyClassVector != null ? polyClassVector.pg$10_x() : PolyDispatch.bootstrapGet("memberGet", "x", (ScriptValue)scriptValue18, (ScriptContext)scriptContext);
-                ScriptValue scriptValue19 = scriptValue4 != ScriptValue.NULL ? ((polyClassBlock_v27 = PolyClassBlock_v2.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassBlock_v27.pg$47_pos() : PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+                ScriptValue scriptValue19 = scriptValue4 != ScriptValue.NULL ? ((polyClassBlock_v47 = PolyClassBlock_v4.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassBlock_v47.pg$47_pos() : PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL;
                 PolyClassVector polyClassVector4 = PolyClassVector.ofGuarded((ScriptValue)scriptValue19);
                 Object object21 = object17 = polyClassVector4 != null ? polyClassVector4.pg$14_y() : PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)scriptValue19, (ScriptContext)scriptContext);
-                ScriptValue scriptValue20 = scriptValue4 != ScriptValue.NULL ? ((polyClassBlock_v26 = PolyClassBlock_v2.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassBlock_v26.pg$47_pos() : PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+                ScriptValue scriptValue20 = scriptValue4 != ScriptValue.NULL ? ((polyClassBlock_v46 = PolyClassBlock_v4.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassBlock_v46.pg$47_pos() : PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL;
                 PolyClassVector polyClassVector5 = PolyClassVector.ofGuarded((ScriptValue)scriptValue20);
                 Object object22 = polyClassVector5 != null ? polyClassVector5.pg$16_z() : PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)scriptValue20, (ScriptContext)scriptContext);
                 String string = "minecraft:air";
@@ -175,8 +175,8 @@ public final class BucketRefiller {
                 } else {
                     v11 = PolyDispatch.bootstrapCall("memberCall", "set_block", (ScriptValue)scriptValue17, (ScriptValue)object18, (ScriptValue)object17, (ScriptValue)object22, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }
-                PolyClassMachine_v2 polyClassMachine_v25 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
-                ScriptValue scriptValue21 = polyClassMachine_v25 != null ? polyClassMachine_v25.pg$120_container() : ((scriptValue16 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue16, (ScriptContext)scriptContext) : ScriptValue.NULL);
+                PolyClassMachine polyClassMachine5 = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+                ScriptValue scriptValue21 = polyClassMachine5 != null ? polyClassMachine5.pg$120_container() : ((scriptValue16 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue16, (ScriptContext)scriptContext) : ScriptValue.NULL);
                 double d5 = 3.0;
                 double d6 = 1.0;
                 if (scriptValue21 instanceof ScriptValue.Obj && (object15 = (obj7 = (ScriptValue.Obj)scriptValue21).instance()) != null && !(object15 instanceof PolyClass) && obj7.typeName().equals("Container")) {
@@ -185,8 +185,8 @@ public final class BucketRefiller {
                 } else {
                     v12 = PolyDispatch.bootstrapCall("memberCall", "remove_item", (ScriptValue)scriptValue21, (ScriptValue)ScriptValue.of((double)d5), (ScriptValue)ScriptValue.of((double)d6), (ScriptContext)scriptContext);
                 }
-                PolyClassMachine_v2 polyClassMachine_v26 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
-                ScriptValue scriptValue22 = polyClassMachine_v26 != null ? polyClassMachine_v26.pg$120_container() : ((scriptValue15 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue15, (ScriptContext)scriptContext) : ScriptValue.NULL);
+                PolyClassMachine polyClassMachine6 = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+                ScriptValue scriptValue22 = polyClassMachine6 != null ? polyClassMachine6.pg$120_container() : ((scriptValue15 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue15, (ScriptContext)scriptContext) : ScriptValue.NULL);
                 double d7 = 5.0;
                 ScriptValue scriptValue23 = scriptContext.getClassOrVar("Item");
                 if (scriptValue23 != ScriptValue.NULL) {

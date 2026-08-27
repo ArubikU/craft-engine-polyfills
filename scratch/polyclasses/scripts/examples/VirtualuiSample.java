@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassPlayer
+ *  dev.arubik.craftengine.script.PolyClassPlayer_v2
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script.gen.examples;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassPlayer;
+import dev.arubik.craftengine.script.PolyClassPlayer_v2;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -47,8 +47,8 @@ public final class VirtualuiSample {
                 Object object;
                 String string = "<red>You already have a VirtualUI open - <white>/virtualui close</white> first.";
                 if (scriptValue2 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                    v0 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+                    PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                    v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
                 } else {
                     v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }
@@ -60,38 +60,22 @@ public final class VirtualuiSample {
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("VirtualUI");
         ScriptValue scriptValue4 = scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "screen", (ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, " sample (ported)")), (ScriptContext)scriptContext) : ScriptValue.NULL;
         builder.val("ui", scriptValue4);
-        ScriptValue scriptValue5 = scriptContext.getClassOrVar("ui");
-        Object object = scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "bounds", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 6.0)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 4.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue6 = scriptContext.getClassOrVar("ui");
-        Object object2 = scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "on_close", (ScriptValue)scriptValue6, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_close")), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue7 = scriptContext.getClassOrVar("ui");
-        Object object3 = scriptValue7 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "label", (ScriptValue)scriptValue7, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "left")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "<white><bold>LEFT HOLOGRAM</bold>\n<gray>Static label, like 's own sample")), (ScriptValue)ScriptValue.of((double)(-2.0)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue8 = scriptContext.getClassOrVar("ui");
-        Object object4 = scriptValue8 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "label", (ScriptValue)scriptValue8, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "right")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "<white><bold>RIGHT HOLOGRAM</bold>\n<gray>Static label")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 2.0)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue9 = scriptContext.getClassOrVar("ui");
-        Object object5 = scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "label", (ScriptValue)scriptValue9, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "info")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "<green><bold>Cursor Information</bold>\n<gray>Move the cursor over a button")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 0.0)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 1.6)), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue10 = scriptContext.getClassOrVar("ui");
-        Object object6 = scriptValue10 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "label", (ScriptValue)scriptValue10, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "pulse")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "${if(sin(VUIText.ticks_open() * 0.1) > 0, '<yellow>', '<gold>')}<bold>* PULSING *</bold>")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 0.0)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 2.6)), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue11 = scriptContext.getClassOrVar("ui");
-        Object object7 = scriptValue11 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "button", (ScriptValue)scriptValue11, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "link_button")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "<aqua><bold>Open a link</bold>")), (ScriptValue)ScriptValue.of((double)(-0.9)), (ScriptValue)ScriptValue.of((double)(-0.6)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_click_link")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 1.3)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 0.5)), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue12 = scriptContext.getClassOrVar("ui");
-        Object object8 = scriptValue12 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "on_hover", (ScriptValue)scriptValue12, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_hover_info")), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue13 = scriptContext.getClassOrVar("ui");
-        Object object9 = scriptValue13 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "on_unhover", (ScriptValue)scriptValue13, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_unhover_info")), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue14 = scriptContext.getClassOrVar("ui");
-        Object object10 = scriptValue14 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "button", (ScriptValue)scriptValue14, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "close_button")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "<red><bold>Close</bold>")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 0.9)), (ScriptValue)ScriptValue.of((double)(-0.6)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_click_close")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 1.0)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 0.5)), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue15 = scriptContext.getClassOrVar("ui");
-        Object object11 = scriptValue15 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "on_hover", (ScriptValue)scriptValue15, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_hover_info")), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue16 = scriptContext.getClassOrVar("ui");
-        Object object12 = scriptValue16 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "on_unhover", (ScriptValue)scriptValue16, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_unhover_info")), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue17 = scriptContext.getClassOrVar("ui");
-        Object object13 = scriptValue17 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "icon", (ScriptValue)scriptValue17, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "icon_demo")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "minecraft:compass")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 0.0)), (ScriptValue)ScriptValue.of((double)(-1.4)), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue18 = scriptContext.getClassOrVar("ui");
-        Object object14 = scriptValue18 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "player_render", (ScriptValue)scriptValue18, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "self_render")), (ScriptValue)ScriptValue.of((double)(-2.5)), (ScriptValue)ScriptValue.of((double)(-1.4)), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue19 = scriptContext.getClassOrVar("ui");
-        Object object15 = scriptValue19 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "block", (ScriptValue)scriptValue19, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "block_demo")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "minecraft:diamond_block")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 2.5)), (ScriptValue)ScriptValue.of((double)(-1.4)), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue20 = scriptContext.getClassOrVar("ui");
-        if (scriptValue20 != ScriptValue.NULL) {
+        Object object = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "bounds", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 6.0)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 4.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object2 = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "on_close", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_close")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object3 = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "label", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "left")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "<white><bold>LEFT HOLOGRAM</bold>\n<gray>Static label, like 's own sample")), (ScriptValue)ScriptValue.of((double)(-2.0)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object4 = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "label", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "right")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "<white><bold>RIGHT HOLOGRAM</bold>\n<gray>Static label")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 2.0)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object5 = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "label", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "info")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "<green><bold>Cursor Information</bold>\n<gray>Move the cursor over a button")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 0.0)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 1.6)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object6 = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "label", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "pulse")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "${if(sin(VUIText.ticks_open() * 0.1) > 0, '<yellow>', '<gold>')}<bold>* PULSING *</bold>")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 0.0)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 2.6)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object7 = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "button", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "link_button")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "<aqua><bold>Open a link</bold>")), (ScriptValue)ScriptValue.of((double)(-0.9)), (ScriptValue)ScriptValue.of((double)(-0.6)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_click_link")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 1.3)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 0.5)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object8 = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "on_hover", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_hover_info")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object9 = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "on_unhover", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_unhover_info")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object10 = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "button", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "close_button")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "<red><bold>Close</bold>")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 0.9)), (ScriptValue)ScriptValue.of((double)(-0.6)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_click_close")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 1.0)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 0.5)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object11 = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "on_hover", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_hover_info")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object12 = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "on_unhover", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_unhover_info")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object13 = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "icon", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "icon_demo")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "minecraft:compass")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 0.0)), (ScriptValue)ScriptValue.of((double)(-1.4)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object14 = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "player_render", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "self_render")), (ScriptValue)ScriptValue.of((double)(-2.5)), (ScriptValue)ScriptValue.of((double)(-1.4)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object15 = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "block", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "block_demo")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "minecraft:diamond_block")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 2.5)), (ScriptValue)ScriptValue.of((double)(-1.4)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        if (scriptValue4 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "volume_scrollbar"));
             arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", VirtualuiSample.class, 0));
@@ -102,16 +86,13 @@ public final class VirtualuiSample {
             arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 0.5));
             arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_scrollbar_change"));
             arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "minecraft:lever"));
-            v16 = PolyDispatch.bootstrapCall("memberCall", "scrollbar", (ScriptValue)scriptValue20, arrayList, (ScriptContext)scriptContext);
+            v16 = PolyDispatch.bootstrapCall("memberCall", "scrollbar", (ScriptValue)scriptValue4, arrayList, (ScriptContext)scriptContext);
         } else {
             v16 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue21 = scriptContext.getClassOrVar("ui");
-        Object object16 = scriptValue21 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "on_hover", (ScriptValue)scriptValue21, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_scrollbar_armed")), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue22 = scriptContext.getClassOrVar("ui");
-        Object object17 = scriptValue22 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "on_unhover", (ScriptValue)scriptValue22, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_scrollbar_released")), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue23 = scriptContext.getClassOrVar("ui");
-        if (scriptValue23 != ScriptValue.NULL) {
+        Object object16 = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "on_hover", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_scrollbar_armed")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object17 = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "on_unhover", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_scrollbar_released")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        if (scriptValue4 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "mute_toggle"));
             arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "<green><bold>ON</bold>"));
@@ -122,36 +103,33 @@ public final class VirtualuiSample {
             arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_toggle_mute"));
             arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 1.0));
             arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 0.5));
-            v19 = PolyDispatch.bootstrapCall("memberCall", "toggle", (ScriptValue)scriptValue23, arrayList, (ScriptContext)scriptContext);
+            v19 = PolyDispatch.bootstrapCall("memberCall", "toggle", (ScriptValue)scriptValue4, arrayList, (ScriptContext)scriptContext);
         } else {
             v19 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue24 = scriptContext.getClassOrVar("ui");
-        if (scriptValue24 != ScriptValue.NULL) {
-            ScriptValue scriptValue25 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "difficulty_select");
+        if (scriptValue4 != ScriptValue.NULL) {
+            ScriptValue scriptValue5 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "difficulty_select");
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "Easy"));
             arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "Normal"));
             arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "Hard"));
-            v21 = PolyDispatch.bootstrapCall("memberCall", "select", (ScriptValue)scriptValue24, (ScriptValue)scriptValue25, (ScriptValue)new ScriptValue.Array(arrayList), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "<white>\u25c0 <yellow>${VUISelect.value()}</yellow> \u25b6")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 3.2)), (ScriptValue)ScriptValue.of((double)(-2.2)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 1.0)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_difficulty_change")), (ScriptContext)scriptContext);
+            v21 = PolyDispatch.bootstrapCall("memberCall", "select", (ScriptValue)scriptValue4, (ScriptValue)scriptValue5, (ScriptValue)new ScriptValue.Array(arrayList), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "<white>\u25c0 <yellow>${VUISelect.value()}</yellow> \u25b6")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 3.2)), (ScriptValue)ScriptValue.of((double)(-2.2)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiSample.class, 1.0)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiSample.class, "examples/virtualui_sample.pf:on_difficulty_change")), (ScriptContext)scriptContext);
         } else {
             v21 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue26 = scriptContext.getClassOrVar("ui");
-        ScriptValue scriptValue27 = scriptValue26 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "build", (ScriptValue)scriptValue26, (ScriptContext)scriptContext) : ScriptValue.NULL;
-        builder.val("built", scriptValue27);
-        ScriptValue scriptValue28 = scriptContext.getClassOrVar("built");
-        Object object18 = scriptValue28 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "show", (ScriptValue)scriptValue28, (ScriptValue)scriptContext.getClassOrVar("Player"), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue29 = scriptContext.getClassOrVar("Player");
-        if (scriptValue29 != ScriptValue.NULL) {
+        ScriptValue scriptValue6 = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "build", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL;
+        builder.val("built", scriptValue6);
+        Object object18 = scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "show", (ScriptValue)scriptValue6, (ScriptValue)scriptContext.getClassOrVar("Player"), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        ScriptValue scriptValue7 = scriptContext.getClassOrVar("Player");
+        if (scriptValue7 != ScriptValue.NULL) {
             ScriptValue.Obj obj;
             Object object19;
             String string = "<aqua>VirtualUI sample opened. Left/right-click a button, sneak, or <white>/virtualui close</white> to exit.";
-            if (scriptValue29 instanceof ScriptValue.Obj && (object19 = (obj = (ScriptValue.Obj)scriptValue29).instance()) != null && !(object19 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object19);
-                v23 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+            if (scriptValue7 instanceof ScriptValue.Obj && (object19 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object19 instanceof PolyClass) && obj.typeName().equals("Player")) {
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object19);
+                v23 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
             } else {
-                v23 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue29, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                v23 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
         } else {
             v23 = ScriptValue.NULL;
@@ -169,8 +147,8 @@ public final class VirtualuiSample {
                 Object object;
                 String string = "<gray>You don't have a VirtualUI open.";
                 if (scriptValue2 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                    v0 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+                    PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                    v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
                 } else {
                     v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }
@@ -187,8 +165,8 @@ public final class VirtualuiSample {
             Object object2;
             String string = "<aqua>VirtualUI closed.";
             if (scriptValue4 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object2);
-                v2 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object2);
+                v2 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
             } else {
                 v2 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
@@ -224,8 +202,8 @@ public final class VirtualuiSample {
             Object object;
             String string = "<yellow>Opening the CraftEngine Polyfills repo link...";
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                v0 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
@@ -245,8 +223,8 @@ public final class VirtualuiSample {
             Object object;
             String string = "<gray>Closing VirtualUI sample.";
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                v0 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
@@ -266,8 +244,8 @@ public final class VirtualuiSample {
             Object object;
             String string = "<gray>VirtualUI sample closed.";
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                v0 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
@@ -285,8 +263,8 @@ public final class VirtualuiSample {
             Object object;
             String string = "<yellow>Volume scrollbar armed - move the cursor, click again to release.";
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                v0 = ScriptValue.of((boolean)polyClassPlayer.tm$36_send_actionbar(string));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$36_send_actionbar(string));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "send_actionbar", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
@@ -304,8 +282,8 @@ public final class VirtualuiSample {
             Object object;
             String string = "<gray>Volume scrollbar released.";
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                v0 = ScriptValue.of((boolean)polyClassPlayer.tm$36_send_actionbar(string));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$36_send_actionbar(string));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "send_actionbar", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
@@ -323,8 +301,8 @@ public final class VirtualuiSample {
             Object object;
             ScriptValue scriptValue2 = ScriptValue.of((String)("<aqua>Volume: <white>" + ScriptFormula.callBuiltin1((String)"round", (ScriptValue)ScriptValue.of((double)(scriptContext.getNum("value") * 100.0)), (ScriptContext)scriptContext).asStr() + "%"));
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                v0 = ScriptValue.of((boolean)polyClassPlayer.tm$36_send_actionbar(scriptValue2.asStr()));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$36_send_actionbar(scriptValue2.asStr()));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "send_actionbar", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
             }
@@ -343,8 +321,8 @@ public final class VirtualuiSample {
                 Object object;
                 String string = "<red>Muted.";
                 if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                    v0 = ScriptValue.of((boolean)polyClassPlayer.tm$36_send_actionbar(string));
+                    PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                    v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$36_send_actionbar(string));
                 } else {
                     v0 = PolyDispatch.bootstrapCall("memberCall", "send_actionbar", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }
@@ -358,8 +336,8 @@ public final class VirtualuiSample {
                 Object object;
                 String string = "<green>Unmuted.";
                 if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                    v1 = ScriptValue.of((boolean)polyClassPlayer.tm$36_send_actionbar(string));
+                    PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                    v1 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$36_send_actionbar(string));
                 } else {
                     v1 = PolyDispatch.bootstrapCall("memberCall", "send_actionbar", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }
@@ -378,8 +356,8 @@ public final class VirtualuiSample {
             Object object;
             ScriptValue scriptValue2 = ScriptValue.of((String)("<aqua>Difficulty: <white>" + scriptContext.getStr("option") + " <gray>(" + scriptContext.getStr("index") + ")"));
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                v0 = ScriptValue.of((boolean)polyClassPlayer.tm$36_send_actionbar(scriptValue2.asStr()));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
+                v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$36_send_actionbar(scriptValue2.asStr()));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "send_actionbar", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
             }

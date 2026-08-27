@@ -2,7 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  dev.arubik.craftengine.script.PolyClassMachine_v2
+ *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -12,7 +12,7 @@
  */
 package dev.arubik.craftengine.script.gen.block_interaction;
 
-import dev.arubik.craftengine.script.PolyClassMachine_v2;
+import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -37,15 +37,14 @@ public final class XpInfo {
     public static ScriptValue _tank(ScriptContext.Builder builder) {
         ScriptValue scriptValue;
         ScriptContext scriptContext = builder.peek();
-        PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
-        ScriptValue scriptValue2 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$178_fluid_tanks() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "fluid_tanks", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
+        PolyClassMachine polyClassMachine = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+        ScriptValue scriptValue2 = polyClassMachine != null ? polyClassMachine.pg$178_fluid_tanks() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "fluid_tanks", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
         builder.val("tanks", scriptValue2);
         Object object = scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "length", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL;
         if (object.asNum() <= 0.0) {
             return scriptContext.getClassOrVar("null");
         }
-        ScriptValue scriptValue3 = scriptContext.getClassOrVar("tanks");
-        return scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", XpInfo.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        return scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", XpInfo.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
     }
 
     public static ScriptValue item(ScriptContext.Builder builder) {
@@ -69,18 +68,16 @@ public final class XpInfo {
             arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", XpInfo.class, "<gray>No XP tank"));
             return new ScriptValue.Array(arrayList);
         }
-        ScriptValue scriptValue2 = scriptContext.getClassOrVar("tank");
-        ScriptValue scriptValue3 = scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", XpInfo.class, "level")), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        builder.val("level", scriptValue3);
-        ScriptValue scriptValue4 = scriptContext.getClassOrVar("tank");
-        ScriptValue scriptValue5 = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", XpInfo.class, "capacity")), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        builder.val("cap", scriptValue5);
-        double d2 = scriptValue5.asNum() > 0.0 ? Math.floor(((d = scriptValue5.asNum()) == 0.0 ? 0.0 : scriptValue3.asNum() / d) * 100.0) : 0.0;
-        ScriptValue scriptValue6 = ScriptValue.of((double)d2);
-        builder.val("pct", scriptValue6);
+        ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", XpInfo.class, "level")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        builder.val("level", scriptValue2);
+        ScriptValue scriptValue3 = scriptValue != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", XpInfo.class, "capacity")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        builder.val("cap", scriptValue3);
+        double d2 = scriptValue3.asNum() > 0.0 ? Math.floor(((d = scriptValue3.asNum()) == 0.0 ? 0.0 : scriptValue2.asNum() / d) * 100.0) : 0.0;
+        ScriptValue scriptValue4 = ScriptValue.of((double)d2);
+        builder.val("pct", scriptValue4);
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", XpInfo.class, "<gray>Absorbs nearby experience orbs."));
-        arrayList.add(ScriptValue.of((String)("<gray>Stored: <white>" + ScriptFormula.numToStr((double)Math.floor(scriptValue3.asNum())) + " <gray>/ <white>" + ScriptFormula.numToStr((double)Math.floor(scriptValue5.asNum())) + " mB")));
+        arrayList.add(ScriptValue.of((String)("<gray>Stored: <white>" + ScriptFormula.numToStr((double)Math.floor(scriptValue2.asNum())) + " <gray>/ <white>" + ScriptFormula.numToStr((double)Math.floor(scriptValue3.asNum())) + " mB")));
         arrayList.add(ScriptValue.of((String)("<gray>Fill: <yellow>" + ScriptFormula.numToStr((double)d2) + "%")));
         return new ScriptValue.Array(arrayList);
     }

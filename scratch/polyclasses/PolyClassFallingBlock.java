@@ -13,14 +13,14 @@
 package dev.arubik.craftengine.script;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassEntity;
+import dev.arubik.craftengine.script.PolyClassEntity_v3;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
 
 public class PolyClassFallingBlock
-extends PolyClassEntity {
+extends PolyClassEntity_v3 {
     private static volatile PolyType.PropertyHandler p$0;
     private static volatile PolyType.TypedPropertyHandler tp$1;
     private static volatile PolyType.PropertyHandler p$2;

@@ -24,7 +24,7 @@ import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.util.List;
 
-public class PolyClassLivingEntity
+public class PolyClassLivingEntity_v3
 extends PolyClassEntity_v3 {
     private static volatile PolyType.TypedMethodHandler1 h$0;
     private static volatile PolyType.MethodHandler m$1;
@@ -327,24 +327,24 @@ extends PolyClassEntity_v3 {
         return PolyClassRuntime.genericProperty((String)"LivingEntity", (String)"frozen_ticks", (Object)this.instance).asNum();
     }
 
-    public PolyClassLivingEntity(Object object) {
+    public PolyClassLivingEntity_v3(Object object) {
         super(object);
     }
 
-    public static PolyClassLivingEntity of(Object object) {
-        return new PolyClassLivingEntity(object);
+    public static PolyClassLivingEntity_v3 of(Object object) {
+        return new PolyClassLivingEntity_v3(object);
     }
 
-    public static PolyClassLivingEntity ofGuarded(ScriptValue scriptValue) {
+    public static PolyClassLivingEntity_v3 ofGuarded(ScriptValue scriptValue) {
         ScriptValue.Obj obj;
         Object object;
         if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("LivingEntity")) {
-            return new PolyClassLivingEntity(object);
+            return new PolyClassLivingEntity_v3(object);
         }
         return null;
     }
 
-    public static PolyClassLivingEntity ofVar(ScriptContext scriptContext, String string) {
-        return PolyClassLivingEntity.ofGuarded(scriptContext.getClassOrVar(string));
+    public static PolyClassLivingEntity_v3 ofVar(ScriptContext scriptContext, String string) {
+        return PolyClassLivingEntity_v3.ofGuarded(scriptContext.getClassOrVar(string));
     }
 }
