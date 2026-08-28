@@ -12,7 +12,7 @@
   "action_script": "kinetics/shafts/shaft",
   "status": "kinetics/shafts/shaft.pf:status",
   "on_break": "kinetics/shafts/shaft.pf:on_break",
-  "action_interval": 1,
+  "action_interval": 4,
   "io": {
     "input": [
       {
