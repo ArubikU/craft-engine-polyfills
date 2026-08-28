@@ -96,7 +96,7 @@ public final class MachineRenderContext {
                 b.num("upgrade_count", upgradesByType.values().stream().mapToInt(i -> i != null ? i : 0).sum());
             }
             if (redstonePower != 0) b.redstone(redstonePower);
-            scriptContextCache = b.build();
+            scriptContextCache = b.buildOnce();
         }
         return scriptContextCache;
     }

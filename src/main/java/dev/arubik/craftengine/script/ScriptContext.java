@@ -38,6 +38,15 @@ public final class ScriptContext {
      * parent" does. Both are immutable once built, so sharing is safe.
      */
     private final ScriptContext parent;
+    /**
+     * Layer count, computed once here rather than by walking the chain on every ask.
+     *
+     * <p>{@link #stack} consults it on every single layering to decide whether to flatten, so
+     * walking cost a chain traversal precisely in the path whose entire purpose is to avoid
+     * traversals. Contexts are immutable and a parent is always fully built before a child names
+     * it, so one addition at construction is exact.
+     */
+    private final int depth;
 
     private ScriptContext(Map<String, ScriptValue> vars, Map<String, ScriptValue> classInstances) {
         this(vars, classInstances, null);
@@ -48,6 +57,7 @@ public final class ScriptContext {
         this.vars = vars;
         this.classInstances = classInstances;
         this.parent = parent;
+        this.depth = parent == null ? 1 : parent.depth + 1;
     }
 
     /**
@@ -73,11 +83,7 @@ public final class ScriptContext {
         return new ScriptContext(flat.vars, flat.classes);
     }
 
-    private int depth() {
-        int d = 1;
-        for (ScriptContext c = parent; c != null; c = c.parent) d++;
-        return d;
-    }
+    private int depth() { return this.depth; }
 
     /**
      * {@code inner} shadowing {@code outer}, without copying either — the cheap form of
@@ -270,8 +276,8 @@ public final class ScriptContext {
     public static Builder builder() { return new Builder(); }
 
     public static final class Builder {
-        private final LinkedHashMap<String, ScriptValue> vars = new LinkedHashMap<>();
-        private final LinkedHashMap<String, ScriptValue> classes = new LinkedHashMap<>();
+        private LinkedHashMap<String, ScriptValue> vars = new LinkedHashMap<>();
+        private LinkedHashMap<String, ScriptValue> classes = new LinkedHashMap<>();
         /**
          * A context this builder's own entries sit ON TOP OF, instead of having been copied into
          * it. Set by {@link #over}.
@@ -463,6 +469,62 @@ public final class ScriptContext {
         // server-thread time in the DataMachineBlockEntity.tick -> runActionScript hot path) —
         // a plain LinkedHashMap copy-constructor is a real independent copy too, just without that
         // immutable-map-specific construction cost.
+        /**
+         * Like {@link #build}, but HANDS the builder's maps to the context instead of copying them,
+         * and retires the builder.
+         *
+         * <p>{@code build}'s copy exists for one caller — {@code ScriptProgram.runStatements} builds
+         * repeatedly from a builder it keeps mutating, so a shared map would let a later statement
+         * leak backward into an earlier closure's snapshot. The per-tick callers are the opposite
+         * shape: they fill a fresh builder, build once, and drop it, so the copy is pure waste. It
+         * was not small waste — the two of them together spent about 3% of the whole server thread
+         * inside {@code HashMap.putMapEntries}, duplicating maps whose only other reference was
+         * about to go out of scope.
+         *
+         * <p>Retiring is what keeps the closure guarantee intact rather than merely documented: the
+         * maps are dropped, so any later use of this builder is an immediate
+         * {@link NullPointerException} at the offending line instead of silent corruption
+         * somewhere else. Choosing this method wrongly cannot be a quiet bug.
+         */
+        public ScriptContext buildOnce() {
+            LinkedHashMap<String, ScriptValue> v = this.vars, c = this.classes;
+            if (base != null) {
+                Builder flat = new Builder();
+                flat.copyFrom(base);
+                flat.vars.putAll(v);
+                flat.classes.putAll(c);
+                v = flat.vars;
+                c = flat.classes;
+            }
+            this.vars = null;
+            this.classes = null;
+            this.base = null;
+            return new ScriptContext(v, c);
+        }
+
+        /**
+         * This builder's own entries LAYERED over {@code outer}, copying neither side.
+         *
+         * <p>The shape it replaces is {@code builder().copyFrom(outer).x(..).build()}, which copies
+         * {@code outer} twice: once into the builder and once again on the way out. Both copies are
+         * of a map the caller already holds and never mutates. In the renderer tick that pattern ran
+         * twice per machine per tick and cost about 4% of the server thread between the two of them.
+         *
+         * <p>The result is exactly equivalent to the copying form — own names shadow {@code outer}'s,
+         * which is what "check own, then parent" does — and safe because both sides are immutable
+         * once built. {@link #stack} applies, so a chain that has grown past {@link #MAX_LAYERS}
+         * still flattens rather than making every later read walk it. Retires the builder for the
+         * reason {@link #buildOnce} does.
+         */
+        public ScriptContext buildOver(ScriptContext outer) {
+            if (base != null) throw new IllegalStateException("buildOver after over()");
+            if (outer == null) return buildOnce();
+            LinkedHashMap<String, ScriptValue> v = this.vars, c = this.classes;
+            this.vars = null;
+            this.classes = null;
+            return ScriptContext.stack(outer, new ScriptContext(v, c));
+        }
+
         public ScriptContext build() {
             // Not wrapped: the ScriptContext owns these copies outright and only ever hands out the
             // unmodifiable view its vars()/classInstances() build on demand. A base is flattened in

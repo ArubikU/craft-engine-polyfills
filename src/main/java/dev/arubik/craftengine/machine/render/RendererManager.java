@@ -508,18 +508,18 @@ public final class RendererManager {
         CraftWorld craftWorld = bukkitWorld = serverLevel != null ? serverLevel.getWorld() : null;
         if (serverLevel != null) {
             String facingValue = facing != null ? facing : RendererManager.yawToFacing(yaw);
-            ScriptContext.Builder augB = ScriptContext.builder().copyFrom(ctx.toScriptContext()).facing(facingValue, yaw);
-            ctx = ctx.augmented(augB.build());
+            ScriptContext.Builder augB = ScriptContext.builder().facing(facingValue, yaw);
+            ctx = ctx.augmented(augB.buildOver(ctx.toScriptContext()));
         }
         if (this.varSpecs != null && !this.varSpecs.isEmpty()) {
-            ScriptContext.Builder varsB = ScriptContext.builder().copyFrom(ctx.toScriptContext());
+            ScriptContext.Builder varsB = ScriptContext.builder();
             for (var entry : this.varSpecs.entrySet()) {
                 if (entry.getValue() instanceof dev.arubik.craftengine.machine.render.variable.VariableSpec.Formula f) {
                     try { varsB.val(entry.getKey(), ScriptFormula.compile(f.expr()).evaluate(ctx.toScriptContext())); }
                     catch (Throwable ignored) {}
                 }
             }
-            ctx = ctx.augmented(varsB.build());
+            ctx = ctx.augmented(varsB.buildOver(ctx.toScriptContext()));
         }
         // Establish this tick's shared evaluation scope ONCE. Every sharedEval below inherits it
         // rather than re-deriving the block state and tick number per formula - see scopeCtx.
