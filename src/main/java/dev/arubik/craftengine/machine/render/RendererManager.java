@@ -219,6 +219,23 @@ public final class RendererManager {
      *  reference and neither formula reads anything else — or 10 shafts all spinning at the same
      *  rpm on the same kinetic network, where rpm is simply one more tracked/keyed variable) share
      *  one cached evaluation instead of each re-walking the same formula every tick. */
+    /**
+     * The three things every sharedEval in one machine's tick agrees on, computed once at the top of
+     * {@link #tick} instead of per formula.
+     *
+     * <p>They were recomputed inside sharedEval, which meant a WORLD BLOCK-STATE LOOKUP for every
+     * formula — and one item_display renderer evaluates six (item, rot_x, rot_y, rot_z, scale,
+     * location). Across a few hundred ticking machines that is thousands of lookups a tick to build
+     * a cache key, for a cache whose whole purpose is to avoid work.
+     *
+     * <p>Safe to hoist because every sharedEval call site in a tick passes that tick's own machine
+     * position, so the state is the same block by construction; the tick number obviously does not
+     * change within a tick; and the context is already cached per MachineRenderContext.
+     */
+    private ScriptContext scopeCtx;
+    private net.minecraft.world.level.block.state.BlockState scopeState;
+    private int scopeTick = -1;
+
     private record SharedFormulaKey(String expr, net.minecraft.world.level.block.state.BlockState state, java.util.List<Object> keyVals) {}
     private record SharedFormulaEntry(int tick, ScriptValue value) {}
     private static final int SHARED_FORMULA_CACHE_MAX = 4096;
@@ -238,15 +255,19 @@ public final class RendererManager {
      *  location}) formulas alike — the cache stores the raw {@link ScriptValue}, not a pre-typed
      *  double. */
     private ScriptValue sharedEval(ServerLevel serverLevel, double x, double y, double z, String expr, MachineRenderContext evalCtx) {
-        ScriptContext sctx = evalCtx.toScriptContext();
         if (expr == null) return ScriptValue.NULL;
+        ScriptContext sctx = scopeCtx != null ? scopeCtx : evalCtx.toScriptContext();
         if (serverLevel == null) return ScriptFormula.compile(expr).evaluate(sctx);
         FormulaSignature sig = FORMULA_SIGNATURES.computeIfAbsent(expr, e -> computeSignature(e, evalCtx));
         if (!sig.cacheable()) return ScriptFormula.compile(expr).evaluate(sctx);
-        int tick;
-        try { tick = serverLevel.getServer().getTickCount(); } catch (Throwable ignored) { return ScriptFormula.compile(expr).evaluate(sctx); }
-        net.minecraft.world.level.block.state.BlockState state =
-                serverLevel.getBlockState(net.minecraft.core.BlockPos.containing(x, y, z));
+        int tick = scopeTick;
+        net.minecraft.world.level.block.state.BlockState state = scopeState;
+        if (state == null) {
+            // Reached only from a caller outside tick(), which has no scope to inherit.
+            try { tick = serverLevel.getServer().getTickCount(); }
+            catch (Throwable ignored) { return ScriptFormula.compile(expr).evaluate(sctx); }
+            state = serverLevel.getBlockState(net.minecraft.core.BlockPos.containing(x, y, z));
+        }
         java.util.List<Object> keyVals = new java.util.ArrayList<>(sig.keyVars().size());
         for (String var : sig.keyVars()) keyVals.add(sctx.getVar(var).asNum());
         SharedFormulaKey key = new SharedFormulaKey(expr, state, keyVals);
@@ -432,6 +453,19 @@ public final class RendererManager {
             }
             ctx = ctx.augmented(varsB.build());
         }
+        // Establish this tick's shared evaluation scope ONCE. Every sharedEval below inherits it
+        // rather than re-deriving the block state and tick number per formula - see scopeCtx.
+        this.scopeCtx = ctx.toScriptContext();
+        if (serverLevel != null) {
+            try {
+                this.scopeTick = serverLevel.getServer().getTickCount();
+                this.scopeState = serverLevel.getBlockState(
+                        net.minecraft.core.BlockPos.containing(x, y, z));
+            } catch (Throwable ignored) {
+                this.scopeState = null;
+            }
+        }
+        try {
         for (int i = 0; i < this.specs.size(); ++i) {
             String blockId;
             boolean active;
@@ -822,6 +856,13 @@ public final class RendererManager {
             }
             display.update(serverLevel, wp6[0], wp6[1], wp6[2], blockId, scaleVal);
         }
+        } finally {
+            // Cleared so a sharedEval reached from OUTSIDE a tick cannot read a stale block state
+            // from whenever this manager last ticked.
+            this.scopeCtx = null;
+            this.scopeState = null;
+            this.scopeTick = -1;
+        }
     }
 
     public void close() {
@@ -947,12 +988,52 @@ public final class RendererManager {
      *  on a DIFFERENT renderer entry declared elsewhere in the same machine's config, addressed by
      *  its stable id — see {@code Machine.get_renderer(id)} (MachineType.java) for the script-facing
      *  counterpart of the same id namespace. */
-    private double[] resolveBoneLocation(String locExpr) {
+    /**
+     * What a renderer's {@code location} string IS — decided once per distinct string.
+     *
+     * <p>Classifying it is a pure function of the text: a bone reference matches a regex, a literal
+     * offset splits and parses to numbers, anything else is an expression. None of that can change
+     * between ticks, and all of it was being redone per renderer per tick — the regex alone was
+     * 1.61% of server wall time in a profile, and the literal path ran a substring, a split and up
+     * to six parseDouble calls on top of it.
+     */
+    private record LocationPlan(Kind kind, String rendererId, String engine, String boneName,
+                                 double[] offsets) {
+        enum Kind { BONE, LITERAL, EXPRESSION }
+    }
+
+    /** Keyed by the location string, which is what the plan depends on and nothing else. */
+    private static final java.util.concurrent.ConcurrentHashMap<String, LocationPlan> LOCATION_PLANS =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static LocationPlan planFor(String locExpr) {
         var m = BONE_LOCATION_PATTERN.matcher(locExpr);
-        if (!m.matches()) return null;
-        String rendererId = m.group(1);
-        String engine = m.group(2);
-        String boneName = m.group(3);
+        if (m.matches()) {
+            return new LocationPlan(LocationPlan.Kind.BONE, m.group(1), m.group(2), m.group(3), null);
+        }
+        // The literal case is pre-checked with isPlainNumberArrayLocation rather than letting
+        // parseDouble throw, for the reason recorded where that helper is defined — but now it runs
+        // once per distinct string instead of once per renderer per tick, so the throw it avoids
+        // was never the whole cost anyway.
+        if (locExpr.startsWith("[") && locExpr.lastIndexOf(93) > 0) {
+            String[] parts = locExpr.substring(1, locExpr.lastIndexOf(93)).split(",");
+            if (parts.length >= 3 && isPlainNumberArrayLocation(parts)) {
+                double rx = parts.length >= 5 ? Double.parseDouble(parts[3].trim()) : Double.NaN;
+                double ry = parts.length == 4 ? Double.parseDouble(parts[3].trim())
+                        : (parts.length >= 5 ? Double.parseDouble(parts[4].trim()) : Double.NaN);
+                double rz = parts.length >= 6 ? Double.parseDouble(parts[5].trim()) : Double.NaN;
+                return new LocationPlan(LocationPlan.Kind.LITERAL, null, null, null, new double[]{
+                        Double.parseDouble(parts[0].trim()), Double.parseDouble(parts[1].trim()),
+                        Double.parseDouble(parts[2].trim()), rx, ry, rz});
+            }
+        }
+        return new LocationPlan(LocationPlan.Kind.EXPRESSION, null, null, null, null);
+    }
+
+    private double[] resolveBoneLocation(LocationPlan plan) {
+        String rendererId = plan.rendererId();
+        String engine = plan.engine();
+        String boneName = plan.boneName();
         double[] pos;
         if ("bm".equals(engine)) {
             dev.arubik.craftengine.machine.render.renderer.BetterModelRenderer r = this.betterModelRendererById(rendererId);
@@ -968,33 +1049,14 @@ public final class RendererManager {
     private double[] resolveSpecLocation(RendererSpec spec, MachineRenderContext evalCtx, ServerLevel serverLevel, double machX, double machY, double machZ) {
         String locExpr = spec.locationExpr();
         if (locExpr != null && !locExpr.isEmpty()) {
-            double[] boneLoc = this.resolveBoneLocation(locExpr);
-            if (boneLoc != null) {
-                return boneLoc;
-            }
-            if (locExpr.startsWith("[")) {
-                // Pre-check EVERY part with looksLikePlainNumber before ever calling
-                // Double.parseDouble — an expression-based "[x, y, z]" (e.g. energy_windmill's
-                // offset, a ternary on Machine.block.property("facing")) is NOT a plain-literal
-                // array, so the OLD "just try parseDouble and catch the failure" approach threw
-                // (and immediately discarded) a NumberFormatException every single tick, for every
-                // instance, on this exact common pattern — exception construction/stack-fill is
-                // expensive in the JVM regardless of whether anything reads the trace, and profiling
-                // confirmed this alone was real, measurable server-thread time. A cheap character
-                // scan avoids ever throwing for the case that was ALWAYS going to fall through to
-                // the ScriptFormula path below anyway.
-                String inner = locExpr.substring(1, locExpr.lastIndexOf(93));
-                String[] parts = inner.split(",");
-                if (parts.length >= 3 && isPlainNumberArrayLocation(parts)) {
-                    double rx;
-                    double dx = Double.parseDouble(parts[0].trim());
-                    double dy = Double.parseDouble(parts[1].trim());
-                    double dz = Double.parseDouble(parts[2].trim());
-                    double d = rx = parts.length >= 5 ? Double.parseDouble(parts[3].trim()) : Double.NaN;
-                    double ry = parts.length == 4 ? Double.parseDouble(parts[3].trim()) : (parts.length >= 5 ? Double.parseDouble(parts[4].trim()) : Double.NaN);
-                    double rz = parts.length >= 6 ? Double.parseDouble(parts[5].trim()) : Double.NaN;
-                    return new double[]{machX + 0.5 + dx, machY + dy, machZ + 0.5 + dz, rx, ry, rz};
-                }
+            LocationPlan plan = LOCATION_PLANS.computeIfAbsent(locExpr, RendererManager::planFor);
+            if (plan.kind() == LocationPlan.Kind.BONE) {
+                double[] boneLoc = this.resolveBoneLocation(plan);
+                if (boneLoc != null) return boneLoc;
+            } else if (plan.kind() == LocationPlan.Kind.LITERAL) {
+                double[] o = plan.offsets();
+                return new double[]{machX + 0.5 + o[0], machY + o[1], machZ + 0.5 + o[2],
+                        o[3], o[4], o[5]};
             }
             try {
                 // sharedEval, not a plain compile+evaluate — a bracket-literal "location":
