@@ -259,6 +259,24 @@ public final class RendererManager {
     public void setRotationTick(boolean sendingThisTick) { this.rotationTick = sendingThisTick; }
 
     /**
+     * How much to stretch every update period, from how far away the nearest viewer is.
+     *
+     * <p>Distance is the one thing that makes a renderer's work unobservable: the same evaluation
+     * that matters at three blocks is invisible at sixty. Rather than choosing one interval per
+     * machine in config — which has to be tuned for the closest a player will ever stand — the
+     * period is multiplied by this, so a machine costs full price only while someone is next to it.
+     *
+     * <p>Deliberately capped small, and not because of the CPU. A display's rotation is interpolated
+     * by the client as a quaternion lerp, which takes the SHORT way round: once the angle advanced
+     * between two updates passes 180 degrees, a spinning part appears to slow down or turn
+     * backwards. The shipped four-tick rotation throttle already spends part of that budget, so the
+     * factor may widen the gap a little, never arbitrarily.
+     */
+    private int lodFactor = 1;
+
+    public void setLodFactor(int factor) { this.lodFactor = Math.max(1, factor); }
+
+    /**
      * The cache key, built without allocating for the values.
      *
      * <p>It used to carry a {@code List<Object>} of the key variables, which meant an ArrayList, a
@@ -383,7 +401,14 @@ public final class RendererManager {
     private boolean shouldUpdateThisTick(int i, RendererSpec spec, MachineRenderContext ctx,
                                           ServerLevel serverLevel, double x, double y, double z) {
         return switch (spec.updateWhen()) {
-            case UpdateWhen.Always ignored -> true;
+            case UpdateWhen.Always ignored -> {
+                if (this.lodFactor <= 1) yield true;
+                // "always" is a request to look right, not a request to be recomputed 20 times a
+                // second at any distance. Far away it becomes an interval like any other.
+                int cur = ++this.updateTickCount[i];
+                if (cur >= this.lodFactor) { this.updateTickCount[i] = 0; yield true; }
+                yield false;
+            }
             case UpdateWhen.Never ignored -> this.updateTickCount[i]++ == 0;
             case UpdateWhen.OnBlockChange ignored -> {
                 if (serverLevel == null) yield true;
@@ -411,7 +436,7 @@ public final class RendererManager {
             };
             case UpdateWhen.Interval iv -> {
                 int cur = ++this.updateTickCount[i];
-                if (cur >= iv.ticks()) { this.updateTickCount[i] = 0; yield true; }
+                if (cur >= iv.ticks() * this.lodFactor) { this.updateTickCount[i] = 0; yield true; }
                 yield false;
             }
             case UpdateWhen.ScriptGate sg -> ctx.evalBool(sg.expr(), null);

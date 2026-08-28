@@ -145,6 +145,37 @@ dev.arubik.craftengine.rotation.KineticMember {
     // were separate literals that happened to agree, and the client's interpolation window has to
     // stay wider than this or a late packet shows as a stutter. See ConveyorItemDisplay's constants.
     private static final long LIGHT_CHECK_INTERVAL = 10;
+    /**
+     * How often the distance bucket is re-checked. A player crosses one bucket boundary in well
+     * over a second of sprinting, so a second-old answer is never wrong by more than one step, and
+     * checking it every tick would put a scan of the player list back into the path this exists to
+     * make cheaper.
+     */
+    private static final long LOD_RECHECK_TICKS = 20;
+    /** Renderer update periods are multiplied by this — see RendererManager#setLodFactor. */
+    private int lodFactor = 1;
+    /** The factor the displays' interpolation windows were last sized for. */
+    private int lodFactorApplied = 0;
+
+    /**
+     * Pick this machine's distance bucket from the nearest player.
+     *
+     * <p>Squared distances, so nothing takes a square root: past 32 blocks a renderer updates half
+     * as often, past 64 a third as often. The ceiling of three is not a CPU judgement — it is the
+     * rotation lerp described on {@code RendererManager#setLodFactor}, which starts misrepresenting
+     * a spin once the angle between updates grows too large.
+     */
+    private void updateLodFactor(ServerLevel level, BlockPos pos) {
+        if (this.ticksAlive % LOD_RECHECK_TICKS != 0 && this.lodFactorApplied != 0) return;
+        double cx = pos.getX() + 0.5, cy = pos.getY() + 0.5, cz = pos.getZ() + 0.5;
+        double best = Double.MAX_VALUE;
+        for (net.minecraft.server.level.ServerPlayer p : level.players()) {
+            double d = p.distanceToSqr(cx, cy, cz);
+            if (d < best) best = d;
+        }
+        this.lodFactor = best <= 32.0 * 32.0 ? 1 : (best <= 64.0 * 64.0 ? 2 : 3);
+    }
+
     private static final long ROTATION_PACKET_INTERVAL =
             dev.arubik.craftengine.conveyor.belt.ConveyorItemDisplay.UPDATE_INTERVAL_TICKS;
     public static volatile boolean SPEC_DISPLAY_DEBUG = false;
@@ -1287,7 +1318,10 @@ dev.arubik.craftengine.rotation.KineticMember {
                 // The same counter and phase the rotation packet decision uses below, so a spinning
                 // display's rotation is recomputed exactly on the ticks it is sent - never stale
                 // when it goes out, never computed for a tick that discards it.
-                this.rendererManager.setRotationTick(this.ticksAlive % ROTATION_PACKET_INTERVAL == 0);
+                this.updateLodFactor((ServerLevel)level, pos);
+                this.rendererManager.setLodFactor(this.lodFactor);
+                this.rendererManager.setRotationTick(
+                        this.ticksAlive % (ROTATION_PACKET_INTERVAL * this.lodFactor) == 0);
                 this.rendererManager.tick(ctx, (ServerLevel)level, pos.getX(), pos.getY(), pos.getZ(), yaw, facingName, (int[][]) null);
                 this.tickSpecDisplays((ServerLevel)level, pos);
                 dev.arubik.craftengine.debug.MachineProfiler.end(dev.arubik.craftengine.debug.MachineProfiler.Phase.RENDERERS, profR);
@@ -1482,8 +1516,11 @@ dev.arubik.craftengine.rotation.KineticMember {
                     }
                     if (er != null && er.active && item != null && !item.isEmpty() && er.itemDisplay != null) {
                         boolean justCreated = this.specDisplays[i] == null;
-                        if (justCreated) {
-                            this.specDisplays[i] = new ConveyorItemDisplay();
+                        // Also when the bucket changed: the window has to keep covering however
+                        // often this display is now actually refreshed, or a machine that just got
+                        // further away sits frozen for the ticks the wider period skips.
+                        if (justCreated || this.lodFactorApplied != this.lodFactor) {
+                            if (justCreated) this.specDisplays[i] = new ConveyorItemDisplay();
                             // The client's interpolation window has to cover however often THIS
                             // renderer is actually refreshed. A spec with update_when: 8 is updated
                             // every eight ticks; a window sized for the four-tick rotation throttle
@@ -1492,7 +1529,7 @@ dev.arubik.craftengine.rotation.KineticMember {
                             if (idSpec.updateWhen() instanceof dev.arubik.craftengine.machine.render.UpdateWhen.Interval iv) {
                                 period = Math.max(period, iv.ticks());
                             }
-                            this.specDisplays[i].setUpdatePeriodTicks(period);
+                            this.specDisplays[i].setUpdatePeriodTicks(period * this.lodFactor);
                         }
                         RendererSpec.EvaluatedItemDisplay eid = er.itemDisplay;
                         double wx = (double)pos.getX() + 0.5 + eid.offsetX();
@@ -1512,7 +1549,8 @@ dev.arubik.craftengine.rotation.KineticMember {
                         // (matching the widened interpolation duration in ConveyorItemDisplay), the
                         // client smooths across the gap instead of needing a packet every tick.
                         boolean rotDirty = this.specDisplays[i].consumeRotationDirty();
-                        boolean sendRotUpdate = rotDirty && this.ticksAlive % ROTATION_PACKET_INTERVAL == 0;
+                        boolean sendRotUpdate = rotDirty
+                                && this.ticksAlive % (ROTATION_PACKET_INTERVAL * this.lodFactor) == 0;
                         int h = item.hashCode();
                         boolean itemChanged = h != this.specDisplayHashes[i];
                         this.specDisplays[i].setNmsItem(item);
@@ -1540,6 +1578,9 @@ dev.arubik.craftengine.rotation.KineticMember {
                 e.printStackTrace();
             }
         }
+        // Recorded only after every display has been resized, so a pass that threw part way through
+        // is retried next tick rather than leaving some windows sized for the old distance.
+        this.lodFactorApplied = this.lodFactor;
     }
 
     /*
