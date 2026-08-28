@@ -121,8 +121,24 @@ public final class ScriptContext {
         return classInstances.containsKey(name);
     }
 
-    public Map<String, ScriptValue> vars() { return vars; }
-    public Map<String, ScriptValue> classInstances() { return classInstances; }
+    /**
+     * The variables, as an unmodifiable view.
+     *
+     * <p>The wrapper is built HERE, per call, rather than being what the field holds. That looks
+     * like a detail and is not: {@code Builder.copyFrom} does {@code putAll} straight off these
+     * maps, and iterating an {@code unmodifiableMap} allocates an {@code UnmodifiableEntry} for
+     * every single entry. On a real server profile those wrapper allocations were three of the six
+     * hottest frames on the whole server thread. Internal copying uses {@link #rawVars} and pays
+     * none of it; callers outside still cannot mutate anything.
+     */
+    public Map<String, ScriptValue> vars() { return java.util.Collections.unmodifiableMap(vars); }
+    public Map<String, ScriptValue> classInstances() {
+        return java.util.Collections.unmodifiableMap(classInstances);
+    }
+
+    /** The backing maps, for copying inside this class only — never handed out. */
+    Map<String, ScriptValue> rawVars() { return vars; }
+    Map<String, ScriptValue> rawClasses() { return classInstances; }
 
     public static Builder builder() { return new Builder(); }
 
@@ -269,8 +285,8 @@ public final class ScriptContext {
         }
 
         public Builder copyFrom(ScriptContext other) {
-            vars.putAll(other.vars);
-            classes.putAll(other.classInstances);
+            vars.putAll(other.rawVars());
+            classes.putAll(other.rawClasses());
             return this;
         }
 
@@ -285,9 +301,9 @@ public final class ScriptContext {
         // a plain LinkedHashMap copy-constructor is a real independent copy too, just without that
         // immutable-map-specific construction cost.
         public ScriptContext build() {
-            return new ScriptContext(
-                java.util.Collections.unmodifiableMap(new LinkedHashMap<>(vars)),
-                java.util.Collections.unmodifiableMap(new LinkedHashMap<>(classes)));
+            // Not wrapped: the ScriptContext owns these copies outright and only ever hands out the
+            // unmodifiable view its vars()/classInstances() build on demand.
+            return new ScriptContext(new LinkedHashMap<>(vars), new LinkedHashMap<>(classes));
         }
 
         /** Zero-copy "read this builder's CURRENT state right now" view — a live wrapper over this
@@ -304,9 +320,7 @@ public final class ScriptContext {
          *  of the WHOLE accumulated context per statement, for a value read once and thrown away)
          *  costing real server-thread time via {@code LinkedHashMap}'s copy-constructor. */
         public ScriptContext peek() {
-            return new ScriptContext(
-                java.util.Collections.unmodifiableMap(vars),
-                java.util.Collections.unmodifiableMap(classes));
+            return new ScriptContext(vars, classes);
         }
 
         private static int[] facingOffset(String facing) {

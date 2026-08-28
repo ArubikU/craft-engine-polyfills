@@ -329,9 +329,12 @@ public final class ScriptProgram {
         if (pureDefs || isTopLevelCacheable(ctx)) {
             ScriptContext defs = cachedDefsResult;
             if (defs != null) {
+                // rawVars/rawClasses, not vars()/classInstances(): those build an unmodifiable
+                // view whose iteration allocates a wrapper per entry, and this is the FAST path —
+                // the one taken by every execution of a cacheable file.
                 return ScriptContext.builder().copyFrom(ctx)
-                        .valsAll(defs.vars())
-                        .typedAll(defs.classInstances())
+                        .valsAll(defs.rawVars())
+                        .typedAll(defs.rawClasses())
                         .peek(); // the builder is a temporary — see the peek() below
             }
         }
