@@ -1,4 +1,4 @@
-# Multipage Chest — button action functions for page navigation.
+# Multipage Chest - button action functions for page navigation.
 # Usage in buttons: action: "multipage_chest.pf:next_page"
 #                   action: "multipage_chest.pf:prev_page"
 

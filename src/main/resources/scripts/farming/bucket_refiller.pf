@@ -1,4 +1,4 @@
-# Bucket Refiller — takes empty buckets from input slot, fills from front block.
+# Bucket Refiller - takes empty buckets from input slot, fills from front block.
 # Water/lava source → water/lava bucket. Consumes the source block.
 
 input = Machine.container.get_item(3)

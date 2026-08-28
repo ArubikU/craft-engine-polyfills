@@ -321,7 +321,7 @@ public class MultiBlockPartBlockEntity extends PersistentController
     }
 
     @Override
-    public <C> @Nullable C get(NamespacedKey key, NbtType type) {
+    public <C>  C get(NamespacedKey key, NbtType type) {
         if (isLocalKey(key))
             return super.get(key, type);
         net.momirealms.craftengine.core.block.entity.BlockEntityController target = getCoreEntity();

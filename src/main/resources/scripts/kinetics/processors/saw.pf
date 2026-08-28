@@ -1,4 +1,4 @@
-# Mechanical Saw — Create-alike. Tree-felling (facing a log, horizontal orientation) or belt/
+# Mechanical Saw - Create-alike. Tree-felling (facing a log, horizontal orientation) or belt/
 # ground item processing (facing "up"/floor-mounted), never both at once. No inventory: drops go
 # via _deposit (contraption storage or world).
 
@@ -9,7 +9,7 @@ import "kinetics/belt_utils.pf" { _face_offset, belt_take, belt_give, depot_give
 
 # RPM/SU baseline: at BASE_RPM the saw draws BASE_SU stress and a belt item takes PROCESS_TICKS
 # ticks to finish; both scale linearly with actual RPM (Create's own stress/speed shape, addon's
-# own numbers). saw.json's item_display hardcodes BASE_PROCESS_WORK as "320.0" — keep in sync.
+# own numbers). saw.json's item_display hardcodes BASE_PROCESS_WORK as "320.0" - keep in sync.
 BASE_RPM = 32
 BASE_SU = 8
 PROCESS_TICKS = 10
@@ -47,7 +47,7 @@ def _saw_recipe_at(item_id, target_idx):
 end
 
 # Re-resolves the exact recipe (own registered, or vanilla stonecutter fallback) that produced
-# out_id from item_id — the pairing already chosen once by _saw_output_for at intake, re-found
+# out_id from item_id - the pairing already chosen once by _saw_output_for at intake, re-found
 # per completion cycle since a Recipe object can't be persisted across ticks (typed storage only
 # holds primitives). Used for recipe.outputs() so each cut cycle gets the recipe's own real
 # (possibly chance-rolled) output instead of a flat guessed amount.
@@ -130,7 +130,7 @@ def _saw_output_for(item_id):
     return null
 end
 
-# No menu — right-click sets/clears the filter directly (Create's SawFilterSlot is a value-box,
+# No menu - right-click sets/clears the filter directly (Create's SawFilterSlot is a value-box,
 # not a GUI slot).
 def on_right_click():
     held = Player.main_hand
@@ -142,8 +142,8 @@ def on_right_click():
 end
 
 # Output face: facing picks the axis (north/south -> east/west, east/west -> north/south), RPM
-# sign picks which one — matches saw.json's item_display exactly. NOT Machine.facing_dx/dz (those
-# use the EFFECTIVE, collapsed facing — UP for a floor-mounted saw, useless here). _face_offset
+# sign picks which one - matches saw.json's item_display exactly. NOT Machine.facing_dx/dz (those
+# use the EFFECTIVE, collapsed facing - UP for a floor-mounted saw, useless here). _face_offset
 # (kinetics/belt_utils.pf) converts this to a numeric (dx,dy,dz) where needed.
 def _saw_output_face():
     facing = Machine.block.property("facing")
@@ -157,7 +157,7 @@ def _saw_output_face():
     return sign > 0 ? "south" : "north"
 end
 
-# The face directly opposite _saw_output_face — the belt segment FEEDING this saw. Same rpm-sign
+# The face directly opposite _saw_output_face - the belt segment FEEDING this saw. Same rpm-sign
 # stability as output_face (both derive from the same persisted sign), so they can't disagree.
 def _saw_input_face():
     face = _saw_output_face()
@@ -174,7 +174,7 @@ def _saw_input_face():
 end
 
 # Persists the LAST NON-ZERO rpm sign (raw "rpm < 0 ? -1 : 1" defaults to +1 whenever rpm reads
-# exactly 0 — unpowered, momentary gaps — which flipped output/incoming sides on a fixed belt
+# exactly 0 - unpowered, momentary gaps - which flipped output/incoming sides on a fixed belt
 # layout that never changed). Call unconditionally every tick, before any gating.
 def _saw_update_rpm_sign(effective_rpm):
     if effective_rpm != 0:
@@ -190,7 +190,7 @@ def _saw_setup_rpm():
     facing = Machine.block.property("facing")
     if face == "wall":
         # "back" (relative token) resolves via the machine's own getFacing(), not a hand-rolled
-        # opposite() off the raw property — that direction convention was backwards in-game.
+        # opposite() off the raw property - that direction convention was backwards in-game.
         Machine.set_rpm_input("back")
         Machine.set_rpm_output_same("")
     else:
@@ -204,7 +204,7 @@ def _saw_setup_rpm():
     end
 end
 
-# For a stationary saw's ground-pickup output — tries the output face's belt (belt_give), then a
+# For a stationary saw's ground-pickup output - tries the output face's belt (belt_give), then a
 # depot there (depot_give), then a gentle toss as last resort. _deposit for a contraption-riding saw.
 def _saw_deposit_directional(item):
     if is_empty(item):
@@ -282,7 +282,7 @@ else if rpm != 0:
     is_now = 1
 end
 
-# Belt/ground item processing — facing UP only. Item is TAKEN off the belt (the animated
+# Belt/ground item processing - facing UP only. Item is TAKEN off the belt (the animated
 # item_display in saw.json is the only visible stand-in while mid-cut); power cutting out just
 # freezes progress until it returns.
 if is_now > 0 && is_belt_facing:
@@ -308,7 +308,7 @@ if is_now > 0 && is_belt_facing:
             end
         else:
             # Stalled on the FEEDING belt segment (can't advance onto the saw's own non-belt tile)
-            # — pull it in via belt_take/belt_give (kinetics/belt_utils.pf); give it right back if
+            # - pull it in via belt_take/belt_give (kinetics/belt_utils.pf); give it right back if
             # the saw has no recipe for it.
             in_face = _saw_input_face()
             taken = belt_take(in_face, null, null)
@@ -320,7 +320,7 @@ if is_now > 0 && is_belt_facing:
                     Machine.set_typed("_saw_count", "int", item_count(taken))
                     Machine.set_typed("_saw_progress", "int", 0)
                     # 2 (distinct from ground=1/own-belt=0): taken from a SIDE-adjacent feeding
-                    # belt, not the saw's own tile — completion must deposit via the directional
+                    # belt, not the saw's own tile - completion must deposit via the directional
                     # helper (output face), not belt.put() on Machine.belt (own position, no real
                     # belt there for this layout).
                     Machine.set_typed("_saw_from_ground", "int", 2)
@@ -328,7 +328,7 @@ if is_now > 0 && is_belt_facing:
                     belt_give(in_face, taken)
                 end
             else:
-                # Depot-style ground pickup (is_resting_item, utils.pf) — no belt at all.
+                # Depot-style ground pickup (is_resting_item, utils.pf) - no belt at all.
                 for entity in Machine.nearby_entities(0.7):
                     if is_resting_item(entity):
                         out_id = _saw_output_for(entity.item.id)
@@ -353,7 +353,7 @@ if is_now > 0 && is_belt_facing:
         progress = progress + abs(belt_rpm)
         Machine.report_su(_saw_su_cost(belt_rpm))
         if progress >= BASE_PROCESS_WORK:
-            # One input item per cut cycle, not the whole stack at once — the rest stays "held"
+            # One input item per cut cycle, not the whole stack at once - the rest stays "held"
             # (_saw_count = remaining, including the one just finished) and shows as a waiting pile
             # via saw.json's third item_display (remaining-1, since the one mid-cut is the sliding
             # renderer's own job) until it's this saw's turn.
@@ -368,7 +368,7 @@ if is_now > 0 && is_belt_facing:
             items = result != null ? result.items : [MinecraftItem(out_id, 1)]
             for out_item in items:
                 if from_ground == 1 || from_ground == 2:
-                    # Ground pickup (1) or a side-adjacent feeding belt (2) — the saw's own tile
+                    # Ground pickup (1) or a side-adjacent feeding belt (2) - the saw's own tile
                     # isn't a real belt in either case, so deposit via the output-face helper
                     # (belt_give -> depot_give -> gentle toss), not Machine.belt (own position).
                     _saw_deposit_directional(out_item)

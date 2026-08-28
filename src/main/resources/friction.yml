@@ -1,17 +1,17 @@
-# Per-block FRICTION for vanilla blocks — how grippy a surface is when a contraption slides on it.
+# Per-block FRICTION for vanilla blocks - how grippy a surface is when a contraption slides on it.
 #
 # It is a Coulomb friction coefficient: the cap on sideways impulse at a contact, as a fraction of the
 # normal impulse. Higher = more grip, lower = more slippery.
 #
 #     0.7   ordinary grip (the default for every block)
-#     0.05  ice — a body slides across it almost freely
-#     0.4   slime — slick (its bounce is a separate thing we don't model)
-#     1.2   soul sand / soul soil — drags, hard to slide on
-#     1.5   honey — nearly sticks in place
+#     0.05  ice - a body slides across it almost freely
+#     0.4   slime - slick (its bounce is a separate thing we don't model)
+#     1.2   soul sand / soul soil - drags, hard to slide on
+#     1.5   honey - nearly sticks in place
 #
 # Friction is a property of the CONTACT, not one block: the solver takes the GEOMETRIC MEAN of the two
 # touching surfaces (the contraption's own mass-weighted mean and the block it rests on). So an icy raft
-# slides on stone AND a stone raft slides on ice — neither surface alone decides it.
+# slides on stone AND a stone raft slides on ice - neither surface alone decides it.
 #
 # Lookup order, first match wins:
 #   1. a CraftEngine custom block's own `polyfills:friction_block` behavior

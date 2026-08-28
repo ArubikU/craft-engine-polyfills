@@ -1,4 +1,4 @@
-# Item Filter — slot 0 is the filter template item.
+# Item Filter - slot 0 is the filter template item.
 # Items above the block: if matching filter → push toward facing, else → push opposite.
 
 filter = Machine.container.get_item(0)

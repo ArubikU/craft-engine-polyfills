@@ -1,4 +1,4 @@
-# Vertical gearbox — relays rpm via Java pullRotationalPower, toggles activated state for rendering.
+# Vertical gearbox - relays rpm via Java pullRotationalPower, toggles activated state for rendering.
 
 def on_break():
     Machine.set_rpm_output(0)

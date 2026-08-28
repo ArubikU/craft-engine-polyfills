@@ -223,15 +223,15 @@ def main():
     doc("1 Game Loop/Game Loop.kd", "Game Loop", gl)
 
     # ---- Route index docs ----
-    doc("2 Industry/_Industry.kd", "Industry — index", [
+    doc("2 Industry/_Industry.kd", "Industry - index", [
         brick("in-h", "text", 0, 'displayStyle = "heading", markdown = "# Industry"'),
         brick("in-i", "text", 1, 'displayStyle = "paragraph", markdown = "El motor steampunk (polyfills). Detalle por edad: @[doc:2 Industry/Copper Age.kd:Copper Age] · @[doc:2 Industry/Steel Age.kd:Steel Age] · @[doc:2 Industry/Aluminum Age.kd:Aluminum Age] · @[doc:2 Industry/Blueprints & Workbench.kd:Blueprints]. Recetas completas: @[doc:5 Reference/Recipes - Machines.kd:Recipe Index]."'),
     ])
-    doc("3 World/_World.kd", "World — index", [
+    doc("3 World/_World.kd", "World - index", [
         brick("wo-h", "text", 0, 'displayStyle = "heading", markdown = "# World"'),
         brick("wo-i", "text", 1, 'displayStyle = "paragraph", markdown = "Contenido de mundo: @[doc:3 World/Woods.kd:Woods & Trees] · @[doc:3 World/Salt & Farming.kd:Salt & Farming]. Mobs/building en @[doc:5 Reference/Catalog - Mobs.kd:Reference]."'),
     ])
-    doc("4 Foreign/_Foreign.kd", "Foreign — index", [
+    doc("4 Foreign/_Foreign.kd", "Foreign - index", [
         brick("fo-h", "text", 0, 'displayStyle = "heading", markdown = "# Foreign"'),
         brick("fo-i", "text", 1, 'displayStyle = "paragraph", markdown = "Contenido importado / no-nativo: cosmeticos (HMC), economia, mobiliario urbano, plushes, graffiti, pack ejemplo topaz. Ver @[doc:4 Foreign/Decorations & Misc.kd:Decorations] y catalogos @[doc:5 Reference/Catalog - Cosmetics & Deco.kd:Cosmetics] · @[doc:5 Reference/Catalog - Economy.kd:Economy] · @[doc:5 Reference/Catalog - Urban & Street.kd:Urban]."'),
     ])
@@ -246,15 +246,15 @@ def main():
 
     mb = recipe_rows(made)
     ui = recipe_rows(used)
-    bricks_m = [brick("rm-h", "text", 0, 'displayStyle = "heading", markdown = "# Recipe Index — Made By (%d outputs)"' % len(made))]
+    bricks_m = [brick("rm-h", "text", 0, 'displayStyle = "heading", markdown = "# Recipe Index - Made By (%d outputs)"' % len(made))]
     for i, c in enumerate(tbl("Producido por", ["item", "metodo", "receta"], mb)):
         bricks_m.append(brick("rm-t%d" % i, "table", i + 1, c))
-    doc("5 Reference/Recipes - Machines.kd", "Recipes — Made By", bricks_m)
+    doc("5 Reference/Recipes - Machines.kd", "Recipes - Made By", bricks_m)
 
-    bricks_u = [brick("ru-h", "text", 0, 'displayStyle = "heading", markdown = "# Recipe Index — Used In (%d inputs)"' % len(used))]
+    bricks_u = [brick("ru-h", "text", 0, 'displayStyle = "heading", markdown = "# Recipe Index - Used In (%d inputs)"' % len(used))]
     for i, c in enumerate(tbl("Usado en", ["item", "metodo", "produce"], ui)):
         bricks_u.append(brick("ru-t%d" % i, "table", i + 1, c))
-    doc("5 Reference/Recipes - Used In.kd", "Recipes — Used In", bricks_u)
+    doc("5 Reference/Recipes - Used In.kd", "Recipes - Used In", bricks_u)
 
     print("done. made rows=%d used rows=%d" % (len(mb), len(ui)))
 

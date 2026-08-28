@@ -1,5 +1,5 @@
-# Shared helpers for kinetics/ machines (shafts, generators, processors) — import with
-# "import \"kinetics/utils.pf\"" (full path, since scripts now live under category subfolders — see
+# Shared helpers for kinetics/ machines (shafts, generators, processors) - import with
+# "import \"kinetics/utils.pf\"" (full path, since scripts now live under category subfolders - see
 # ScriptRegistry's relPath/relPathNoExt keys). Kept separate from the root utils.pf: these are
 # specific to the kinetic-power / contraption-drop domain, not generally useful outside it.
 
@@ -21,7 +21,7 @@ def _deposit(item):
     end
 end
 
-# Linear contraption speed (blocks/tick) -> break-speed units — the scale a stationary machine's
+# Linear contraption speed (blocks/tick) -> break-speed units - the scale a stationary machine's
 # abs(rpm)/10 formula roughly matches (rpm ~20-50 -> speed ~2-5). Was duplicated verbatim in saw.pf
 # and drill.pf before this existed. Tune LINEAR_SPEED_SCALE if a moving-contraption machine feels
 # too slow/fast relative to its redstone-fed standalone counterpart.
@@ -31,10 +31,10 @@ def _linear_break_speed(contraption):
 end
 
 # Flips the "activated" block-state property (and its own persisted last-value, under `act_key`)
-# only on an actual CHANGE — avoids a redundant set_property call (and whatever model/particle
+# only on an actual CHANGE - avoids a redundant set_property call (and whatever model/particle
 # update it triggers) every single tick a machine's on/off state hasn't moved. `act_key` is a typed
 # int key unique per machine (e.g. "_saw_act", "_drill_act") since each machine's own on/off history
-# is independent — this was duplicated identically (just the key name differing) across drill.pf,
+# is independent - this was duplicated identically (just the key name differing) across drill.pf,
 # saw.pf, hand_crank.pf, cogwheel_large.pf and cogwheel_small.pf before this existed.
 def _update_activated(act_key, is_now):
     was = Machine.get_typed(act_key, "int")

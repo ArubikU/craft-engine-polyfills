@@ -1,4 +1,4 @@
-# Block Breaker — breaks the block directly in front (facing direction).
+# Block Breaker - breaks the block directly in front (facing direction).
 # Progressive break animation, contraption-aware (breaks real-world block, not contraption internal).
 # If inside a contraption, holds it still while breaking via ScriptStallBehavior.
 
@@ -23,7 +23,7 @@ if !block.is_air && !UNBREAKABLE.has(block.id):
         Machine.release_contraption()
     end
 else:
-    # No target — clear any in-progress break and release hold
+    # No target - clear any in-progress break and release hold
     Machine.release_contraption()
 end
 

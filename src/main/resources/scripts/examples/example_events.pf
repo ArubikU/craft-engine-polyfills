@@ -1,4 +1,4 @@
-# Example events/*.json bridge target — see events/example.json. Fires on every player join.
+# Example events/*.json bridge target - see events/example.json. Fires on every player join.
 def on_join():
     Player.send_message("<green>Welcome, " + Player.name + "!")
 end

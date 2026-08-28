@@ -1,4 +1,4 @@
-# Depot tick — auto-collect item entities sitting on top of the depot surface.
+# Depot tick - auto-collect item entities sitting on top of the depot surface.
 # Mirrors DepotBlockEntity.receiveConveyorItem: items from belts/drops land here
 # and get absorbed into inventory if there's space.
 

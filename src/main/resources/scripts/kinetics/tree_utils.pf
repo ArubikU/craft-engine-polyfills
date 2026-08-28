@@ -15,7 +15,7 @@ def _is_choppable(id):
     return _is_log(id) || _is_leaf_id(id)
 end
 
-# Block at an absolute world pos — resolves through a contraption's real_block if riding one.
+# Block at an absolute world pos - resolves through a contraption's real_block if riding one.
 def _get_tree_block(contraption, x, y, z):
     if contraption != null:
         return contraption.contraption_world.real_block(x, y, z)

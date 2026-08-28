@@ -72,7 +72,7 @@
         "z": "Machine.block.property(\"facing\") == \"south\" ? -0.2 : (Machine.block.property(\"facing\") == \"north\" ? 0.2 : 0)"
       },
       "rot_y": "Machine.block.property(\"facing\") == \"south\" ? 180 : (Machine.block.property(\"facing\") == \"north\" ? 0 : (Machine.block.property(\"facing\") == \"west\" ? 270 : 90))",
-      "update_when": "always",
+      "update_when": "4",
       "global": true
     },
     {
@@ -86,7 +86,7 @@
       "rot_y": "Machine.block.property(\"facing\") == \"south\" ? 180 : (Machine.block.property(\"facing\") == \"north\" ? 0 : (Machine.block.property(\"facing\") == \"west\" ? 270 : 90))",
       "rot_z": "tick() * 4",
       "when": "Machine.activated",
-      "update_when": "always",
+      "update_when": "4",
       "global": true
     },
     {
@@ -100,7 +100,7 @@
       "rot_y": "Machine.block.property(\"facing\") == \"south\" ? 180 : (Machine.block.property(\"facing\") == \"north\" ? 0 : (Machine.block.property(\"facing\") == \"west\" ? 270 : 90))",
       "rot_z": "tick() * 4 + 120",
       "when": "Machine.activated",
-      "update_when": "always",
+      "update_when": "4",
       "global": true
     },
     {
@@ -114,7 +114,7 @@
       "rot_y": "Machine.block.property(\"facing\") == \"south\" ? 180 : (Machine.block.property(\"facing\") == \"north\" ? 0 : (Machine.block.property(\"facing\") == \"west\" ? 270 : 90))",
       "rot_z": "tick() * 4 + 240",
       "when": "Machine.activated",
-      "update_when": "always",
+      "update_when": "4",
       "global": true
     }
   ]

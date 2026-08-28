@@ -1,4 +1,4 @@
-# Fan — pushes/pulls entities in facing direction.
+# Fan - pushes/pulls entities in facing direction.
 # Force = (redstone_power / 15) * (1 / distance). Inversed mode via flag.
 
 power = Machine.redstone

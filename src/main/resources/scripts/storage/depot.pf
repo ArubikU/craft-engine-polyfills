@@ -1,4 +1,4 @@
-# Depot — GUI-less 9-slot storage block (1:1 emulation of DepotBlockEntity).
+# Depot - GUI-less 9-slot storage block (1:1 emulation of DepotBlockEntity).
 # Empty hand (or sneak) → take last item back.
 # Item in hand → container.push: merges/fills, returns whatever didn't fit.
 
@@ -19,7 +19,7 @@ if Player.is_sneaking || is_empty(held):
 else:
     # Put: container.push handles merge + fill; only remove from hand what actually fit
     # (the old Machine.add_item only ever returned a bool, so a partial fill silently removed
-    # just 1 item from the player's hand regardless of how many the container actually took —
+    # just 1 item from the player's hand regardless of how many the container actually took -
     # container.push's leftover count fixes that).
     held_count = item_count(held)
     leftover = Machine.container.push(held)

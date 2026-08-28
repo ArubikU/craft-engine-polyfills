@@ -1,4 +1,4 @@
-# Redstone Randomizer — on each rising edge, picks a random output direction 0-3.
+# Redstone Randomizer - on each rising edge, picks a random output direction 0-3.
 # Stores result in "rand_dir" flag. Machine renderers can read the flag for directional output.
 
 cur_power = Machine.redstone > 0 ? 1 : 0

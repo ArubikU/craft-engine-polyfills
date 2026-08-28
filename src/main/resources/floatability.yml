@@ -1,4 +1,4 @@
-# Per-block FLOATABILITY for vanilla blocks — how much gravity a block keeps while it is IN A FLUID.
+# Per-block FLOATABILITY for vanilla blocks - how much gravity a block keeps while it is IN A FLUID.
 #
 # This is compared against the fluid's own buoyancy (water = 1, lava = 2). The difference is the lift:
 #
@@ -6,12 +6,12 @@
 #
 # so one expression covers every case, with no special rules:
 #
-#     0.0   fully buoyant in water — floats            (wood, wool)
-#     1.0   keeps full gravity in water — sinks        (stone, dirt)
+#     0.0   fully buoyant in water - floats            (wood, wool)
+#     1.0   keeps full gravity in water - sinks        (stone, dirt)
 #           ...but in LAVA gets 2-1 = 1x lift, so it floats. Stone rafts on lava are not coded
 #           anywhere; they are what the arithmetic says.
 #     2.0+  sinks through lava as well                 (netherite)
-#    -1.0   pushed up as hard as gravity pulls down — rises
+#    -1.0   pushed up as hard as gravity pulls down - rises
 #
 # Floatability does NOT change gravity in air. A block with 0.0 is not weightless: it falls normally
 # and floats once it lands in water, which is what wood does.
@@ -24,11 +24,11 @@
 #
 # Keys are Bukkit material names; a `minecraft:` prefix is accepted.
 
-# Floatability for a block nothing above classified — sinks in water, rides on lava.
+# Floatability for a block nothing above classified - sinks in water, rides on lava.
 default: 1.0
 
 blocks: {}
-# Examples — uncomment to override the built-in table:
+# Examples - uncomment to override the built-in table:
 #   OAK_PLANKS: 0.0        # floats
 #   IRON_BLOCK: 2.2        # sinks through lava too
 #   minecraft:slime_block: -0.5   # actively rises in water

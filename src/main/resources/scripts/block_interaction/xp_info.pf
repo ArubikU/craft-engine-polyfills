@@ -1,8 +1,8 @@
-# XP Collector info icon — replaces the recipe_info.pf helper, which reported
+# XP Collector info icon - replaces the recipe_info.pf helper, which reported
 # "No matching recipe" forever because xp_collector has no recipes at all.
 #
 # NOTE: Machine.fluid_tanks is an ARRAY of maps (same shape as Machine.gas_tanks),
-# not a FluidTanks object — read it with .get(i) then .get("field"), as gas_info.pf does.
+# not a FluidTanks object - read it with .get(i) then .get("field"), as gas_info.pf does.
 # The FluidTanks type's level()/capacity() methods belong to a different accessor.
 
 def _tank():

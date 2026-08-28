@@ -1,4 +1,4 @@
-# Speed Sensor — measures the fastest nearby entity and outputs 0-15.
+# Speed Sensor - measures the fastest nearby entity and outputs 0-15.
 #
 # Tunables, all via Machine.set_typed(values are ints, "int"):
 #   scan_range   blocks to scan                        (default 3)

@@ -1,6 +1,6 @@
 # Contraption system configuration
 
-# Entity culling — limits which players receive display entity packets.
+# Entity culling - limits which players receive display entity packets.
 # Reduces client-side lag from loading many non-essential display entities.
 entity_culling:
   # Master toggle. Disable to send all element packets to every player in the world (legacy behaviour).
@@ -11,7 +11,7 @@ entity_culling:
   # they re-enter range.
   view_distance: 64.0
 
-  # Frustum culling — additionally hides elements outside the player's field of view.
+  # Frustum culling - additionally hides elements outside the player's field of view.
   # Disabled by default. Enable to further reduce packet load on servers with many contraptions.
   frustum:
     # Enable directional frustum culling.
@@ -21,7 +21,7 @@ entity_culling:
     # Increase if players report contraptions disappearing while looking at them.
     fov: 120.0
 
-    # Distance (blocks) within which frustum culling is bypassed — always show.
+    # Distance (blocks) within which frustum culling is bypassed - always show.
     near_bypass: 16.0
 
     # Expand the target sphere by this many blocks when computing the frustum check.
@@ -56,6 +56,6 @@ fluid_render:
   render_source: true
 
   # Allow fluid to flow and spread within captured contraption levels.
-  # Disabled by default — flowing water inside a contraption usually causes
+  # Disabled by default - flowing water inside a contraption usually causes
   # unexpected spread or lag. Enable only if you intentionally capture flowing fluids.
   simulate_flow: false

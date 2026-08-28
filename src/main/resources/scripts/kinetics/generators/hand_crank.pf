@@ -1,4 +1,4 @@
-# Hand Crank — drains stored energy each tick, outputs RPM while energized.
+# Hand Crank - drains stored energy each tick, outputs RPM while energized.
 import "kinetics/utils.pf" { _update_activated }
 
 energy = Machine.get_typed("crank_energy", "int")

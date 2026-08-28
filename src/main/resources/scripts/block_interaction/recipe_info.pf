@@ -1,10 +1,10 @@
-# Recipe info helper — use in layout slots:
+# Recipe info helper - use in layout slots:
 #   { "slot": 4, "item": "recipe_info.pf:item", "name": "recipe_info.pf:name", "lore": ["recipe_info.pf:lore"] }
 #
 # Shows, based on the current working_recipe (actively processing) or matching_recipe (would start
 # if powered): the real output item as the icon + display name, a live progress bar, outputs with
 # drop chance + craft/min, ingredients, and whichever of RPM / SU / item fuel (coal, ...) / CraftEnergy
-# the recipe actually needs — each section only appears when the recipe actually uses that resource,
+# the recipe actually needs - each section only appears when the recipe actually uses that resource,
 # so a plain no-power recipe doesn't show three empty power lines.
 
 def _recipe():
@@ -82,7 +82,7 @@ def lore():
     end
     lines = push(lines, _div())
 
-    # Outputs — real display name, count, drop chance if not guaranteed, craft/min estimate.
+    # Outputs - real display name, count, drop chance if not guaranteed, craft/min estimate.
     lines = push(lines, "<white><b>OUTPUT")
     out_i = 0
     for out_item in recipe.outputs:
@@ -110,7 +110,7 @@ def lore():
         end
     end
 
-    # Power/resource requirements — only the ones this recipe actually uses.
+    # Power/resource requirements - only the ones this recipe actually uses.
     has_power_line = recipe.min_rpm > 0 || recipe.su_cost > 0 || recipe.fuel_required || recipe.energy_cost > 0
     if has_power_line:
         lines = push(lines, _div())

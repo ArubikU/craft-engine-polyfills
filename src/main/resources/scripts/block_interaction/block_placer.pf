@@ -1,4 +1,4 @@
-# Block Placer — places a block from input slots into the facing direction.
+# Block Placer - places a block from input slots into the facing direction.
 # Uses facing_block for proper block inspection instead of scan_block_at (string-only).
 
 facing = Machine.facing_block

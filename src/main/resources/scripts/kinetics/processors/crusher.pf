@@ -1,4 +1,4 @@
-# crusher.pf — renderer script for the crusher machine
+# crusher.pf - renderer script for the crusher machine
 # Variables here are available to all renderers that declare "run": "crusher"
 # All machine vars in scope: rpm, overclock, progress, max_progress, processing, etc.
 # PolyFormula supported: sin/cos/clamp/lerp, ?, %, Inventory.slot(n), etc.

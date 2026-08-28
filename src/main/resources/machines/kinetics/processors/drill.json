@@ -44,7 +44,7 @@
       "rot_y": -90,
       "scale": "1.0",
       "when": "Machine.activated && Machine.block.property(\"facing\") == \"north\"",
-      "update_when": "always",
+      "update_when": "4",
       "global": true
     },
     {
@@ -60,7 +60,7 @@
       "rot_y": 90,
       "scale": "1.0",
       "when": "Machine.activated && Machine.block.property(\"facing\") == \"south\"",
-      "update_when": "always",
+      "update_when": "4",
       "global": true
     },
     {
@@ -75,7 +75,7 @@
       "rot_x": "tick() * (Machine.contraption != null ? Machine.contraption.rpm : rpm) * 0.3 *-1",
       "scale": "1.0",
       "when": "Machine.activated && Machine.block.property(\"facing\") == \"east\"",
-      "update_when": "always",
+      "update_when": "4",
       "global": true
     },
     {
@@ -90,7 +90,7 @@
       "rot_x": "tick() * (Machine.contraption != null ? Machine.contraption.rpm : rpm) * 0.3 *-1",
       "scale": "1.0",
       "when": "Machine.activated && Machine.block.property(\"facing\") == \"west\"",
-      "update_when": "always",
+      "update_when": "4",
       "global": true
     },
     {
@@ -104,7 +104,7 @@
       "rot_y": "tick() * (Machine.contraption != null ? Machine.contraption.rpm : rpm) * 0.3 *-1",
       "scale": "1.0",
       "when": "Machine.activated && Machine.block.property(\"facing\") == \"up\"",
-      "update_when": "always",
+      "update_when": "4",
       "global": true
     },
     {
@@ -118,7 +118,7 @@
       "rot_y": "tick() * (Machine.contraption != null ? Machine.contraption.rpm : rpm) * 0.3 *-1",
       "scale": "1.0",
       "when": "Machine.activated && Machine.block.property(\"facing\") == \"down\"",
-      "update_when": "always",
+      "update_when": "4",
       "global": true
     }
   ]

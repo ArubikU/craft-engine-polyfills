@@ -1,4 +1,4 @@
-# Shaft — passive RPM relay. The pull/push mechanism is handled by the Java tick.
+# Shaft - passive RPM relay. The pull/push mechanism is handled by the Java tick.
 # The activated blockstate is driven by the machine's `status` field (maybeUpdateActivated),
 # not by a manual set_state + NBT flag: the flag latched independently of the real block
 # state, so once they drifted apart the shaft could never re-activate.

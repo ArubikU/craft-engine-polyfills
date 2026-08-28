@@ -1,4 +1,4 @@
-# Item Magnet — two-zone collection using Vector math.
+# Item Magnet - two-zone collection using Vector math.
 #   dist_sq > 9  (>3 blocks):  push entity toward machine
 #   dist_sq ≤ 9  (≤3 blocks):  collect into inventory
 

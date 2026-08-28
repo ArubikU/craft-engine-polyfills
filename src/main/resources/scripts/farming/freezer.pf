@@ -1,4 +1,4 @@
-# Freezer — converts water blocks to ice, applies freeze effect to nearby entities.
+# Freezer - converts water blocks to ice, applies freeze effect to nearby entities.
 
 WATER_TO_ICE = make_map(
 "minecraft:water", "minecraft:ice"

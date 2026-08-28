@@ -1,4 +1,4 @@
-# Hand Crank right-click — add energy (cap at 100)
+# Hand Crank right-click - add energy (cap at 100)
 energy = Machine.get_typed("crank_energy", "int")
 Machine.set_typed("crank_energy", "int", min(energy + 20, 100))
 Machine.play_sound("minecraft:block.iron_door.close", 0.5, 1.5)

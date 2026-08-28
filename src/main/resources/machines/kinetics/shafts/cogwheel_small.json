@@ -49,7 +49,7 @@
       "rot_y": "tick() * rpm * 0.3",
       "scale": "1.0",
       "when": "Machine.axis == \"y\" && Machine.activated",
-      "update_when": "always",
+      "update_when": "4",
       "global": true
     },
     {
@@ -65,7 +65,7 @@
       "rot_y": -90,
       "scale": "1.0",
       "when": "Machine.axis == \"z\" && Machine.activated",
-      "update_when": "always",
+      "update_when": "4",
       "global": true
     },
     {
@@ -80,7 +80,7 @@
       "rot_x": "tick() * rpm * 0.3",
       "scale": "1.0",
       "when": "Machine.axis == \"x\" && Machine.activated",
-      "update_when": "always",
+      "update_when": "4",
       "global": true
     }
   ]

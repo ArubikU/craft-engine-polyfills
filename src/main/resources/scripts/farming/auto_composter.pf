@@ -1,4 +1,4 @@
-# Auto Composter — consumes compostable items and accumulates a level.
+# Auto Composter - consumes compostable items and accumulates a level.
 # Every 8 compost-points yields 1 bone_meal pushed to output slots.
 # Input slots: 0-17  |  Output slots: 18-26
 

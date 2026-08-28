@@ -1,4 +1,4 @@
-# Gas tank info helper — use in layout slots for machines with gas tanks:
+# Gas tank info helper - use in layout slots for machines with gas tanks:
 #   { "slot": 4, "item": "gas_info.pf:item", "name": "gas_info.pf:name", "lore": ["gas_info.pf:lore"] }
 # Shows the first gas tank's contents (level, capacity, type name).
 

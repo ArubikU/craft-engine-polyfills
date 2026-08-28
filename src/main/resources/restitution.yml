@@ -1,11 +1,11 @@
-# Per-block RESTITUTION (bounciness) for vanilla blocks — how much of a head-on impact a surface hands back
+# Per-block RESTITUTION (bounciness) for vanilla blocks - how much of a head-on impact a surface hands back
 # as a bounce.
 #
 # It is a coefficient of restitution: the fraction of closing speed returned as separation at a contact.
 # Higher = bouncier.
 #
-#     0.0   every ordinary block — absorbs the hit (the default)
-#     1.0   slime block — the ONE vanilla bouncy block
+#     0.0   every ordinary block - absorbs the hit (the default)
+#     1.0   slime block - the ONE vanilla bouncy block
 #
 # Restitution is CELL-LOCAL, unlike mass / friction / floatability (which are one mass-weighted-mean number
 # for the whole body). A contraption only bounces where the CONTACTED cell is bouncy: a slime cell in a

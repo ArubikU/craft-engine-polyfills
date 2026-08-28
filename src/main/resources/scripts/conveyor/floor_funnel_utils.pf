@@ -1,12 +1,12 @@
-# Floor Funnel / Ceiling Funnel — shared tick, mirroring the old FloorFunnelBlockEntity Java
+# Floor Funnel / Ceiling Funnel - shared tick, mirroring the old FloorFunnelBlockEntity Java
 # behavior 1:1 (both variants were literally the same Java class, `pull_above` was its only
-# constructor difference). No animation, no facing — always straight up/down, one item held at a
+# constructor difference). No animation, no facing - always straight up/down, one item held at a
 # time, instant pickup/drop (unlike the belt-facing Funnel, which travels over FUNNEL_STEP ticks).
 #
 # Floor funnel (pull_above=false): vacuums dropped items resting on top, deposits into the
 # container below each tick (drops instead if nothing's there to deposit into).
 # Ceiling funnel (pull_above=true): vacuums dropped items AND actively pulls from a container
-# above, always just drops below — it never deposits into one (matches real Create funnels: a
+# above, always just drops below - it never deposits into one (matches real Create funnels: a
 # ceiling funnel gravity-feeds, it doesn't insert).
 
 import "utils.pf" { is_resting_item }
@@ -70,7 +70,7 @@ def _floor_funnel_drop_held():
     end
 end
 
-# Empty-hand right-click takes the held item back into the player's inventory — matches
+# Empty-hand right-click takes the held item back into the player's inventory - matches
 # FloorFunnelBehavior/CeilingFunnelBehavior's own useWithoutItem exactly (non-empty hand passes
 # through, e.g. so a player can still place a block against it).
 def _floor_funnel_on_right_click():

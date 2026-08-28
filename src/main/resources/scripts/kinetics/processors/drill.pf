@@ -1,4 +1,4 @@
-# Drill — RPM-driven block breaker. Standalone: speed = abs(rpm)/10, targets Machine.facing_block.
+# Drill - RPM-driven block breaker. Standalone: speed = abs(rpm)/10, targets Machine.facing_block.
 # Contraption-borne: speed from contraption.rpm (rotational) or contraption.speed (linear); holds
 # the contraption while mid-break so it doesn't drift off target. No inventory: drops via _deposit.
 
@@ -14,7 +14,7 @@ if contraption != null:
 
     if is_now > 0:
         speed = is_rotational ? max(1, abs(contraption.rpm) / 10) : _linear_break_speed(contraption)
-        # Project through the contraption's LIVE transform — Machine.facing_block would resolve
+        # Project through the contraption's LIVE transform - Machine.facing_block would resolve
         # inside its virtual structure instead of the real world.
         target = contraption.contraption_world.real_block(Machine.x + Machine.facing_dx, Machine.y + Machine.facing_dy, Machine.z + Machine.facing_dz)
         if target == null || target.is_air:

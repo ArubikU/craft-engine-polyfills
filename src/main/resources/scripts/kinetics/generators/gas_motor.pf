@@ -1,4 +1,4 @@
-# Gas Motor — full logic matching the original DataMotorBlockEntity behavior.
+# Gas Motor - full logic matching the original DataMotorBlockEntity behavior.
 # Reads gas from "vapor" tank, calculates RPM/SU based on gas type,
 # applies overclock multiplier, reports SU to RpmNetwork.
 

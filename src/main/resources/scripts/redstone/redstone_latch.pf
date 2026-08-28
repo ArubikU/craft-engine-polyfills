@@ -1,4 +1,4 @@
-# Redstone SR Latch — toggles output on each rising edge of input.
+# Redstone SR Latch - toggles output on each rising edge of input.
 # Latched state persists across ticks.
 
 cur_power = Machine.redstone > 0 ? 1 : 0

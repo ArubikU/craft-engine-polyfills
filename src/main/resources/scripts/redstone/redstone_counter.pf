@@ -1,4 +1,4 @@
-# Redstone Counter — counts rising edges of redstone input, fires pulse at max count.
+# Redstone Counter - counts rising edges of redstone input, fires pulse at max count.
 # Set Machine.get_typed("max_count", "int") to configure threshold (default 10).
 
 cur_power = Machine.redstone > 0 ? 1 : 0

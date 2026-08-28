@@ -1,13 +1,13 @@
-# Backing script for /virtualui sample|close (see cmds/virtualui_sample.json) — the ENTIRE screen,
+# Backing script for /virtualui sample|close (see cmds/virtualui_sample.json) - the ENTIRE screen,
 # visuals AND behavior, is built here via the VirtualUI script API. No Java code defines any widget
 # for this demo; open_sample() below is exactly what a server owner would write for their own UI.
 # Demonstrates every built-in widget kind (label, button, icon, block, player_render, scrollbar)
 # and every generic capability a click callback can reach (Player.open_url/send_message,
-# VirtualUI.change_hologram/hide) — port of 's own bundled sample config, one-to-one.
+# VirtualUI.change_hologram/hide) - port of 's own bundled sample config, one-to-one.
 
 def open_sample():
     if VirtualUI.is_open(Player):
-        Player.send_message("<red>You already have a VirtualUI open — <white>/virtualui close</white> first.")
+        Player.send_message("<red>You already have a VirtualUI open - <white>/virtualui close</white> first.")
         return
     end
 
@@ -19,7 +19,7 @@ def open_sample():
     ui.label("right", "<white><bold>RIGHT HOLOGRAM</bold>\n<gray>Static label", 2.0, 0.0)
     ui.label("info", "<green><bold>Cursor Information</bold>\n<gray>Move the cursor over a button", 0.0, 1.6)
 
-    # Animation demo: VUIWidget.ticks_open() is a time axis every widget kind inherits — this label's
+    # Animation demo: VUIWidget.ticks_open() is a time axis every widget kind inherits - this label's
     # text is re-evaluated every render tick via the "${...}" pipeline, so a pure sine-driven color
     # pulse costs nothing extra beyond what the engine already does.
     ui.label("pulse", "${if(sin(VUIText.ticks_open() * 0.1) > 0, '<yellow>', '<gold>')}<bold>* PULSING *</bold>", 0.0, 2.6)
@@ -36,7 +36,7 @@ def open_sample():
     ui.player_render("self_render", -2.5, -1.4)
     ui.block("block_demo", "minecraft:diamond_block", 2.5, -1.4)
 
-    # trailing "minecraft:lever" is the thumb's tracker item icon — omit it (and the font-image
+    # trailing "minecraft:lever" is the thumb's tracker item icon - omit it (and the font-image
     # arg after it) to fall back to the generated box-drawing bar instead.
     ui.scrollbar("volume_scrollbar", false, 0.0, -2.2, 2.0, 0.4, 0.5, "examples/virtualui_sample.pf:on_scrollbar_change", "minecraft:lever")
     ui.on_hover("examples/virtualui_sample.pf:on_scrollbar_armed")
@@ -92,7 +92,7 @@ end
 # Scrollbar demo (port of 's hotbar-scrollbar gesture): click the bar to arm it, move the
 # cursor to drag, click again to release. on_change fires every tick the value actually moves.
 def on_scrollbar_armed(widget_id):
-    Player.send_actionbar("<yellow>Volume scrollbar armed — move the cursor, click again to release.")
+    Player.send_actionbar("<yellow>Volume scrollbar armed - move the cursor, click again to release.")
 end
 
 def on_scrollbar_released(widget_id):
@@ -103,7 +103,7 @@ def on_scrollbar_change(widget_id, value):
     Player.send_actionbar("<aqua>Volume: <white>" + round(value * 100) + "%")
 end
 
-# Toggle demo: click flips state internally (no on_click needed) — on_change(widget_id, is_on)
+# Toggle demo: click flips state internally (no on_click needed) - on_change(widget_id, is_on)
 # fires with the new boolean.
 def on_toggle_mute(widget_id, is_on):
     if is_on:

@@ -1,4 +1,4 @@
-# Spike Trap — damages entities on contact. Slot 0 weapon scales damage. Owner immune.
+# Spike Trap - damages entities on contact. Slot 0 weapon scales damage. Owner immune.
 
 cooldown = Machine.get_typed("atk_cd", "int")
 

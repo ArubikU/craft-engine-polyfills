@@ -1,4 +1,4 @@
-# Redstone Add-On 4.0 — Implementation Status
+# Redstone Add-On 4.0 - Implementation Status
 
 Source: `pb_red` namespace (Bedrock Edition). CE = CraftEngine Polyfills.
 
@@ -23,7 +23,7 @@ Legend: ✅ = 100% (model + block config + machine JSON + script) · 🔧 = Part
 | `fertilizer` | `redstone/fertilizer` | `fertilizer.json` | `fertilizer.pf` | `machines.yml` |
 | `freezer` | *(CE custom)* | `freezer.json` | `freezer.pf` | `machines.yml` |
 | `harvester` | *(CE custom)* | `harvester.json` | `harvester.pf` | `machines.yml` |
-| `hopper_dropper` | `redstone/hopper_dropper` | `hopper_dropper.json` | *(none — CE IO)* | `machines.yml` |
+| `hopper_dropper` | `redstone/hopper_dropper` | `hopper_dropper.json` | *(none - CE IO)* | `machines.yml` |
 | `item_magnet` | `redstone/item_magnet` | `item_magnet.json` | `item_magnet.pf` | `machines.yml` |
 | `item_trash` | *(CE custom)* | `item_trash.json` | `item_trash.pf` | `machines.yml` |
 | `jump_pad` | `redstone/jump_pad_block` | `jump_pad.json` | `jump_pad.pf` | `machines.yml` |
@@ -72,100 +72,100 @@ Legend: ✅ = 100% (model + block config + machine JSON + script) · 🔧 = Part
 
 ---
 
-## ❌ Not Implemented — Needs New Systems
+## ❌ Not Implemented - Needs New Systems
 
-### `wireless_redstone` — Wireless Signal Transmitter/Receiver
+### `wireless_redstone` - Wireless Signal Transmitter/Receiver
 **Requires:** GlobalBlockNetwork (world-level channel registry)
 **Blocks:** 1 block, 2 modes (transmitter/receiver)
 **States:** `is_transmitter` (bool), color channel (0-15), `powered`
 **Logic:** Transmitter reads input power → broadcasts to GlobalBlockNetwork on channel. Receiver listens → outputs received power level.
 **Assets available:** Model `redstone/wireless_redstone` ✅, Texture `wireless_redstone_*.png` ✅
 
-### `entity_teleporter` — Entity Teleporter
+### `entity_teleporter` - Entity Teleporter
 **Requires:** GlobalBlockNetwork (channel-keyed position registry)
 **Blocks:** 1 block
 **States:** color channel (0-15), `powered`
 **Logic:** Entities within 1.5 radius get teleported to random paired receiver on same channel. 10-tick cooldown tag.
 **Assets available:** Model `redstone/entity_teleporter` ✅ (34 elements), Texture `entity_teleporter.png` ✅
 
-### `item_teleporter` — Item Teleporter
+### `item_teleporter` - Item Teleporter
 **Requires:** GlobalBlockNetwork (same as entity_teleporter)
 **Blocks:** 1 block
 **States:** `tp_in` (transmit/receive), color channel (0-15)
 **Logic:** `tp_in=true`: items touching → teleport to random receiver on channel. `tp_in=false`: receives.
 **Assets available:** Model `redstone/item_teleporter` ✅ (36 elements), Texture `item_teleporter.png` ✅
 
-### `super_piston` — Multi-Block Piston
+### `super_piston` - Multi-Block Piston
 **Requires:** NMS piston event chain (custom multi-block push/pull)
 **Blocks:** 4 parts (normal body, arm, head, sticky variant)
 **States:** `facing_direction` (6-way), `powered`, arm extension (0-3)
 **Logic:** Pushes up to 12 blocks in facing direction. Sticky variant pulls. Animated arm extension over 4 ticks.
 **Assets available:** Models `redstone/super_piston_normal` (2 elem), `super_piston_arm` (1), `super_piston_body` (2), `super_piston_head` (3) ✅
 
-### `elevator` — Elevator System (5 block types)
+### `elevator` - Elevator System (5 block types)
 **Requires:** Custom minecart vertical rail physics + floor detection + control signals
 **Blocks:**
-1. `elevator_rail` — vertical rail segment (placed on wall)
-2. `elevator_floor` — floor marker (detects arrival)
-3. `elevator_control_rail_up` — sends cart upward
-4. `elevator_control_rail_down` — sends cart downward
-5. `elevator_control_rail_stop` — stops cart at this floor
+1. `elevator_rail` - vertical rail segment (placed on wall)
+2. `elevator_floor` - floor marker (detects arrival)
+3. `elevator_control_rail_up` - sends cart upward
+4. `elevator_control_rail_down` - sends cart downward
+5. `elevator_control_rail_stop` - stops cart at this floor
 **States per block:** `facing_direction`, `powered`
 **Logic:** Minecart rides vertical rails. Floor blocks detect cart presence → output redstone. Control rails apply vertical velocity (+0.5 up / -0.5 down / 0 stop). Needs custom minecart physics override.
 **Assets available:** Models `redstone/elevator_rail` (4 elem), `redstone/elevator_floor` (1 elem) ✅. Textures `elevator.png`, `elevator_rail.png`, `elevator_floor.png`, `elevator_control_rail_*.png` ✅
 
-### `friction_booster` — Surface Friction Modifier
+### `friction_booster` - Surface Friction Modifier
 **Requires:** NMS entity friction attribute (`Entity.setFriction` or slowness)
 **Blocks:** 1 block
 **States:** `friction_level` (0-15)
 **Logic:** Reads max redstone power from back → stores as friction_level. Entities on top get modified speed multiplier.
 **Assets available:** Textures `friction_booster_0.png` through `friction_booster_4.png` ✅
 
-### `quarry_machine` — Automated Quarry Vehicle
+### `quarry_machine` - Automated Quarry Vehicle
 **Requires:** Contraption rail-laying behavior + drill integration
 **Entities:** 5-entity compound (quarry_machine, rail_placer_furnace, rail_placer_seat, portable_block_dispenser, portable_drill)
 **Logic:** Rides minecart. Places rails ahead from inventory. Coal powers furnace for locomotion. Drill entity breaks ore in front. 6 placement modes.
 **Assets available:** Model `redstone/flying_machine` ✅ (generic vehicle shell)
 
-### `transplanter` — Seed Planter Vehicle
+### `transplanter` - Seed Planter Vehicle
 **Requires:** Contraption script-driven machine + farmland detection
 **Entities:** 1 rider entity on minecart
 **Logic:** When moving ≥0.01 speed, plants seeds in 3×2 strip perpendicular to motion. Scans for farmland below.
 **Assets available:** None (uses quarry_machine shell)
 
-### `redstone_ore_detector` — Ore Finder
+### `redstone_ore_detector` - Ore Finder
 **Requires:** Block scanning + particle effect system
 **Blocks:** 1 block
 **States:** `ore_index` (0-11 ore types), `particle` (bool)
 **Logic:** Scans 10-block cube. Shows colored directional particles. Distance determines color: <2.5m=green, 2.5-3.5=yellow, 3.5-6=orange, >6=red.
 **Assets available:** Model `redstone/redstone_ore_detector` ✅ (29 elements)
 
-### `redstone_display` — Visual Display Block
+### `redstone_display` - Visual Display Block
 **Requires:** Custom text/pixel rendering on block face
 **Blocks:** 1 block
 **Logic:** Shows configurable text/numbers on face. Can display redstone signal level.
 **Assets available:** Model `redstone/redstone_display` ✅ (1 element)
 
-### `remote_controlled_redstone` — Remote Control
+### `remote_controlled_redstone` - Remote Control
 **Requires:** GlobalBlockNetwork + player interaction (item-triggered channel broadcast)
 **Blocks:** 1 block + 1 item (remote controller)
 **Logic:** Player holds remote → right-click sends pulse to all blocks on linked channel.
 **Assets available:** Model `redstone/remote_controlled_redstone` ✅ (30 elements)
 
-### `ore_refiner` — Ore Credit Processor
+### `ore_refiner` - Ore Credit Processor
 **Requires:** Custom credit-based recipe system (not standard machine recipes)
 **Blocks:** 1 block
 **States:** `ore_result` (0-8), `level` (0-10 fill visual)
 **Logic:** Credit accumulation per ore type. Outputs refined product when credits ≥ threshold.
 **Assets available:** Model `redstone/ore_refiner` ✅ (29 elements), Texture `ore_refiner.png` ✅
 
-### `super_smelter` — Bulk Furnace
+### `super_smelter` - Bulk Furnace
 **Requires:** Item entity detection + fuel consumption + 40 recipes
 **Blocks:** 1 block
 **Logic:** Detects item entities on block, smelts if fuel (coal/charcoal) available in chest above.
 **Assets available:** Model `redstone/super_smelter` ✅ (24 elements)
 
-### `precision_wire_gutter` / `redstone_gutter` — Redstone Wire Routing
+### `precision_wire_gutter` / `redstone_gutter` - Redstone Wire Routing
 **Requires:** Custom redstone wire routing system (directional signal propagation)
 **Blocks:** 5 variants each (straight, up, down, left, right)
 **Logic:** Routes redstone signal in specific direction without bleed.

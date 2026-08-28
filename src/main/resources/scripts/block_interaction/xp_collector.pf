@@ -1,4 +1,4 @@
-# XP Collector — collects experience orbs and fills XP tank.
+# XP Collector - collects experience orbs and fills XP tank.
 
 entities = Machine.nearby_entities(6)
 total_xp  = 0

@@ -1,4 +1,4 @@
-# Auto Breeder — finds breedable adult animals in range, feeds them matching food.
+# Auto Breeder - finds breedable adult animals in range, feeds them matching food.
 # Uses use_item_on_entity (works for any entity, not just vanilla Animal class).
 # BREEDING_FOODS map: entity type → food item id that triggers breeding.
 

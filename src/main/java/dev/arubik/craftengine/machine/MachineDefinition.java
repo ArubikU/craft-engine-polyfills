@@ -65,8 +65,6 @@ public final class MachineDefinition {
      *  redefining it this way (rather than "any inverted face" regardless of relay/new-network, as
      *  it briefly meant) breaks nothing already deployed. */
     private Set<String> rpmOutputInvertedRaw = Set.of();
-    /** Gearbox-style: derive the output sign from the driven face instead of a static face list. */
-    private boolean rpmOutputRelative = false;
     /** Faces declared under the unified io block's bare "output" key (type "rpm") — DISTINCT from
      *  "output_same"/{@link #rpmOutputFacesRaw}: a consumer pulling through one of THESE faces mints
      *  its own fresh {@code RpmNetwork} instead of joining this machine's own network, i.e. this is a
@@ -403,19 +401,6 @@ public final class MachineDefinition {
 
     public Set<String> rpmOutputInvertedRaw() {
         return this.rpmOutputInvertedRaw;
-    }
-
-    /**
-     * When true the machine ignores {@code output_same}/{@code output_inverted} for sign purposes
-     * and instead continues straight through the driven axis while reversing across it — the
-     * physical behaviour of a gearbox, which a static face list cannot express.
-     */
-    public boolean rpmOutputRelative() {
-        return this.rpmOutputRelative;
-    }
-
-    public void setRpmOutputRelative(boolean v) {
-        this.rpmOutputRelative = v;
     }
 
     public void setRpmOutputInvertedRaw(Set<String> f) {

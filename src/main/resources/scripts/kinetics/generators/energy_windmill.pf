@@ -1,4 +1,4 @@
-# Energy Windmill — generation scales with wind (storms spin the sails harder).
+# Energy Windmill - generation scales with wind (storms spin the sails harder).
 #
 # per_tick is NOT a fixed JSON constant at runtime: Machine.set_energy_per_tick
 # lets any machine re-tune its own rate every tick based on whatever it wants (weather here;

@@ -1,10 +1,10 @@
-# Windmill Bearing — right-click interaction.
+# Windmill Bearing - right-click interaction.
 #
 #   click while idle       assemble the structure attached to the bearing's FACE
 #   click while assembled  flip the rotation direction (Create's clockwise / counter-clockwise)
 #   sneak + click          disassemble, returning the blocks to the world
 #
-# The old version always assembled `Machine.block_at(0, 1, 0)` — the block straight above. A
+# The old version always assembled `Machine.block_at(0, 1, 0)` - the block straight above. A
 # bearing points somewhere, and in Create it assembles whatever is attached to the face it points
 # at, so a windmill built out to the north of a north-facing bearing was simply never found.
 
@@ -13,7 +13,7 @@ MIN_SAILS = 8   # matches windmill.pf; Create refuses to run a windmill with les
 # Where the structure to assemble is found.
 #
 # Prefer the BEARING ITSELF when it is glued: a player who glues the bearing to their build has
-# already said what belongs together, and the glue cluster containing it IS the structure —
+# already said what belongs together, and the glue cluster containing it IS the structure -
 # assembleFrom drops the pivot, so the bearing stays put. This works whichever way the bearing
 # points, which matters because a bearing whose block config does not declare which property
 # holds its facing reports NORTH regardless of how it was placed.
@@ -34,7 +34,7 @@ if Player.is_sneaking:
         cid = Machine.get_typed("contraption_uuid", "string")
         contraption = ContraptionManager.get(cid)
         if contraption != null:
-            # disassemble(), not kill(): kill() only despawns/disposes — it never puts the blocks
+            # disassemble(), not kill(): kill() only despawns/disposes - it never puts the blocks
             # back, which is why disassembling used to look like it did nothing.
             contraption.disassemble()
         end
@@ -57,7 +57,7 @@ else if assembled > 0:
     : "<gray>Windmill now turns <white>counter-clockwise<gray>.")
 else:
     seed = _seed_block()
-    # Diagnostic breadcrumb — facing/seed resolution has been the recurring failure point here.
+    # Diagnostic breadcrumb - facing/seed resolution has been the recurring failure point here.
     # Shown on every failed assemble attempt so a bad build can be told apart from a bad lookup
     # without needing server-side debugging to see it.
     Player.send_message("<dark_gray>[debug] facing=" + Machine.block.property("facing")
@@ -67,11 +67,11 @@ else:
         Player.send_message("<red>Nothing attached to the bearing's face to assemble.")
     else if !Glue.is_glued(seed):
         # An unglued block is a one-block structure: assembling would pick up nothing but itself.
-        Player.send_message("<red>That structure is not glued together — glue the sails to each other and to the bearing.")
+        Player.send_message("<red>That structure is not glued together - glue the sails to each other and to the bearing.")
     else:
         # Count the sails BEFORE assembling, by inspecting the very glue graph the assembler
         # walks. The old order assembled first and killed the contraption if the count came up
-        # short — but assembling has already REMOVED those blocks from the world by then, so a
+        # short - but assembling has already REMOVED those blocks from the world by then, so a
         # failed check destroyed the build instead of refusing it.
         sails = Glue.count(seed, "sail")
         if sails < MIN_SAILS:
@@ -79,8 +79,8 @@ else:
             + "<red> of <white>" + MIN_SAILS + "<red> needed.")
         else:
             # create_bearing, not create_at: the bearing is the PIVOT and must stay in the world.
-            # No type argument: polyfills:windmill no longer exists — MachineContraptionType
-            # replaced the per-machine types — and create_bearing defaults to it.
+            # No type argument: polyfills:windmill no longer exists - MachineContraptionType
+            # replaced the per-machine types - and create_bearing defaults to it.
             contraption = ContraptionManager.create_bearing(seed, Machine.block_at(0, 0, 0))
             if contraption == null:
                 Player.send_message("<red>Could not assemble that structure.")

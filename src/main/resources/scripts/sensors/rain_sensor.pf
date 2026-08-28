@@ -1,4 +1,4 @@
-# Rain Sensor — emits 15 when raining or thundering, 0 when clear.
+# Rain Sensor - emits 15 when raining or thundering, 0 when clear.
 
 if World.is_raining || World.is_thundering:
     Machine.emit_redstone(15)

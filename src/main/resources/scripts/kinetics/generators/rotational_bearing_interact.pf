@@ -1,10 +1,10 @@
-# Rotational Bearing — right-click interaction.
+# Rotational Bearing - right-click interaction.
 #
 #   click while idle       assemble the structure attached to the bearing's FACE
 #   click while assembled  no-op (direction/speed already comes from the network, nothing to flip)
 #   sneak + click          disassemble, returning the blocks to the world
 #
-# Same assembly convention as windmill_interact.pf — see that file's writeup of why the seed lookup
+# Same assembly convention as windmill_interact.pf - see that file's writeup of why the seed lookup
 # prefers the bearing itself (when glued) over the block it faces.
 
 def _seed_block():
@@ -22,7 +22,7 @@ if Player.is_sneaking:
         cid = Machine.get_typed("contraption_uuid", "string")
         contraption = ContraptionManager.get(cid)
         if contraption != null:
-            # disassemble(), not kill(): kill() only despawns/disposes — it never puts the blocks
+            # disassemble(), not kill(): kill() only despawns/disposes - it never puts the blocks
             # back.
             contraption.disassemble()
         end
@@ -32,13 +32,13 @@ if Player.is_sneaking:
         Player.send_message("<gray>Rotational bearing disassembled.")
     end
 else if assembled > 0:
-    Player.send_message("<gray>Already assembled — feed RPM from below to turn it.")
+    Player.send_message("<gray>Already assembled - feed RPM from below to turn it.")
 else:
     seed = _seed_block()
     if seed == null || seed.is_air:
         Player.send_message("<red>Nothing attached to the bearing's face to assemble.")
     else if !Glue.is_glued(seed):
-        Player.send_message("<red>That structure is not glued together — glue it to itself and to the bearing.")
+        Player.send_message("<red>That structure is not glued together - glue it to itself and to the bearing.")
     else:
         # create_bearing, not create_at: the bearing is the PIVOT and must stay in the world.
         contraption = ContraptionManager.create_bearing(seed, Machine.block_at(0, 0, 0))

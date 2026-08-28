@@ -110,37 +110,6 @@ public final class RpmPropagation {
     }
 
     /**
-     * Gearbox output sign, derived from which face is actually being driven.
-     *
-     * <p>Ported from Create's {@code RotationPropagator.getAxisModifier}:
-     * <pre>
-     *   direction.getAxis() == source.getAxis()
-     *       ? direction == source ? 1 : -1
-     *       : direction.getAxisDirection() == source.getAxisDirection() ? -1 : 1
-     * </pre>
-     *
-     * <p>So the shaft <em>opposite</em> the driven one is REVERSED — a gearbox is a pair of meshed
-     * bevel gears, not a straight coupling — and a perpendicular face depends on whether the two
-     * faces point along the same axis direction. Neither half can be expressed with static
-     * {@code output_same}/{@code output_inverted} lists, because the split moves with the input:
-     * gearbox_h hardcoded north/south as "same", which was wrong for both the collinear case and
-     * for any build driven from east or west.
-     *
-     * @param outAxis  axis of the output face (0=X, 1=Y, 2=Z)
-     * @param outSign  axis direction of the output face (+1 for EAST/UP/SOUTH, -1 otherwise)
-     * @param inAxis   axis of the driven face
-     * @param inSign   axis direction of the driven face
-     * @return {@code +1} to keep the direction, {@code -1} to reverse it
-     */
-    public static float gearboxModifier(int outAxis, int outSign, int inAxis, int inSign) {
-        if (outAxis == inAxis) {
-            // Same face = back toward the source (no-op); opposite face = reversed.
-            return outSign == inSign ? 1f : -1f;
-        }
-        return outSign == inSign ? -1f : 1f;
-    }
-
-    /**
      * The longest a settled block may go between neighbour scans, in ticks.
      *
      * <p>Kept small on purpose: this is also the worst-case delay before a block notices its

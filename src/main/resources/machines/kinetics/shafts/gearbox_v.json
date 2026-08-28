@@ -53,7 +53,7 @@
       "rot_y": "tick() * rpm * 0.3",
       "scale": "1.0",
       "when": "Machine.activated",
-      "update_when": "always",
+      "update_when": "4",
       "global": true
     },
     {
@@ -69,7 +69,7 @@
       "rot_x": "tick() * rpm * 0.3",
       "scale": "1.0",
       "when": "Machine.activated",
-      "update_when": "always",
+      "update_when": "4",
       "global": true
     }
   ]

@@ -1,13 +1,13 @@
-# Item Pipe Panel — keeps this segment registered in the item-pipe network engine (cheap,
-# idempotent — a single map write) every tick, and implements the 6 face-mode buttons + 6
+# Item Pipe Panel - keeps this segment registered in the item-pipe network engine (cheap,
+# idempotent - a single map write) every tick, and implements the 6 face-mode buttons + 6
 # per-face redstone-required toggles. See machines/item_pipe_panel.json for the button wiring.
 
 Machine.pipe_register_network()
 
 
 # Facing a storage container: Disabled -> Input -> Output -> Both -> Disabled (all 4 states are
-# meaningful there — the pipe pulls from / pushes into an actual inventory).
-# Facing another pipe (or nothing at all yet): only Disabled <-> Both makes sense — a segment
+# meaningful there - the pipe pulls from / pushes into an actual inventory).
+# Facing another pipe (or nothing at all yet): only Disabled <-> Both makes sense - a segment
 # either routes items through this face or it doesn't, there's no separate "direction" to a plain
 # conduit. Cycling a pipe-facing side through Input-only/Output-only would be a state with no
 # real effect (routing already only cares whether either flag is set, see ItemEngine#step's
@@ -92,21 +92,21 @@ end
 # --- Item filter (page 1) ---
 #
 # Storage: ONE FULL ITEM flag per filter slot, "pipe_filter_<dir>_<slot 0..8>" (see
-# Machine.get_item_flag/set_item_flag — a base64-serialized ItemStack, not just an id string), so
+# Machine.get_item_flag/set_item_flag - a base64-serialized ItemStack, not just an id string), so
 # an enchanted book, a custom-named tool, a written book etc. filter by their EXACT identity, not
-# merely "any item of that base type". Not a single joined CSV — this script engine has no
+# merely "any item of that base type". Not a single joined CSV - this script engine has no
 # string-split builtin, so a CSV would be write-only; one flag per slot needs no parsing at all.
 #
 # The 9 filter slots on page 1 are GHOST slots (see MenuSlotType#GHOST / machines/item_pipe_panel
-# .json's "ghost_slots"), NOT real input slots — a real, conjured-on-open marker item was the whole
+# .json's "ghost_slots"), NOT real input slots - a real, conjured-on-open marker item was the whole
 # duplication bug: Machine.add_item_to_slot materialized a brand new ItemStack from the saved id
 # every time the page opened, and a player who took that marker into their own inventory (a
-# perfectly ordinary click on what LOOKS like a normal slot) got a real, keepable copy for free —
+# perfectly ordinary click on what LOOKS like a normal slot) got a real, keepable copy for free -
 # repeatable indefinitely by just reopening the page. A ghost slot never holds a real, transferable
 # stack at all: `ghost_get` only supplies what item to RENDER, `ghost_set` only ever READS the
-# clicked item (never touches/consumes/duplicates it), and every click commits immediately — no
+# clicked item (never touches/consumes/duplicates it), and every click commits immediately - no
 # separate Save step, so there's no "unsaved edit" a disconnect could ever leave in a half-done
-# state. The stack's COUNT is irrelevant either way — this is an identity filter ("this slot's
+# state. The stack's COUNT is irrelevant either way - this is an identity filter ("this slot's
 # type/enchants/etc match"), not a quantity threshold, so clicking in 1 or 64 means the same thing.
 def dir_name(idx):
     if idx == 0:
@@ -164,13 +164,13 @@ end
 
 # --- Filter match mode (per face) ---
 #
-# Named "matchmode" (not "mode") deliberately — `mode` is already bound inside filter_item() as
+# Named "matchmode" (not "mode") deliberately - `mode` is already bound inside filter_item() as
 # the TRANSFER direction ("input"/"output", see ItemEngine#runTransferScript), a completely
 # different axis; reusing the name would silently shadow it.
 #
-#   equals  — same item type + same components (enchants, name, ...) + same STACK COUNT too.
-#   seamsly — same item type + same components, count irrelevant (the previous, only behaviour).
-#   id      — only the base item type/id; ignores every component and the count.
+#   equals  - same item type + same components (enchants, name, ...) + same STACK COUNT too.
+#   seamsly - same item type + same components, count irrelevant (the previous, only behaviour).
+#   id      - only the base item type/id; ignores every component and the count.
 def filter_matchmode(dir):
     m = Machine.get_typed("pipe_filter_matchmode_" + dir, "string")
     if m == "":
@@ -195,7 +195,7 @@ def cycle_filter_matchmode():
     Machine.set_typed("pipe_filter_matchmode_" + dir, "string", next)
 end
 
-# Bare ".pf:func" button name (see MachineMenuConfig.Button#evaluateNameRaw) — the whole label
+# Bare ".pf:func" button name (see MachineMenuConfig.Button#evaluateNameRaw) - the whole label
 # lives here instead of a giant nested ${if(...)} in the JSON.
 def filter_matchmode_label():
     dir = dir_name(Machine.get_typed("pipe_filter_dir_index", "int"))
@@ -210,7 +210,7 @@ def filter_matchmode_label():
     return "<gray>Filter Mode: <yellow>" + text
 end
 
-# The one place that decides whether `candidate` counts as "the same" as a saved filter item —
+# The one place that decides whether `candidate` counts as "the same" as a saved filter item -
 # every filter-adjacent feature this addon grows later should call THIS, not reinvent its own
 # comparison, so "what does Equals/Seamsly/Id mean" only ever has to change in one spot.
 def item_matches(candidate, saved, matchmode):
@@ -223,18 +223,18 @@ def item_matches(candidate, saved, matchmode):
     return candidate.same_as(saved)
 end
 
-# Ghost slot render hook — `slot` (0..8) is bound by Java before this runs. Returning the full Item
-# (rather than a bare id string) means the rendered icon shows the EXACT saved item — enchant
-# glint, custom name, everything — not just a generic stand-in for its base type.
+# Ghost slot render hook - `slot` (0..8) is bound by Java before this runs. Returning the full Item
+# (rather than a bare id string) means the rendered icon shows the EXACT saved item - enchant
+# glint, custom name, everything - not just a generic stand-in for its base type.
 def ghost_get():
     dir = dir_name(Machine.get_typed("pipe_filter_dir_index", "int"))
     return Machine.get_typed("pipe_filter_" + dir + "_" + slot, "item")
 end
 
-# Ghost slot click hook — `slot`, `clicked_item` (the FULL cursor item, or empty if empty-handed)
+# Ghost slot click hook - `slot`, `clicked_item` (the FULL cursor item, or empty if empty-handed)
 # and `click_type` are bound by Java. Right-click always clears (regardless of what's in hand); a
 # left-click with an item sets it (preserving every component); a left-click with an EMPTY hand is
-# a no-op — otherwise just browsing an already-filled slot with nothing held would silently wipe it.
+# a no-op - otherwise just browsing an already-filled slot with nothing held would silently wipe it.
 def ghost_set():
     dir = dir_name(Machine.get_typed("pipe_filter_dir_index", "int"))
     key = "pipe_filter_" + dir + "_" + slot
@@ -250,10 +250,10 @@ end
 
 # --- Item filter evaluation (on_pipe_transfer hook, see machines/item_pipe_panel.json) ---
 # This is the SAME generic hook every machine's own transfer gate calls (AbstractMachineBlockEntity
-# #runOnTransferScript) — here it's an item pipe segment's per-face filter, elsewhere it's a
+# #runOnTransferScript) - here it's an item pipe segment's per-face filter, elsewhere it's a
 # destination machine vetoing what it accepts, but it's one mechanism. Called with `type` ("item"
 # for this pipe), `payload` (the candidate Item), `direction`, `mode`, `event` bound. Java only
-# orchestrates the call and reads back event.cancelled — call event.cancel() to block, do nothing
+# orchestrates the call and reads back event.cancelled - call event.cancel() to block, do nothing
 # to allow. Change what "passes" means by editing this function, never by touching ItemEngine.java.
 def filter_item():
     if type != "item":

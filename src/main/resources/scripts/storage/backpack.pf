@@ -1,7 +1,7 @@
-# Backpack (polyfills:backpack) — item behavior example.
+# Backpack (polyfills:backpack) - item behavior example.
 #
 # Right-click opens a 2-page menu built from the SAME pages[] system machines use (see
-# items/backpack.json) — free "storage" slots plus a next/prev button pair, not a plain chest.
+# items/backpack.json) - free "storage" slots plus a next/prev button pair, not a plain chest.
 # Shift-right-click on a block face places `polyfills:storage_block` and spills every page's
 # stored contents straight into it (see DataItemBehavior#tryPlaceContainerBlock); this script then
 # runs once the block is down, with `item` (the backpack, still holding its old NBT) and `Block`
@@ -11,14 +11,14 @@ def on_place_block():
     Player.send_message("<green>Backpack unpacked into a storage block.")
 end
 
-# storage_filter's `script` — the id-list `deny` in the JSON already blocks a backpack/jetpack
+# storage_filter's `script` - the id-list `deny` in the JSON already blocks a backpack/jetpack
 # nesting inside itself; this adds a second, script-driven rule as a worked example of the
 # "or a script function" filter form: refuse anything enchanted (nothing sensible fits in a bag
 # that isn't also just a plain resource). Runs for EVERY attempted placement into a storage slot,
 # with `item` bound to the candidate being placed (not the backpack itself).
 def can_store(item):
     if item.enchantments.size > 0:
-        Player.send_message("<red>That won't fit — enchanted items stay out of the backpack.")
+        Player.send_message("<red>That won't fit - enchanted items stay out of the backpack.")
         return false
     end
     return true

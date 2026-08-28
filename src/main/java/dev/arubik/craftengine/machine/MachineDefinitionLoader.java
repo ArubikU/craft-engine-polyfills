@@ -55,12 +55,12 @@ public final class MachineDefinitionLoader {
         Key id = view.has("id") ? view.key("id", "polyfills") : Key.of((String)"polyfills", (String)MachineDefinitionLoader.stripExtension(fileName).replace('/', '_'));
         MachineDefinition definition = MachineDefinitionLoader.parse(view, id);
         MachineDefinition.REGISTRY.register(id, definition);
-        // A "celled" machine (one running on an auto-placing multi-cell structure — see
+        // A "celled" machine (one running on an auto-placing multi-cell structure - see
         // MultiCellGeometry) is still an ordinary MachineDefinition above; this ADDITIONALLY
         // registers a CelledMachineDefinition under the same id, purely to carry per-cell I/O
         // rules (which cell offset accepts/provides what, on which faces) reusing the assembled
         // multiblock system's IOSpec rule language rather than a second one. Absent "cell_io", no
-        // CelledMachineDefinition is registered at all — DataMachineBehavior falls back to plain
+        // CelledMachineDefinition is registered at all - DataMachineBehavior falls back to plain
         // redirect-every-face-to-core for that machine, exactly as before this existed.
         if (view.has("cell_io")) {
             dev.arubik.craftengine.multiblock.MultiBlockDefinition.IOSpec io =
@@ -140,7 +140,7 @@ public final class MachineDefinitionLoader {
             energy = new MachineDefinition.EnergySpec(cap,
                     e.rangedInt("max_input", cap, 0, Integer.MAX_VALUE),
                     e.rangedInt("max_output", cap, 0, Integer.MAX_VALUE),
-                    // Signed: positive generates, negative is a passive drain — see
+                    // Signed: positive generates, negative is a passive drain - see
                     // AbstractMachineBlockEntity#processTick.
                     e.rangedInt("per_tick", 0, Integer.MIN_VALUE, Integer.MAX_VALUE));
         }
@@ -203,9 +203,9 @@ public final class MachineDefinitionLoader {
                     dev.arubik.craftengine.machine.render.UpdateWhen.parse(r.string("update_when", "always"));
             String scriptRef = r.string("run", null);
             if ((spec = (switch (rType) {
-                // "id" (optional) — a stable renderer id a script can later look up via
+                // "id" (optional) - a stable renderer id a script can later look up via
                 // Machine.get_renderer(id) (see MachineType.java), e.g. for bone-level access
-                // ("{id}:meg/bm:{bone_name}" location strings) or IK. null if not declared —
+                // ("{id}:meg/bm:{bone_name}" location strings) or IK. null if not declared -
                 // matches every other optional field's "null means unset" convention here.
                 case "bettermodel" -> new RendererSpec.BetterModelSpec(r.string("model_id"), r.string("animation", null), r.string("speed", null), whenExpr, updateWhen, scriptRef, r.integer("margin", 0), r.string("id", null));
                 case "modelengine" -> new RendererSpec.ModelEngineSpec(r.string("model_id"), r.string("animation", null), r.string("speed", null), whenExpr, updateWhen, scriptRef, r.string("id", null));
@@ -283,7 +283,7 @@ public final class MachineDefinitionLoader {
         MachineDefinition def = new MachineDefinition(id, view.string("recipe_type", id.value()), view.string("title", id.value()), menuSize, inputs, outputs, fuels, upgrades, info, fluidTanks, gasTanks, flags.fuel(), io, buttons, power, bars, infoSpec, paging, variables, renderers, upgradeDefs, actionScript, actionInterval);
         def.setFlags(flags);
         // BUGFIX: this was being parsed above into a local var but never attached to the
-        // definition — every machine's definition.energy() silently read back as "none"
+        // definition - every machine's definition.energy() silently read back as "none"
         // regardless of what the JSON declared.
         def.setEnergy(energy);
         def.setInteractScript(interactScript);
@@ -345,11 +345,6 @@ public final class MachineDefinitionLoader {
                     def.setRpmOutputInvertedRaw(inv);
                     def.setRpmOutputDeclared(true);
                 }
-                if (rpmIoObj.has("output_relative") && rpmIoObj.get("output_relative").getAsBoolean()) {
-                    // Gearbox behaviour: the sign follows the driven face at runtime.
-                    def.setRpmOutputRelative(true);
-                    def.setRpmOutputDeclared(true);
-                }
                 if (rpmIoObj.has("input_block_filter") && !(filter = MachineDefinitionLoader.parseBlockFilter(rpmIoObj.get("input_block_filter"))).isEmpty()) {
                     def.setRpmInputBlockFilter(filter);
                 }
@@ -361,17 +356,17 @@ public final class MachineDefinitionLoader {
                 // empty catch block
             }
         }
-        // Unified schema: RPM faces declared the SAME way item/fluid/gas faces are — as "rpm"-typed
-        // entries under the shared io.input/output_same/output/output_inverted blocks — instead of
+        // Unified schema: RPM faces declared the SAME way item/fluid/gas faces are - as "rpm"-typed
+        // entries under the shared io.input/output_same/output/output_inverted blocks - instead of
         // the legacy standalone io.rpm sub-object above (still supported, and merged with this).
         // "output_same" is a plain RELAY: whatever network the input came from keeps propagating
         // through it. Bare "output" is a NEW-NETWORK BOUNDARY: a consumer pulling through one of
-        // those faces mints its own fresh RpmNetwork instead of joining this block's — see
+        // those faces mints its own fresh RpmNetwork instead of joining this block's - see
         // DataMachineBlockEntity#syncNetworkWithSource/#isNewNetworkOutputFace. These are genuinely
         // different concepts, not aliases of each other (unlike the legacy block's "output"
         // fallback, kept above only for old configs that pre-date this distinction).
         MachineDefinitionLoader.parseUnifiedRpmIo(view, def);
-        // Parse pages[] — new configurable menu system
+        // Parse pages[] - new configurable menu system
         if (view.raw().has("pages") && view.raw().get("pages").isJsonArray()) {
             List<MachineDefinition.PageDef> pages = new ArrayList<>();
             for (JsonElement pageEl : view.raw().get("pages").getAsJsonArray()) {
@@ -380,13 +375,13 @@ public final class MachineDefinitionLoader {
             }
             def.setPages(pages);
             // A paged machine's real input/output/fuel slots live on its PageDef(s) (absolute
-            // container offsets — see ItemDefinition's own "same absolute offset" convention), NOT
+            // container offsets - see ItemDefinition's own "same absolute offset" convention), NOT
             // on the constructor's inputSlots/outputSlots/fuelSlots params above (those only ever
             // came from the OLDER top-level "slots": {...} single-page format, so they're empty for
             // any purely-paged machine like the drill or the crusher). Two independent readers need
             // this aggregate:
             //   - MachineDefinition#mergePageSlots feeds it into #inputSlots()/#outputSlots()/
-            //     #fuelSlots() themselves — what getMatchingRecipe() reads to find its ingredient
+            //     #fuelSlots() themselves - what getMatchingRecipe() reads to find its ingredient
             //     slots, and what DataMachineBlockEntity#getInputSlots()/getOutputSlots() (a hopper/
             //     funnel/pipe's real entry point via getSlotsForFace) read. Without this a paged
             //     machine's recipe NEVER had any ingredient slot to check, and NO amount of "io"
@@ -394,7 +389,7 @@ public final class MachineDefinitionLoader {
             //   - the "io" block's addOutput/addInput (above) only ever recorded PER-FACE type
             //     PERMISSION ("is item output allowed through this face at all"), never which
             //     physical slots those permissions apply to (IOConfiguration.Simple#getSlots
-            //     defaults to int[0] until told via setSlots) — wiring the same aggregate into it
+            //     defaults to int[0] until told via setSlots) - wiring the same aggregate into it
             //     too keeps a script's own Machine.io_get/io_set queries answering consistently
             //     with what the hopper/funnel/pipe path actually sees.
             java.util.LinkedHashSet<Integer> allInputs = new java.util.LinkedHashSet<>();
@@ -424,7 +419,7 @@ public final class MachineDefinitionLoader {
         return def;
     }
 
-    /** Shared JSON parser for one {@code pages[]} entry — reused verbatim by
+    /** Shared JSON parser for one {@code pages[]} entry - reused verbatim by
      *  {@code ItemDefinitionLoader} so item-behavior pages follow the exact same schema as
      *  machine pages (buttons/bars/paging/ghost slots/static layout), not a second dialect. */
     @SuppressWarnings("unchecked")
@@ -435,8 +430,8 @@ public final class MachineDefinitionLoader {
         if (sizeOrType == null && p.has("type")) sizeOrType = p.string("type", "54");
         String specialType = p.string("special", null);
 
-        // Static layout items — or "layout": "file.pf:func" to generate the whole list at menu-open
-        // time instead (see PageDef#layoutGenerator / DataMachineBlockEntity#buildPageLayout) —
+        // Static layout items - or "layout": "file.pf:func" to generate the whole list at menu-open
+        // time instead (see PageDef#layoutGenerator / DataMachineBlockEntity#buildPageLayout) -
         // for a page whose SLOT COUNT itself is data-driven, not just per-slot content.
         List<MachineDefinition.PageDef.StaticSlot> layout = new ArrayList<>();
         String layoutGenerator = null;
@@ -465,7 +460,7 @@ public final class MachineDefinitionLoader {
         int[] inputs  = MachineDefinitionLoader.toArraySafe(slots.intList("input"));
         int[] outputs = MachineDefinitionLoader.toArraySafe(slots.intList("output"));
         int[] fuels   = MachineDefinitionLoader.toArraySafe(slots.intList("fuel"));
-        // Free, unrestricted slots (place/take/stack freely) — no machine declares these, but an
+        // Free, unrestricted slots (place/take/stack freely) - no machine declares these, but an
         // item-behavior page (backpack storage) is nothing BUT free storage. See MenuSlotType#STORAGE.
         int[] storage = MachineDefinitionLoader.toArraySafe(slots.intList("storage"));
         MachineDefinition.PageDef.StorageFilterSpec storageFilter = MachineDefinition.PageDef.StorageFilterSpec.none();
@@ -476,7 +471,7 @@ public final class MachineDefinitionLoader {
                     sf.rangedInt("max_amount", 0, 0, Integer.MAX_VALUE));
         }
 
-        // Buttons — or "buttons": "file.pf:func" to generate the whole list at menu-open time
+        // Buttons - or "buttons": "file.pf:func" to generate the whole list at menu-open time
         // instead (see PageDef#buttonsGenerator). Same rationale as the layout generator above.
         List<MachineDefinition.ButtonSpec> buttons = new ArrayList<>();
         String buttonsGenerator = null;
@@ -503,7 +498,7 @@ public final class MachineDefinitionLoader {
             bars.add(new MachineDefinition.BarRef(barId, barSlots, b.string("source", barId.value())));
         }
 
-        // Ghost slots — script-backed identity-marker slots (item filters, ...), see
+        // Ghost slots - script-backed identity-marker slots (item filters, ...), see
         // MachineDefinition.PageDef.GhostSlotSpec for the get/set contract.
         List<MachineDefinition.PageDef.GhostSlotSpec> ghostSlots = new ArrayList<>();
         if (p.raw().has("ghost_slots") && p.raw().get("ghost_slots").isJsonArray()) {
@@ -562,7 +557,7 @@ public final class MachineDefinitionLoader {
                     else if (prim.isNumber()) components.put(ce.getKey(), prim.getAsNumber().doubleValue());
                     else components.put(ce.getKey(), prim.getAsString());
                 } else if (cv.isJsonObject()) {
-                    // complex component — store as marker
+                    // complex component - store as marker
                     components.put(ce.getKey(), Boolean.TRUE);
                 }
             }
@@ -603,7 +598,7 @@ public final class MachineDefinitionLoader {
 
     /** Reads "rpm"-typed entries out of the SAME io.input/output_same/output/output_inverted blocks
      *  item/fluid/gas/etc. already use (see {@link #applyGrants}), merging their raw face tokens
-     *  into the machine's existing rpm face sets — additive with (and on top of) the legacy
+     *  into the machine's existing rpm face sets - additive with (and on top of) the legacy
      *  standalone io.rpm sub-object parsed just above this call site. */
     private static void parseUnifiedRpmIo(JsonView view, MachineDefinition def) {
         if (!view.raw().has("io") || !view.raw().get("io").isJsonObject()) {
@@ -623,7 +618,7 @@ public final class MachineDefinitionLoader {
             def.setRpmOutputFacesRaw(merged);
             def.setRpmOutputDeclared(true);
         }
-        // Bare "output" (no "_same") — a genuine new-network boundary, NOT an alias of output_same.
+        // Bare "output" (no "_same") - a genuine new-network boundary, NOT an alias of output_same.
         Set<String> newNet = MachineDefinitionLoader.collectRpmFaces(ioObj, "output");
         if (!newNet.isEmpty()) {
             LinkedHashSet<String> merged = new LinkedHashSet<String>(def.rpmOutputNewNetworkFacesRaw());
@@ -636,12 +631,6 @@ public final class MachineDefinitionLoader {
             LinkedHashSet<String> merged = new LinkedHashSet<String>(def.rpmOutputInvertedRaw());
             merged.addAll(inv);
             def.setRpmOutputInvertedRaw(merged);
-            def.setRpmOutputDeclared(true);
-        }
-        // Optional per-entry "relative": true (gearbox_h/v-style) on an output_same/output rpm entry.
-        if (MachineDefinitionLoader.rpmEntriesHaveRelativeFlag(ioObj, "output_same")
-                || MachineDefinitionLoader.rpmEntriesHaveRelativeFlag(ioObj, "output")) {
-            def.setRpmOutputRelative(true);
             def.setRpmOutputDeclared(true);
         }
     }
@@ -677,17 +666,6 @@ public final class MachineDefinitionLoader {
             out.addAll(MachineDefinitionLoader.parseRawFaces(entry.get("faces")));
         }
         return out;
-    }
-
-    private static boolean rpmEntriesHaveRelativeFlag(JsonObject ioObj, String field) {
-        for (JsonObject entry : MachineDefinitionLoader.rpmEntryObjects(ioObj, field)) {
-            if (MachineDefinitionLoader.isRpmTyped(entry) && entry.has("relative")) {
-                try {
-                    if (entry.get("relative").getAsBoolean()) return true;
-                } catch (Throwable ignored) {}
-            }
-        }
-        return false;
     }
 
     private static Set<String> parseRawFaces(JsonElement el) {
@@ -736,7 +714,7 @@ public final class MachineDefinitionLoader {
      * </pre>
      *
      * <p>{@code kinetics} defaults to whether the machine consumes stress, which is the only part
-     * of the old behaviour that was ever derivable — the rest was spelled out by the now-removed
+     * of the old behaviour that was ever derivable - the rest was spelled out by the now-removed
      * {@code no_processing} / {@code fuel_required} / {@code open_ui} / {@code continuous_fuel}
      * keys, which every shipped machine JSON has been migrated off.
      */
@@ -790,7 +768,7 @@ public final class MachineDefinitionLoader {
             for (String typeName : entry.stringList("types")) {
                 // RPM faces use a richer, facing-relative vocabulary (front/back/left/right/
                 // axis_pos/axis_neg/axis_perp) resolved per-instance at runtime, not this generic
-                // parser's fixed absolute-direction faceGroup() — parseUnifiedRpmIo (see its call
+                // parser's fixed absolute-direction faceGroup() - parseUnifiedRpmIo (see its call
                 // site) handles "rpm"-typed entries from these SAME io.input/output_same/output/
                 // output_inverted blocks separately. Skip it here (not a real IOConfiguration.IOType
                 // at all) so its face tokens (e.g. "back"/"axis_perp") never reach faceGroup(),

@@ -1,4 +1,4 @@
-# Light Sensor — outputs redstone proportional to received light at block above.
+# Light Sensor - outputs redstone proportional to received light at block above.
 b = Machine.block_at(0, 1, 0)
 light = b.combined_light
 if light > 15:

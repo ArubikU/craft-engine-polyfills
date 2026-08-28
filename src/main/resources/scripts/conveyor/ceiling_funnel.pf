@@ -1,4 +1,4 @@
-# Ceiling Funnel — machine-ified from the old CeilingFunnelBehavior/FloorFunnelBlockEntity(pullAbove)
+# Ceiling Funnel - machine-ified from the old CeilingFunnelBehavior/FloorFunnelBlockEntity(pullAbove)
 # Java pair. See floor_funnel_utils.pf for the shared tick logic (also used by floor_funnel.pf).
 
 import "conveyor/floor_funnel_utils.pf" { _floor_funnel_tick, _floor_funnel_on_right_click, _floor_funnel_drop_held }

@@ -1,4 +1,4 @@
-# Fertilizer — applies bone meal to crops/plants in range.
+# Fertilizer - applies bone meal to crops/plants in range.
 # Uses block.apply_bone_meal() which simulates growBonemeal on the block.
 
 level_flag = Machine.get_typed("level", "int")

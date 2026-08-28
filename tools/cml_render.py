@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-cml_render.py — bake an iso PNG for EVERY model in the CraftEngine `modern` pack.
+cml_render.py - bake an iso PNG for EVERY model in the CraftEngine `modern` pack.
 
 Variant of tools/blueprint_gen.py. Walks both namespaces (minecraft + cml), and for
 each model JSON:

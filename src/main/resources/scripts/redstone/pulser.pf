@@ -1,4 +1,4 @@
-# Pulser — timed pulse. On rising edge, outputs for N ticks then off.
+# Pulser - timed pulse. On rising edge, outputs for N ticks then off.
 duration = Machine.get_typed("duration", "int")
 if duration <= 0:
     duration = 10

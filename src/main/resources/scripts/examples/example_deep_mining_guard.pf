@@ -1,15 +1,15 @@
-# Example events/*.json bridge target — see events/example_deep_mining_guard.json.
+# Example events/*.json bridge target - see events/example_deep_mining_guard.json.
 #
 # Demonstrates BlockBreakWrapper's typed properties (event.block, event.player, event.drop_items/
 # event.exp_to_drop) instead of the generic BukkitEvent reflective wrapper example.pf uses. With the
-# generic wrapper this would be event.get("block")/event.get("player") — every key is a bare string
+# generic wrapper this would be event.get("block")/event.get("player") - every key is a bare string
 # with no compile-time (or even load-time) checking, so a typo like "drop_item" instead of
 # "drop_items" would silently read back NULL forever instead of failing loudly, and the returned
 # value still needs manual type coercion before it's usable. The dedicated wrapper's properties are
 # real PolyType members: a typo is a script-parse-time "unknown property" error, and event.block
 # comes back as an already-wrapped Block object (block.pos.y, block.id, ...) with no reflection or
 # coercion step in between.
-# The guard line is set to -1000 — below the bottom of any real world (min build height is -64) —
+# The guard line is set to -1000 - below the bottom of any real world (min build height is -64) -
 # so this example doesn't silently break normal mining/building on a fresh install. Raise it (e.g.
 # to 5) only if you actually want a deep-mining guard; y<=5 covers nearly the entire underground of
 # a modern world and will make it look like block-breaking is broken server-wide.
@@ -21,7 +21,7 @@ def on_break():
         event.cancel()
         Player.send_message("<red>Mining this deep is off-limits here.")
     else:
-        # Above the line: let the break happen, but reward it — double the vanilla XP orb this
+        # Above the line: let the break happen, but reward it - double the vanilla XP orb this
         # block would have dropped. set_exp_to_drop/exp_to_drop are real typed accessors, not a
         # generic event.get("expToDrop")/event.set("expToDrop", ...) round-trip.
         event.set_exp_to_drop(event.exp_to_drop * 2)

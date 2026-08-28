@@ -1,4 +1,4 @@
-# Funnel placement routing — machine-ified from the old FunnelPlaceListener.java. The single
+# Funnel placement routing - machine-ified from the old FunnelPlaceListener.java. The single
 # cml:funnel item places a different block depending on which face was clicked: top -> floor
 # funnel, bottom -> ceiling funnel, any side -> the belt-facing funnel (facing set to that side).
 

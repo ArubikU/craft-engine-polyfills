@@ -1,4 +1,4 @@
-# water_wheel.pf — small and large water wheel, ported from Create's WaterWheelBlockEntity.
+# water_wheel.pf - small and large water wheel, ported from Create's WaterWheelBlockEntity.
 #
 #   action_script: "water_wheel.pf:tick_small"   (1x1 wheel)
 #   action_script: "water_wheel.pf:tick_large"   (large wheel)
@@ -19,7 +19,7 @@
 #
 # Two things that surprise people, and that the previous implementation got wrong:
 #
-#  * flowScore only decides the DIRECTION. More water does not mean more speed — a wheel is
+#  * flowScore only decides the DIRECTION. More water does not mean more speed - a wheel is
 #    +8 rpm, -8 rpm or nothing (large: +-4). The old version summed a weighted 32-per-face
 #    contribution and could reach 128 rpm.
 #  * STILL water contributes nothing. getFlow of a source block with no slope is the zero
@@ -28,7 +28,7 @@
 #
 # Offsets: the small wheel checks the 4 blocks orthogonally adjacent in the wheel plane
 # (Create's SMALL_OFFSETS). The large wheel checks Create's LARGE_OFFSETS ring at distance 2
-# AND the distance-1 ring — see _large_offsets for why the extra ring is needed here.
+# AND the distance-1 ring - see _large_offsets for why the extra ring is needed here.
 
 SMALL_SPEED = 8.0
 LARGE_SPEED = 4.0
@@ -58,7 +58,7 @@ def _large_offsets(axis):
     #
     # Create's large wheel is a 3x3 multiblock, so its water only ever touches the structure
     # at distance 2 from the centre block. Here the wheel is a single block whose model spans
-    # 3 blocks, so water poured beside it sits at distance 1 — scanning only the outer ring
+    # 3 blocks, so water poured beside it sits at distance 1 - scanning only the outer ring
     # meant a player could flood the wheel and nothing happened. Both rings count.
     if axis == "y":
         return [ _off(1,0,0), _off(-1,0,0), _off(0,0,1), _off(0,0,-1),

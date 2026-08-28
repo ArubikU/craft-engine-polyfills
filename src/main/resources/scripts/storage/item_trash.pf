@@ -1,4 +1,4 @@
-# Item Trash — destroys items in input slots and nearby dropped item entities.
+# Item Trash - destroys items in input slots and nearby dropped item entities.
 
 for i in range(27):
     if !is_empty(Machine.container.get_item(i)):

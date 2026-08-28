@@ -1,4 +1,4 @@
-# Mob Generator — spawns mob from flag, consumes fuel from slot 0.
+# Mob Generator - spawns mob from flag, consumes fuel from slot 0.
 mob_idx = Machine.get_typed("mob_index", "int")
 if mob_idx <= 0:
     mob_idx = 1

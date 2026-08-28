@@ -1,9 +1,9 @@
-# /teleporters — a standalone, block-less way into the SAME "teleporter_freq_<name>" frequency
+# /teleporters - a standalone, block-less way into the SAME "teleporter_freq_<name>" frequency
 # registry teleporter.pf/specialized_teleporter.pf use (see teleporter.pf's own header for the full
 # registry-shape writeup): type a frequency, then pick any destination tuned to it from a Menu, for
 # 1 Nether Star per jump instead of a physical teleporter block's CE energy cost. Demonstrates the
 # Dialog API used with NO Machine at all (Dialog.as_notice's owner arg falls back to a generic
-# context when it isn't a real machine — see DialogManagerType#buildAction) and the standalone
+# context when it isn't a real machine - see DialogManagerType#buildAction) and the standalone
 # Menu/Item.skull-adjacent GUI system from the same session as tpa.pf.
 
 TELEPORT_ITEM = "minecraft:nether_star"
@@ -13,7 +13,7 @@ def freq_key(freq):
     return "teleporter_freq_" + freq
 end
 
-# Same sign-alias lookup as teleporter.pf/specialized_teleporter.pf — duplicated, not shared, per
+# Same sign-alias lookup as teleporter.pf/specialized_teleporter.pf - duplicated, not shared, per
 # those files' own header note on why (no cross-file function-call syntax for .pf scripts).
 def _sign_alias_at(world_name, x, y, z):
     tw = world(world_name)

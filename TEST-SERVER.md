@@ -8,7 +8,7 @@ A headless Paper + CraftEngine harness for runtime-validating the plugin. The
 mkdir -p testserver/plugins
 # Paper 1.21.11
 curl -sL "https://api.papermc.io/v2/projects/paper/versions/1.21.11/builds/69/downloads/paper-1.21.11-69.jar" -o testserver/paper.jar
-# CraftEngine (free, Modrinth) — match the API version in gradle.properties as closely as available
+# CraftEngine (free, Modrinth) - match the API version in gradle.properties as closely as available
 curl -sL "https://cdn.modrinth.com/data/tRX6FMfQ/versions/2JnyXLo1/craft-engine-paper-plugin-26.6.1.jar" -o testserver/plugins/craft-engine.jar
 # PacketEvents (hard runtime dependency of this plugin)
 curl -sL "https://cdn.modrinth.com/data/HYKaKraK/versions/vIMIVfSx/packetevents-spigot-2.12.2.jar" -o testserver/plugins/packetevents.jar
@@ -33,7 +33,7 @@ cd testserver
 [CraftEnginePolyfill] Loaded N recipes.
 ```
 and **no** `ClassNotFoundException` / `NoSuchMethodError` / `NoClassDefFoundError` /
-`AbstractMethodError` in `boot.log` — those are the runtime symptoms of an API mismatch the
+`AbstractMethodError` in `boot.log` - those are the runtime symptoms of an API mismatch the
 compiler cannot catch. The 26.6.2-API migration was validated this way against the CE 26.6.1 plugin
 (plugin enabled, no exceptions).
 

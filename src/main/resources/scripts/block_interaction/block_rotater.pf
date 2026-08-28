@@ -1,4 +1,4 @@
-# Block Rotater — cycles the facing property of the block in front by one step.
+# Block Rotater - cycles the facing property of the block in front by one step.
 # Uses cycle_block_prop which works on any blockstate property, including CE custom blocks.
 
 block = Machine.facing_block

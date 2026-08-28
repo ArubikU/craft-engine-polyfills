@@ -1,4 +1,4 @@
-# Overclock control — click-type-aware bump functions.
+# Overclock control - click-type-aware bump functions.
 # Use in button actions: "overclock.pf:increase" / "overclock.pf:decrease"
 #
 # click_type variable is injected by the button system:

@@ -4,7 +4,7 @@
   "subcommands": [
     {
       "name": "sample",
-      "description": "Opens a sample VirtualUI screen — camera lock, buttons, icons, a scrollbar.",
+      "description": "Opens a sample VirtualUI screen - camera lock, buttons, icons, a scrollbar.",
       "execute": "examples/virtualui_sample.pf:open_sample"
     },
     {
@@ -14,7 +14,7 @@
     },
     {
       "name": "createdemo",
-      "description": "Opens a demo screen using ported Create mod GUI icon textures — every widget type.",
+      "description": "Opens a demo screen using ported Create mod GUI icon textures - every widget type.",
       "execute": "examples/virtualui_create_demo.pf:open_create_demo"
     },
     {

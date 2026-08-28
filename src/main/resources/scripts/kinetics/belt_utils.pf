@@ -6,7 +6,7 @@
 # (Item.matches), an Item/ItemStack requires an exact match (Item.same_as / Container.pull_item's
 # own spec handling).
 # `amount` (optional): how many to take, default the whole stack found.
-# give-side (belt_give/depot_give) returns the LEFTOVER item — non-empty means it didn't fit/wasn't
+# give-side (belt_give/depot_give) returns the LEFTOVER item - non-empty means it didn't fit/wasn't
 # accepted, so the caller should fall back (toss, try another face, ...).
 
 def _face_offset(face):
@@ -45,13 +45,13 @@ def _item_matches(item, validator):
 end
 
 # How close to fully arrived (progress toward 1.0) a carried item must be on a FEEDING belt
-# segment before belt_take will pull it — has_item alone is true for any item that just entered
+# segment before belt_take will pull it - has_item alone is true for any item that just entered
 # the segment, even mid-transit toward some other destination; only one genuinely stalled at the
 # exit (blocked because this machine won't let it advance further) should actually be grabbed.
 BELT_TAKE_STALL_THRESHOLD = 0.99
 
 # Takes up to `amount` (default: the whole carried stack) from the belt at `face`, only if it
-# matches `validator` AND is actually stalled at the segment's exit (progress >= threshold —
+# matches `validator` AND is actually stalled at the segment's exit (progress >= threshold -
 # see BELT_TAKE_STALL_THRESHOLD). Empty item if there's nothing there, it doesn't match, nothing
 # is carried, or it's still mid-transit.
 def belt_take(face, validator, amount):
@@ -96,7 +96,7 @@ def depot_take(face, validator, amount):
 end
 
 # Total count of items matching `validator` currently in the container at `face`, WITHOUT removing
-# anything — for a caller that needs "is there enough to take X at once" before actually pulling
+# anything - for a caller that needs "is there enough to take X at once" before actually pulling
 # (depot_take's own pull/pull_item always happily takes LESS than asked if that's all there is).
 def depot_count(face, validator):
     off = _face_offset(face)

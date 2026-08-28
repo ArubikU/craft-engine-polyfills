@@ -1,4 +1,4 @@
-# Entity Sensor — detects living entities in range, outputs redstone 0-15.
+# Entity Sensor - detects living entities in range, outputs redstone 0-15.
 # mode: 0=normal (on/off), 1=density (count-based), 2=proximity (closer = stronger)
 # Set via Machine.set_typed("scan_range", "int", N) and Machine.set_typed("mode", "int", 0-2).
 

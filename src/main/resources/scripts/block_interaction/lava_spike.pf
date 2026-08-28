@@ -1,4 +1,4 @@
-# Lava Spike — ignites and damages entities on contact. Owner immune.
+# Lava Spike - ignites and damages entities on contact. Owner immune.
 
 cooldown = Machine.get_typed("atk_cd", "int")
 

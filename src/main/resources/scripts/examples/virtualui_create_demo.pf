@@ -1,13 +1,13 @@
-# Create-mod-textured VirtualUI demo (see /virtualui createdemo) — exercises every built-in widget
+# Create-mod-textured VirtualUI demo (see /virtualui createdemo) - exercises every built-in widget
 # kind (button, label, image, icon, item, slot, player_render, block, scrollbar, toggle, select)
-# using icons SLICED from Create's own gui/icons.png sheet (ported into cml:create_* items — see
+# using icons SLICED from Create's own gui/icons.png sheet (ported into cml:create_* items - see
 # testserver/plugins/CraftEngine/resources/modern/configuration/item/polyfills/
 # virtualui_create_icons.yml), so every icon-bearing widget below shows real Create pixel art
 # instead of a placeholder vanilla item.
 
 def open_create_demo():
     if VirtualUI.is_open(Player):
-        Player.send_message("<red>You already have a VirtualUI open — <white>/virtualui close</white> first.")
+        Player.send_message("<red>You already have a VirtualUI open - <white>/virtualui close</white> first.")
         return
     end
 
@@ -17,7 +17,7 @@ def open_create_demo():
 
     ui.label("title", "<gold><bold>CREATE-STYLE DEMO</bold>\n<gray>Every widget, real Create icons", 0.0, 2.4)
 
-    # Icon-button toolbar — each is a Button widget with a Create icon attached via icon_of(...).
+    # Icon-button toolbar - each is a Button widget with a Create icon attached via icon_of(...).
     # on_hover/on_unhover wired to the shared handlers below so the "status" label's promise
     # ("Hover a button to see its id in the actionbar") actually holds.
     ui.button("btn_add", "", -3.2, 1.2, "examples/virtualui_create_demo.pf:on_add", 0.6, 0.6)
@@ -45,13 +45,13 @@ def open_create_demo():
     ui.on_hover("examples/virtualui_create_demo.pf:on_toolbar_hover")
     ui.on_unhover("examples/virtualui_create_demo.pf:on_toolbar_unhover")
 
-    # Play/Pause toggle — on-state shows Create's pause icon (playing), off-state shows play icon.
+    # Play/Pause toggle - on-state shows Create's pause icon (playing), off-state shows play icon.
     ui.toggle("play_toggle", "", "", -3.2, 0.0, false, "examples/virtualui_create_demo.pf:on_play_toggle", 0.6, 0.6)
     ui.icon_of("cml:create_pause", 0, 0, 0.6)
 
     ui.icon("grid_icon", "cml:create_grid", -1.6, 0.0, 0.6)
 
-    # Layered "framed slot" look (real Create item-slot border texture) — a plain background icon
+    # Layered "framed slot" look (real Create item-slot border texture) - a plain background icon
     # placed at the SAME x/y as the item it frames, further away on the z axis (see .icon(...)'s
     # doc on the new optional z param), so it renders visually behind with no new plumbing needed.
     ui.icon("held_item_frame", "cml:create_slot_frame", -0.6, 0.0, 0.85, "", -0.3)
@@ -62,7 +62,7 @@ def open_create_demo():
     ui.player_render("self_render", 2.8, 0.0, 1.2)
 
     # Track/groove backdrop layered behind the scrollbar (same z-layering convention as the slot
-    # frames above) — Create's own scrollbar has no dedicated groove art (see
+    # frames above) - Create's own scrollbar has no dedicated groove art (see
     # virtualui_create_icons.yml's comment on create_scroll_track for the honest substitute used),
     # stretched to the bar's own width/height via .image(...).
     ui.image("speed_track_bg", "cml:create_scroll_track", -2.0, -1.4, 2.4, 0.3, "", -0.3)
@@ -74,7 +74,7 @@ def open_create_demo():
     ui.select("mode_select", ["Auto", "Manual", "Off"],
             "<white>◀ <gold>${VUISelect.value()}</gold> ▶", 1.8, -1.4, 0, "examples/virtualui_create_demo.pf:on_mode_change")
 
-    # Non-interactive fill gauge (Widget.ProgressWidget) — value only ever moves via
+    # Non-interactive fill gauge (Widget.ProgressWidget) - value only ever moves via
     # VirtualUI.set_progress(...), demoed here from btn_add/btn_trash above (+/-10% each press).
     ui.progress("queue_progress", false, 0.0, -1.9, 3.2, 0.35, 0.35)
 
@@ -97,7 +97,7 @@ def on_toolbar_unhover(widget_id):
     Player.send_actionbar("")
 end
 
-# Each toolbar button also nudges the "queue_progress" gauge to a distinct level — a minimal but
+# Each toolbar button also nudges the "queue_progress" gauge to a distinct level - a minimal but
 # real demo of VirtualUI.set_progress(player, widget_id, value), the only way a ProgressWidget's
 # fill ever moves.
 def on_add(widget_id):

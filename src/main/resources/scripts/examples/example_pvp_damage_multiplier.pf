@@ -1,15 +1,15 @@
-# Example events/*.json bridge target — see events/example_pvp_damage_multiplier.json.
+# Example events/*.json bridge target - see events/example_pvp_damage_multiplier.json.
 #
-# Demonstrates EntityDamageByEntityWrapper — everything EntityDamageEvent has (event.entity,
+# Demonstrates EntityDamageByEntityWrapper - everything EntityDamageEvent has (event.entity,
 # event.damage/set_damage, event.cause) plus event.damager, the entity that CAUSED the damage. With
 # the generic BukkitEvent wrapper, telling "a player hit something" from "a skeleton's arrow hit
 # something" apart means reflectively calling getDamager() yourself and hoping the returned object
-# happens to expose the methods you then guess at — here damager comes back already wrapped as
+# happens to expose the methods you then guess at - here damager comes back already wrapped as
 # whatever PolyType actually fits it ("Player" for a real player, a generic entity object
 # otherwise), so type_of(event.damager) is a real, always-correct answer instead of a coercion
 # gamble.
 #
-# Also shows event.cause — "fall" damage never reaches this wrapper at all (there's no damager to
+# Also shows event.cause - "fall" damage never reaches this wrapper at all (there's no damager to
 # report), so this script only ever sees genuinely entity-caused hits.
 def on_damage():
     if type_of(event.damager) == "Player" && type_of(event.entity) == "Player":

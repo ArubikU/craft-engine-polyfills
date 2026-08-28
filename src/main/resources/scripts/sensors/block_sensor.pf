@@ -1,4 +1,4 @@
-# Block Sensor — scans forward up to scan_range, counts matching blocks.
+# Block Sensor - scans forward up to scan_range, counts matching blocks.
 # Output = floor((matches / scan_range) * 15).
 # Block uses the polyfills:data_machine behavior, which is always a redstone signal source.
 # Set scan_range via Machine.set_typed("scan_range", "int", N). Item filter from the input slot (optional).

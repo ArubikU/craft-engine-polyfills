@@ -1,4 +1,4 @@
-# cogwheel.pf — all cogwheel meshing, ported from Create's RotationPropagator.
+# cogwheel.pf - all cogwheel meshing, ported from Create's RotationPropagator.
 #
 # Usage in machine JSON:
 #   action_script: "cogwheel.pf:tick_large"   (large cog tick)
@@ -6,7 +6,7 @@
 #   status:        "cogwheel.pf:status"
 #   on_break:      "cogwheel.pf:on_break"
 #
-# Three distinct meshes, each with its OWN geometry — this is the part that was missing:
+# Three distinct meshes, each with its OWN geometry - this is the part that was missing:
 #
 #   small <-> small   orthogonally adjacent, perpendicular to the shared rotation axis,
 #                     same axis on both.                         ratio -1
@@ -22,7 +22,7 @@
 #                     (Create: isLargeToLargeGear)
 #
 # Only small<->small used to work, because the other two were attempted in Java behind an
-# "axis_perp" rpm-input face that no machine JSON ever declared — so that code never ran.
+# "axis_perp" rpm-input face that no machine JSON ever declared - so that code never ran.
 
 # ---- Offset helpers -----------------------------------------------------
 
@@ -52,7 +52,7 @@ def _is_large(id):
     return contains(id, "cogwheel_large")
 end
 
-# 4 orthogonal neighbours perpendicular to our axis — small<->small.
+# 4 orthogonal neighbours perpendicular to our axis - small<->small.
 def _perp_offsets():
     a = Machine.axis
     if a == "y":
@@ -64,7 +64,7 @@ def _perp_offsets():
     return [ _off(1,0,0), _off(-1,0,0), _off(0,1,0), _off(0,-1,0) ]
 end
 
-# 4 in-plane diagonals (on-axis component 0) — large<->small.
+# 4 in-plane diagonals (on-axis component 0) - large<->small.
 def _plane_diag_offsets():
     a = Machine.axis
     if a == "y":
@@ -77,7 +77,7 @@ def _plane_diag_offsets():
 end
 
 # 8 cross-axis diagonals (non-zero on our axis AND on one other, zero on the third)
-# — large<->large.
+# - large<->large.
 def _cross_diag_offsets():
     a = Machine.axis
     if a == "y":

@@ -155,6 +155,21 @@ WorldlyContainerHolder {
     }
 
     public InteractionResult useWithoutItem(UseOnContext context, ImmutableBlockState state) {
+        return openMachineMenu(context, state);
+    }
+
+    /** {@code BlockBehavior} has TWO separate right-click hooks: {@link #useWithoutItem} (empty
+     *  hand) and this one (ANY item in hand, including off-hand). Only {@code useWithoutItem} was
+     *  ever overridden here — with an item in hand (which is most of the time in practice), the
+     *  click fell straight to the base class's default {@code useOnBlock}, which never opens
+     *  anything, with zero trace anywhere (right-clicking simply "did nothing"). Menu-opening
+     *  should behave the same regardless of what's in hand — same as a vanilla container never
+     *  caring what item you're holding when you open it — so this shares the exact same logic. */
+    public InteractionResult useOnBlock(UseOnContext context, ImmutableBlockState state) {
+        return openMachineMenu(context, state);
+    }
+
+    private InteractionResult openMachineMenu(UseOnContext context, ImmutableBlockState state) {
         try {
             BlockEntityController blockEntityController;
             ServerLevel level = ((CraftWorld)((BukkitWorld)context.getLevel()).platformWorld()).getHandle();

@@ -1,15 +1,15 @@
-# Cursor gallery demo (see /virtualui cursors) — exercises every cursor.states entry ported from
-# Kenney's Cursor Pixel Pack (kenney.nl, CC0/public domain — see virtualui.yml's cursor.states and
+# Cursor gallery demo (see /virtualui cursors) - exercises every cursor.states entry ported from
+# Kenney's Cursor Pixel Pack (kenney.nl, CC0/public domain - see virtualui.yml's cursor.states and
 # testserver/plugins/CraftEngine/resources/modern/configuration/item/polyfills/
 # virtualui_kenney_cursors.yml for the full ported set + source tile numbers). Each button here
-# forces the cursor into one EXTRA (opt-in-only) state via .hover_state(name) — a DECLARATIVE
-# per-widget override, no script callback needed at all (see VirtualUIScreen#hoverCursorStates) —
+# forces the cursor into one EXTRA (opt-in-only) state via .hover_state(name) - a DECLARATIVE
+# per-widget override, no script callback needed at all (see VirtualUIScreen#hoverCursorStates) -
 # the 6 canonical states (normal/hover/hold/scroll_vertical/scroll_horizontal/processing) are
 # already exercised automatically just by using the sample screen.
 
 def open_cursor_gallery():
     if VirtualUI.is_open(Player):
-        Player.send_message("<red>You already have a VirtualUI open — <white>/virtualui close</white> first.")
+        Player.send_message("<red>You already have a VirtualUI open - <white>/virtualui close</white> first.")
         return
     end
 
@@ -53,7 +53,7 @@ def open_cursor_gallery():
     ui.on_hover("examples/virtualui_cursor_gallery.pf:on_scrollbar_armed")
     ui.on_unhover("examples/virtualui_cursor_gallery.pf:on_scrollbar_released")
 
-    ui.label("status", "<gray>Hover a button to preview its cursor — no click needed", 0.0, -2.6)
+    ui.label("status", "<gray>Hover a button to preview its cursor - no click needed", 0.0, -2.6)
 
     built = ui.build()
     built.show(Player)
@@ -65,7 +65,7 @@ def on_close():
 end
 
 def on_scrollbar_armed(widget_id):
-    Player.send_actionbar("<yellow>Scrollbar armed — drag arms the 'hold' cursor automatically.")
+    Player.send_actionbar("<yellow>Scrollbar armed - drag arms the 'hold' cursor automatically.")
 end
 
 def on_scrollbar_released(widget_id):

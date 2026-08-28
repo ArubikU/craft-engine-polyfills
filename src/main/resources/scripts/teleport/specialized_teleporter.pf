@@ -1,4 +1,4 @@
-# Specialized Teleporter — same frequency network as the classic teleporter.pf (identical
+# Specialized Teleporter - same frequency network as the classic teleporter.pf (identical
 # "teleporter_freq_<name>" Server string-flag registry, so the two interoperate: tune both to the
 # same frequency and either one can reach the other) but instead of blindly warping to the FIRST
 # other teleporter found, it lists every reachable destination as its own button and lets the
@@ -6,13 +6,13 @@
 # resolved by Java), so the small registry helpers below are a deliberate copy of teleporter.pf's,
 # not a shared import.
 #
-# The whole button layout — prev/next nav AND every destination slot — comes from ONE generator,
+# The whole button layout - prev/next nav AND every destination slot - comes from ONE generator,
 # "buttons": "specialized_teleporter.pf:generate_buttons" in specialized_teleporter.json, instead
 # of a static per-slot array. Java calls this fresh EVERY render tick (not just once when the menu
-# opens — see DataMachineBlockEntity#installGeneratedButton) and on every click, so tuning a new
+# opens - see DataMachineBlockEntity#installGeneratedButton) and on every click, so tuning a new
 # frequency, another teleporter registering/unregistering, or paging all show up live without
 # closing and reopening the menu. A destination slot simply isn't in the returned list when there's
-# nothing to show there — no separate "hide this button" mechanism needed.
+# nothing to show there - no separate "hide this button" mechanism needed.
 
 TELEPORT_COST = 10000
 DEST_PAGE_SIZE = 28
@@ -81,15 +81,15 @@ def set_frequency(freq):
 end
 
 # Reads the first non-empty line off a sign mounted on any of the 6 faces adjacent to
-# (world_name, x, y, z), or "" if none is found — lets a destination (or this teleporter itself)
+# (world_name, x, y, z), or "" if none is found - lets a destination (or this teleporter itself)
 # show a friendly alias instead of raw coordinates when someone bothers to label it. Same helper
-# as teleporter.pf's — duplicated, not shared, per this file's own header note on why.
+# as teleporter.pf's - duplicated, not shared, per this file's own header note on why.
 #
 # get_block(...,true) force-loads the chunk first: plain NMS block reads on an unloaded chunk
 # silently return air (no sign ever detected) instead of loading anything, which is exactly why a
 # destination teleporter far from any online player never showed its alias in the GUI even after
 # reopening it, while a nearby redstone-triggered pair (whose chunk was already loaded from normal
-# play) worked fine — the block was never actually air, it just was never being read correctly.
+# play) worked fine - the block was never actually air, it just was never being read correctly.
 def _sign_alias_at(world_name, x, y, z):
     tw = world(world_name)
     if is_empty(tw):
@@ -110,13 +110,13 @@ def _sign_alias_at(world_name, x, y, z):
     return ""
 end
 
-# This teleporter's own alias — the first non-empty front line of a sign mounted on one of its
+# This teleporter's own alias - the first non-empty front line of a sign mounted on one of its
 # own faces, or "" if it isn't labeled.
 def _own_alias():
     return _sign_alias_at(World.name, Machine.x, Machine.y, Machine.z)
 end
 
-# Every OTHER teleporter tuned to freq, as "world,x,y,z" strings, in stable registration order —
+# Every OTHER teleporter tuned to freq, as "world,x,y,z" strings, in stable registration order -
 # the same list generate_buttons()/do_teleport_slot index into.
 def frequency_entries(freq):
     entries = []
@@ -141,7 +141,7 @@ def total_pages(freq):
     return int(floor((n - 1) / DEST_PAGE_SIZE)) + 1
 end
 
-# --- GUI: frequency tuner (ghost slot) — identical convention to teleporter.pf.
+# --- GUI: frequency tuner (ghost slot) - identical convention to teleporter.pf.
 def ghost_get():
     return "cml:teleporter_core"
 end
@@ -194,7 +194,7 @@ def status_lore():
 end
 
 # --- Generated button layout: prev/next nav (only when actually usable) plus one button per
-# reachable destination on the current page. Called fresh every render tick AND on every click —
+# reachable destination on the current page. Called fresh every render tick AND on every click -
 # see specialized_teleporter.json's "buttons" field and DataMachineBlockEntity#installGeneratedButton.
 def generate_buttons():
     out = []
@@ -214,7 +214,7 @@ def generate_buttons():
 
     # Second way to tune the frequency, alongside the ghost-slot item (slot 0): a dialog with a
     # single text field, pre-filled with the current frequency. Doesn't replace the item-based
-    # tuning — some players find typing a name faster than finding/renaming an item, others the
+    # tuning - some players find typing a name faster than finding/renaming an item, others the
     # other way around, so both stay available.
     out = push(out, make_map("slot", 5, "icon", "cml:teleporter_core",
         "name", "<aqua>Tune via Dialog",
@@ -256,7 +256,7 @@ def do_teleport_slot(idx):
         return
     end
     if Machine.energy_stored < TELEPORT_COST:
-        Player.send_message("<red>Not enough energy — need " + TELEPORT_COST + " CE.")
+        Player.send_message("<red>Not enough energy - need " + TELEPORT_COST + " CE.")
         return
     end
     entry = entries.get(global_idx)
@@ -276,7 +276,7 @@ end
 
 # --- Dialog-based frequency tuning (see generate_buttons' "Tune via Dialog" button). The dialog's
 # Accept button calls on_frequency_dialog_submit with whatever the player typed appended as its
-# argument — same convention any other action_ref callback uses, just supplied at click time
+# argument - same convention any other action_ref callback uses, just supplied at click time
 # instead of baked into the ref string (see DialogManagerType / ScriptCall#executeWithExtraArgs).
 # Dialog is its own type (not hung off Machine), so Machine/Player are passed in explicitly.
 def open_frequency_dialog():
@@ -308,10 +308,10 @@ end
 # --- Redstone-triggered teleport-by-alias: wire a button/lever/pressure plate to this teleporter
 # (see specialized_teleporter.json's "on_redstone_actuator"). If THIS teleporter is labeled with a
 # sign, triggering it teleports the pressing player straight to whichever OTHER teleporter on the
-# same frequency is labeled with the SAME sign text — skipping the destination-picker GUI
+# same frequency is labeled with the SAME sign text - skipping the destination-picker GUI
 # entirely. RedstoneActuatorListener only calls this on an actual physical trigger (pressure plate
 # step, lever flip, button press), not every tick a lever/plate stays powered, so no rising-edge
-# tracking is needed here — and it hands us the real triggering Player, same as on_interact.
+# tracking is needed here - and it hands us the real triggering Player, same as on_interact.
 def on_redstone_actuator():
     alias = _own_alias()
     if alias == "":
@@ -325,7 +325,7 @@ def on_redstone_actuator():
         parts = split(entry, ",")
         if _sign_alias_at(parts.get(0), parts.get(1), parts.get(2), parts.get(3)) == alias:
             if Machine.energy_stored < TELEPORT_COST:
-                Player.send_message("<red>Not enough energy — need " + TELEPORT_COST + " CE.")
+                Player.send_message("<red>Not enough energy - need " + TELEPORT_COST + " CE.")
                 return
             end
             target_world = world(parts.get(0))
@@ -346,7 +346,7 @@ end
 
 # --- Right-click open: forces Machine.open_menu to build a FRESH layout (see its Java-side
 # comment) instead of letting MachineBlockBehavior's default path reopen whatever MachineMenu is
-# already cached — otherwise generate_buttons() (and the destination aliases it bakes in) would
+# already cached - otherwise generate_buttons() (and the destination aliases it bakes in) would
 # only ever refresh on Machine.update() (e.g. re-tuning the frequency), not on a plain reopen.
 def on_right_click():
     Machine.open_menu(Player)

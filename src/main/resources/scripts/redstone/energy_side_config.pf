@@ -1,7 +1,7 @@
-# Energy side config — mirrors Nova's "Open Side Config" button (see Charger.kt/
+# Energy side config - mirrors Nova's "Open Side Config" button (see Charger.kt/
 # FurnaceGenerator.kt: `OpenSideConfigItem(sideConfigGui)`), reusing the SAME io_get/io_set
 # primitives the item pipe panel's face buttons already use, just for IOType "energy" instead
-# of "item". Shared by energy_cell.json and energy_generator.json — both have a real per-face
+# of "item". Shared by energy_cell.json and energy_generator.json - both have a real per-face
 # energy connection worth configuring; energy_solar_panel/energy_windmill don't get this button,
 # matching Nova's own SolarPanel.kt/WindTurbine.kt menus, which have no side-config item either
 # (they're a fixed extract-only source with no per-face choice to expose).

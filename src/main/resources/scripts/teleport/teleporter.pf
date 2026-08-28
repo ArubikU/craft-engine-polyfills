@@ -1,11 +1,11 @@
-# Teleporter — global frequency network, entirely script-side (see the goal: "no dedicated
+# Teleporter - global frequency network, entirely script-side (see the goal: "no dedicated
 # TeleporterRegistry class, just the script engine (Server.*_flag / split / join / world()) and
-# machines"). Java only supplies GENERIC primitives here — Machine.consume_energy,
-# Server.get_str_flag/set_str_flag, split/join, world(name), World.location, Player.teleport_to —
+# machines"). Java only supplies GENERIC primitives here - Machine.consume_energy,
+# Server.get_str_flag/set_str_flag, split/join, world(name), World.location, Player.teleport_to -
 # nothing that knows "teleporter" exists on the Java side at all.
 #
 # Registry shape: ONE Server string flag per frequency, "teleporter_freq_<name>", holding every
-# teleporter tuned to it as "world,x,y,z" entries joined with ";" — e.g.
+# teleporter tuned to it as "world,x,y,z" entries joined with ";" - e.g.
 #   "minecraft:overworld,120,64,-30;minecraft:the_nether,15,80,4"
 # A flat delimited string, not a richer structure, on purpose (see ServerFlags' own javadoc): that
 # keeps the underlying primitive reusable for whatever the NEXT cross-block feature needs instead
@@ -76,10 +76,10 @@ end
 
 
 # Reads the first non-empty line off a sign mounted on any of the 6 faces adjacent to
-# (world_name, x, y, z), or "" if none is found — lets a teleporter's destination (or itself)
+# (world_name, x, y, z), or "" if none is found - lets a teleporter's destination (or itself)
 # show a friendly alias instead of raw coordinates when someone bothers to label it.
 #
-# get_block(...,true) force-loads the chunk first — plain NMS block reads on an unloaded chunk
+# get_block(...,true) force-loads the chunk first - plain NMS block reads on an unloaded chunk
 # silently return air instead of loading anything, which is why a destination far from any online
 # player never showed its alias even after reopening the GUI (see specialized_teleporter.pf's
 # identical fix for the full explanation).
@@ -118,8 +118,8 @@ def linked_count(freq):
     return n
 end
 
-# --- GUI: frequency tuner (ghost slot — see MenuSlotType#GHOST). Insert a RENAMED item to tune
-# the frequency to its display name; right-click clears it. Never holds a real item — see
+# --- GUI: frequency tuner (ghost slot - see MenuSlotType#GHOST). Insert a RENAMED item to tune
+# the frequency to its display name; right-click clears it. Never holds a real item - see
 # item_pipe_panel.pf's own writeup of why (the duplication exploit a real conjured-marker slot
 # opened up) for the full reasoning; this reuses the exact same mechanism.
 def ghost_get():
@@ -175,11 +175,11 @@ end
 def do_teleport():
     freq = get_frequency()
     if freq == "":
-        Player.send_message("<red>No frequency set — insert a renamed item to tune one first.")
+        Player.send_message("<red>No frequency set - insert a renamed item to tune one first.")
         return
     end
     if Machine.energy_stored < TELEPORT_COST:
-        Player.send_message("<red>Not enough energy — need " + TELEPORT_COST + " CE.")
+        Player.send_message("<red>Not enough energy - need " + TELEPORT_COST + " CE.")
         return
     end
     existing = Server.get_typed(freq_key(freq), "string")
@@ -207,10 +207,10 @@ def do_teleport():
     Player.send_message("<red>No other teleporter is currently reachable on '" + freq + "'.")
 end
 
-# --- Dialog-based frequency tuning — second way to tune besides the ghost-slot item (slot 13),
+# --- Dialog-based frequency tuning - second way to tune besides the ghost-slot item (slot 13),
 # same idea as specialized_teleporter.pf's identical button. Accept calls
 # on_frequency_dialog_submit with the typed text appended as its argument. Dialog is its own type
-# (not hung off Machine) — see DialogManagerType — so Machine is passed in explicitly, and the
+# (not hung off Machine) - see DialogManagerType - so Machine is passed in explicitly, and the
 # built dialog is shown to whichever Player is bound in THIS script's own context (the one who
 # clicked the button that opened it).
 def open_frequency_dialog():

@@ -1,15 +1,15 @@
-# Example events/*.json bridge target — see events/example_fancy_join_message.json.
+# Example events/*.json bridge target - see events/example_fancy_join_message.json.
 #
 # Demonstrates PlayerJoinWrapper's join_message get/set pair. The generic BukkitEvent wrapper could
 # technically reach this too (event.get("joinMessage")/event.set("joinMessage", ...)), but that
-# round-trips through Adventure's Component type reflectively on every read/write — miss the exact
+# round-trips through Adventure's Component type reflectively on every read/write - miss the exact
 # accessor Bukkit expects and it either throws or silently no-ops, and the raw Component would need
 # manual serialization before a script could do anything useful with it. PlayerJoinWrapper's
 # join_message property is already a plain MiniMessage-parseable string on the way in and out, so a
 # script never touches Component internals at all.
 #
 # Setting an empty string suppresses the default broadcast entirely (see setJoinMessage's javadoc);
-# this instead rewrites it with the player's own name still substituted in via Player.name — the
+# this instead rewrites it with the player's own name still substituted in via Player.name - the
 # join event fires with Player already bound, same as every other player-shaped event.
 def on_join():
     event.set_join_message("<gray>[<gold>+</gold>] <yellow>" + Player.name + "<gray> stepped onto the server.")

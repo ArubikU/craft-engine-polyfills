@@ -1,4 +1,4 @@
-# /warps — a faithful 1:1 port of the purchased "PlayerWarps" plugin's (Olzie-12, Blossom Studios
+# /warps - a faithful 1:1 port of the purchased "PlayerWarps" plugin's (Olzie-12, Blossom Studios
 # GUI pack) menu set, built on the same /cmds "pages" declarative GUI feature every other command
 # in this session uses (see cmds/warps.json + CmdPageDef's javadoc), plus this codebase's usual
 # generic primitives: SQL for the relational warp registry (see schema note below), Player.get_typed
@@ -8,16 +8,16 @@
 #
 # ---- The source's "invisible item" multi-slot button technique (see cml:invisible_item's own
 # comment in configuration/item/polyfills/player_warps/player_warps_items.yml for the full
-# writeup) — EVERY multi-slot button in the real PlayerWarps guis/*.yml (e.g. bannedplayers.yml's
+# writeup) - EVERY multi-slot button in the real PlayerWarps guis/*.yml (e.g. bannedplayers.yml's
 # `next-page: slot: [51,52]`, category.yml's `shops: slot: [14,15,16,23,24,25]`) is really the
 # SAME clickable item placed in every listed slot, all sharing one action. There is no separate
-# "real icon slot" vs "filler slots" — the button's actual GRAPHIC is baked into that page's
+# "real icon slot" vs "filler slots" - the button's actual GRAPHIC is baked into that page's
 # cml:player_warps_* background image underneath; the invisible items just make that whole drawn
 # area clickable. Reproduced here the same way: cmds/warps.json's "layout" repeats the SAME
 # cml:invisible_item + action across every slot of a cluster.
 #
-# ---- Storage shape — a REAL relational schema (see __init__ below), not typed-flag blobs. The
-# warp itself is keyed by a UUID (`warps.id`), NOT its display name — a rename is then just
+# ---- Storage shape - a REAL relational schema (see __init__ below), not typed-flag blobs. The
+# warp itself is keyed by a UUID (`warps.id`), NOT its display name - a rename is then just
 # `UPDATE warps SET name = ? WHERE id = ?`, and every OTHER table below references that stable id
 # via a foreign key, so a rename never has to touch bans/favourites/visitors/ratings at all (the
 # old compound-blob version had to manually copy+clear FOUR separate keys on every rename because
@@ -28,9 +28,9 @@
 #   warp_favourites  (warp_id FK -> warps.id ON DELETE CASCADE, player_uuid)     PK (warp_id, player_uuid)
 #   warp_visitors    (warp_id FK -> warps.id ON DELETE CASCADE, uuid, name, count) PK (warp_id, uuid)
 #   warp_ratings     (warp_id FK -> warps.id ON DELETE CASCADE, uuid, name, stars) PK (warp_id, uuid)
-# ON DELETE CASCADE means delete_warp is now a ONE-ROW delete — every ban/favourite/visitor/rating
+# ON DELETE CASCADE means delete_warp is now a ONE-ROW delete - every ban/favourite/visitor/rating
 # row for it disappears automatically (SQLDriver enables `PRAGMA foreign_keys = ON` for exactly
-# this). Ownership is likewise just a column on the warps row (owner_uuid) — there's no more
+# this). Ownership is likewise just a column on the warps row (owner_uuid) - there's no more
 # separate Player-side "warps_owned" list to keep in sync on create/delete/rename/transfer; owned
 # warps are simply `SELECT ... FROM warps WHERE owner_uuid = ?`.
 #
@@ -41,18 +41,18 @@
 #   Player.get_typed("warps_sort", "string")               -> "oldest"|"name"|"visits" (see SIMPLIFICATIONS)
 #   Player.get_typed("warps_search"/"warps_banned_search"/"warps_visited_search", "string") -> filters
 #   Player.get_typed("warps_current_warp", "string")       -> the warp NAME in context for managewarp/
-#                                                       banned/visited/visitedit/rate pages — the .pf
+#                                                       banned/visited/visitedit/rate pages - the .pf
 #                                                       equivalent of the source's "%warp%" macro, set
 #                                                       right before Cmd.open_page(...) into one of them.
 #   Player.get_typed("warps_extra_slots", "int")           -> extra slots bought via /warps buyslot
 #
 # ---- Deliberate simplifications vs. the real PlayerWarps (documented, not silently dropped):
 #  - No Vault/economy hook exists in this codebase, so config.yml's real money PRICES aren't
-#    reproduced literally — Player.total_exp/give_exp/take_exp (a currency primitive added this
+#    reproduced literally - Player.total_exp/give_exp/take_exp (a currency primitive added this
 #    session specifically for this) stands in for money instead: creating a warp costs
 #    WARP_CREATE_COST xp, teleporting costs WARP_TELEPORT_COST xp (free for a warp's own owner),
 #    and a sponsor slot beyond WARP_FREE_LIMIT can be bought outright for WARP_EXTRA_SLOT_COST xp
-#    via `/warps buyslot` — stacking on TOP of (not replacing) the permission-based unlimited tier
+#    via `/warps buyslot` - stacking on TOP of (not replacing) the permission-based unlimited tier
 #    (WARP_SPONSOR_PERMISSION) the original rough draft already had.
 #  - The source's invisible-item "Quit" button now actually closes the menu (Player.close_inventory()).
 #  - No sign-editing/ProtocolLib search exists in this engine; every "Search" button here opens a
@@ -60,13 +60,13 @@
 #    owner substring).
 #  - Sort is reduced from the source's 9 modes (Highest/Lowest Visits, Alphabetical, Oldest/Newest
 #    Date, Rates, Rates Average, Favourite Count, Random) to 3 representative ones (oldest/name/
-#    visits) — cycled the same way via a "Sort" button.
+#    visits) - cycled the same way via a "Sort" button.
 #  - rate.yml's own `blacklisted-slots: [""]` (effectively "use nearly the whole 54-slot grid") is
 #    ported using the SAME reused 14-slot list block as banned/visited/mywarps/favourite instead of
-#    a bespoke near-full-grid layout — visually smaller than the source but functionally identical
+#    a bespoke near-full-grid layout - visually smaller than the source but functionally identical
 #    (paginated list of rating entries).
 #  - The source's Leaderboard and Sponsor-purchase-flow (category.yml's sponsor-items /
-#    leaderboard blocks) are NOT ported — both are disabled by default in config.yml
+#    leaderboard blocks) are NOT ported - both are disabled by default in config.yml
 #    (`leaderboard.enabled: false`) or require the missing economy hook (sponsor purchases).
 #  - Category filtering only recognizes the 7 preset categories from category.yml's
 #    `category-items` (all/houses/shops/farms/pvp/other/event); a warp CAN still be assigned an
@@ -85,21 +85,21 @@ WARP_FREE_LIMIT = 2
 WARP_SPONSOR_PERMISSION = "polyfills.warps.extra"
 
 # ---- Command surface + permissions (source: config.yml's "sub-commands" list + the plugin's own
-# permission node reference) — ownership (is_owner) is already the real gate on every one of these
+# permission node reference) - ownership (is_owner) is already the real gate on every one of these
 # for a normal player (matches this addon's existing GUI actions, none of which needed a separate
 # permission node beyond owning the warp), so none of the per-command "pw.xxx" nodes below are
-# actually CHECKED for a command's normal owner-operates-on-their-own-warp path — only
+# actually CHECKED for a command's normal owner-operates-on-their-own-warp path - only
 # PERM_ADMIN_BYPASS is (letting staff manage warps they don't own), plus the three true admin-only
 # commands (removeall/reload/addwarps). Gating the ordinary ones behind their own permission node
 # too, with no default grant declared anywhere, would just lock EVERY player out of their own warps
-# on a server with no permissions plugin installed — the source ships these granted-by-default via
+# on a server with no permissions plugin installed - the source ships these granted-by-default via
 # its own permission defaults, which this addon has no equivalent registration for.
 PERM_ADMIN_BYPASS = "polyfills.warps.admin.bypass"
 PERM_ADMIN_REMOVEALL = "polyfills.warps.admin.removeall"
 PERM_ADMIN_RELOAD = "polyfills.warps.admin.reload"
 PERM_ADMIN_ADDWARPS = "polyfills.warps.admin.addwarps"
 
-# True for the warp's real owner OR a PERM_ADMIN_BYPASS staff member — use this instead of
+# True for the warp's real owner OR a PERM_ADMIN_BYPASS staff member - use this instead of
 # is_owner(...) directly in any command that should let staff manage a warp they don't own.
 def can_manage(name):
     return is_owner(name) || Player.has_permission(PERM_ADMIN_BYPASS)
@@ -110,10 +110,10 @@ WARP_CREATE_COST = 30
 WARP_TELEPORT_COST = 5
 WARP_EXTRA_SLOT_COST = 500
 
-# ---- Sponsor slots (category.yml's "sponsor-items" 1-5) — main-menu-featured warp slots, real
+# ---- Sponsor slots (category.yml's "sponsor-items" 1-5) - main-menu-featured warp slots, real
 # money ($100k/$50k/$35k/$25k/$10k) in the source, mapped to this project's XP economy instead
 # (see WARP_CREATE_COST/WARP_EXTRA_SLOT_COST above for the same substitution). Index 0 = slot #1
-# (priciest/longest) through index 4 = slot #5 (cheapest/shortest) — matches the source's own
+# (priciest/longest) through index 4 = slot #5 (cheapest/shortest) - matches the source's own
 # slot-to-tier ordering exactly (its slot 47 = "Sponsor slot #1" at $100k/2 days, ... slot 51 =
 # "Sponsor slot #5" at $10k/1 hour).
 SPONSOR_SLOTS = [47, 48, 49, 50, 51]
@@ -121,7 +121,7 @@ SPONSOR_PRICES = [1500, 900, 600, 400, 200]
 SPONSOR_DURATIONS = [172800, 86400, 43200, 21600, 3600]
 
 # Runs once when this script first loads AND on every /cep reload scripts (see ScriptRegistry's
-# own javadoc for the __init__/__unload__ lifecycle) — the natural place for idempotent schema
+# own javadoc for the __init__/__unload__ lifecycle) - the natural place for idempotent schema
 # setup. CREATE TABLE IF NOT EXISTS is safe to re-run on every reload; it never touches existing
 # rows. See the storage-shape note at the top of this file for the full schema.
 def __init__():
@@ -152,7 +152,7 @@ def __init__():
         "warp_id TEXT NOT NULL REFERENCES warps(id) ON DELETE CASCADE, " +
         "uuid TEXT NOT NULL, name TEXT NOT NULL, stars INTEGER NOT NULL, " +
         "PRIMARY KEY (warp_id, uuid))")
-    # warp_id references ON DELETE CASCADE too — deleting the sponsored warp itself frees the slot
+    # warp_id references ON DELETE CASCADE too - deleting the sponsored warp itself frees the slot
     # automatically, same as every other per-warp table above.
     SQL.execute("CREATE TABLE IF NOT EXISTS warp_sponsors (" +
         "slot_num INTEGER PRIMARY KEY, " +
@@ -180,7 +180,7 @@ def arr_contains(arr, val):
 end
 
 # Real player-skin head for a "this row is about player X" list entry (banned/visited/rate rows
-# below) — prefers the LIVE online player (freshest skin), falling back to just the name string
+# below) - prefers the LIVE online player (freshest skin), falling back to just the name string
 # when offline, since Item.create(...).with_profile(name) still resolves whatever skin Bukkit has
 # cached for that name even offline. Returned as a full Item value for "icon" in make_map(...),
 # which the buttons generator pipeline now displays AS-IS (see GeneratedPageContent#customIcon)
@@ -195,7 +195,7 @@ end
 
 # ---- Warp registry (see the schema note at the top of this file) -------------------------------
 
-# The warp's stable identity — every other table joins on THIS, never the display name (see
+# The warp's stable identity - every other table joins on THIS, never the display name (see
 # on_rename_submit: renaming only ever touches warps.name).
 def warp_id(name):
     rows = SQL.query("SELECT id FROM warps WHERE name = ?", name)
@@ -205,7 +205,7 @@ def warp_id(name):
     return rows.get(0).get("id")
 end
 
-# The whole per-warp row — absent (never-created or deleted) warps read back as an empty Map, so
+# The whole per-warp row - absent (never-created or deleted) warps read back as an empty Map, so
 # `is_null(warp_row(name).get("id"))` is this file's uniform "does this warp actually exist" check.
 def warp_row(name):
     rows = SQL.query("SELECT * FROM warps WHERE name = ?", name)
@@ -227,7 +227,7 @@ def warp_exists(name):
     return len(SQL.query("SELECT 1 FROM warps WHERE name = ?", name)) > 0
 end
 
-# No more Player-side "warps_owned" list to keep in sync — ownership lives entirely on the warps
+# No more Player-side "warps_owned" list to keep in sync - ownership lives entirely on the warps
 # row itself.
 def owned_warp_names():
     out = []
@@ -253,7 +253,7 @@ def create_warp(name):
 end
 
 # ON DELETE CASCADE (see __init__) takes care of every ban/favourite/visitor/rating row for this
-# warp — no more manual per-table clearing.
+# warp - no more manual per-table clearing.
 def delete_warp(name):
     if !is_owner(name):
         return false
@@ -270,7 +270,7 @@ def is_favourite(name):
     return len(SQL.query("SELECT 1 FROM warp_favourites WHERE warp_id = ? AND player_uuid = ?", warp_id(name), Player.uuid)) > 0
 end
 
-# ---- Batch membership lookups for list pages (see generate_browse_buttons and friends) — ONE
+# ---- Batch membership lookups for list pages (see generate_browse_buttons and friends) - ONE
 # query each for "every warp_id THIS player has favourited/is banned from", instead of is_favourite/
 # is_banned running a separate query PER ROW. A page of 36 warps went from 1 (list) + 36*2
 # (favourite+ban per row) + 36*2 (icon+lore re-fetching the row again) = 145 queries down to 3
@@ -332,7 +332,7 @@ def teleport_to_warp(name):
     Player.send_message("<green>✔ <white>Welcome to <yellow>" + name + "<white>!")
 end
 
-# Pure — takes an already-fetched warp ROW (a full "SELECT * FROM warps" Map), no SQL of its own.
+# Pure - takes an already-fetched warp ROW (a full "SELECT * FROM warps" Map), no SQL of its own.
 # The _of/_for variants below are what the list-page generators use so N warps costs the SAME 3
 # queries total regardless of N; warp_icon/warp_lore (name-based, one lookup each) stay around for
 # the rare single-warp call sites (sponsor slots) where that's negligible.
@@ -374,7 +374,7 @@ def warp_lore(name):
     return warp_lore_of(warp_row(name), is_favourite(name), is_banned(name))
 end
 
-# ---- Sorting / filtering / search — real SQL WHERE/ORDER BY now instead of loading every warp
+# ---- Sorting / filtering / search - real SQL WHERE/ORDER BY now instead of loading every warp
 # and filtering/sorting it in-script (the exact overhead the SQL motor exists to remove; see
 # apply_sort's old O(n^2) sort_by_visits_desc, gone entirely below). ---------------------------
 
@@ -400,7 +400,7 @@ def sort_label():
     return "Oldest"
 end
 
-# page_name is which page to reopen after cycling — "Sort" appears on warps/manage/favourite,
+# page_name is which page to reopen after cycling - "Sort" appears on warps/manage/favourite,
 # and reopening a hardcoded "warps" regardless of which one was actually clicked from was exactly
 # the bug where clicking Sort on "My Warps" jumped to the public browse page instead of staying
 # put. Each JSON button passes its own page via the static-arg ref convention, e.g.
@@ -418,7 +418,7 @@ def cycle_sort(page_name):
     Cmd.open_page(page_name)
 end
 
-# Same "which page reopens" bug as cycle_sort above — Search also appears on warps/manage/
+# Same "which page reopens" bug as cycle_sort above - Search also appears on warps/manage/
 # favourite, so the page to redraw after submitting has to travel with the dialog, not be assumed.
 def open_search_dialog(page_name):
     Dialog.base("Search Warps").input_text("value", "Warp or owner name", Player.get_typed("warps_search", "string")).as_notice(Cmd, "Search", "warps.pf:on_search_submit:" + page_name).show(Player)
@@ -493,7 +493,7 @@ def browse_title():
     return "{Images.from('cml:player_warps_warps')}{Images.shift(-170)}<black> Page " + (offset + 1) + "/" + (max_browse_offset() + 1)
 end
 
-# Full rows now (not just names) — generate_browse_buttons builds icons/lore straight from these
+# Full rows now (not just names) - generate_browse_buttons builds icons/lore straight from these
 # instead of re-querying per warp (see warp_icon_of/warp_lore_of + player_favourite_ids/
 # player_banned_ids above for why that matters).
 def filtered_browse_rows():
@@ -578,7 +578,7 @@ def effective_limit():
     return effective_limit_num()
 end
 
-# /warps buyslot — spends WARP_EXTRA_SLOT_COST xp to permanently raise THIS player's warp limit
+# /warps buyslot - spends WARP_EXTRA_SLOT_COST xp to permanently raise THIS player's warp limit
 # by one, stacking with (not replacing) the permission-based unlimited tier.
 def buy_extra_slot():
     if !Player.take_exp(WARP_EXTRA_SLOT_COST):
@@ -601,20 +601,20 @@ def sort_lore_line():
     return "<gray>Current: <white>" + sort_label()
 end
 
-# ---- Warp creation — a COMMAND ("/warps create <name>"/"/warps set <name>"), not a GUI button.
-# Checked against the real source: mywarps.yml has NO create button at all — the closest thing is
+# ---- Warp creation - a COMMAND ("/warps create <name>"/"/warps set <name>"), not a GUI button.
+# Checked against the real source: mywarps.yml has NO create button at all - the closest thing is
 # an "available-placeholder" (disabled by default) whose own lore just says "You can set warps via
 # /pw set". The earlier GUI "Create Warp" button on the manage page was a fabrication with no
 # background art to back it (there's no button drawn there in cml:player_warps_submenu_1), which
-# is exactly why it looked broken/misplaced — removed; see cmds/warps.json's "manage" page.
+# is exactly why it looked broken/misplaced - removed; see cmds/warps.json's "manage" page.
 
 def on_create_command():
     on_create_submit(Cmd.arg("name"))
 end
 
-# /warps set <name> — same as create for a name that doesn't exist yet, but for one of YOUR OWN
+# /warps set <name> - same as create for a name that doesn't exist yet, but for one of YOUR OWN
 # existing warps it re-points that warp to your current location instead of failing with "already
-# exists" (matches the source command's real "set" semantics — it's meant to be re-runnable to
+# exists" (matches the source command's real "set" semantics - it's meant to be re-runnable to
 # reposition a warp, not just a one-shot create). No XP charge here since nothing new is being
 # created, just repositioned; "already exists" only ever fires now for a NAME someone ELSE owns.
 def on_set_command():
@@ -649,7 +649,7 @@ def on_create_submit(name):
     end
     if len(owned_warp_names()) >= effective_limit_num():
         if Player.has_exp(WARP_EXTRA_SLOT_COST):
-            Player.send_message("<red>✘ <white>You've reached your warp limit. <yellow>You have enough XP to unlock another — try <white>/warps buyslot<yellow>, then create '" + name + "' again.")
+            Player.send_message("<red>✘ <white>You've reached your warp limit. <yellow>You have enough XP to unlock another - try <white>/warps buyslot<yellow>, then create '" + name + "' again.")
         else:
             Player.send_message("<red>✘ <white>You've reached your warp limit.")
         end
@@ -667,7 +667,7 @@ def on_create_submit(name):
     end
 end
 
-# ---- Sponsor slots (category.yml's "sponsor-items") — 5 slots on the main menu (47-51) a player
+# ---- Sponsor slots (category.yml's "sponsor-items") - 5 slots on the main menu (47-51) a player
 # can pay XP to feature one of THEIR OWN warps on, for a limited time. See SPONSOR_SLOTS/PRICES/
 # DURATIONS above for the per-slot tiers. ON DELETE CASCADE (warp_sponsors.warp_id -> warps.id,
 # see __init__) means deleting the sponsored warp itself silently frees the slot too.
@@ -677,7 +677,7 @@ def purge_expired_sponsors():
 end
 
 # The occupying warp's name/buyer, or an empty Map if that slot is free (or its sponsorship just
-# expired — purge_expired_sponsors runs first so an expired row never shows as still occupied).
+# expired - purge_expired_sponsors runs first so an expired row never shows as still occupied).
 def sponsor_row(slot_num):
     purge_expired_sponsors()
     rows = SQL.query("SELECT w.name AS name, s.buyer_uuid AS buyer_uuid, s.expires_at AS expires_at " +
@@ -853,7 +853,7 @@ def generate_favourite_buttons():
         row = rows.get(global_idx)
         name = row.get("name")
         # Every row here is already a favourite by construction (the JOIN itself is the
-        # membership check) — no need for a THIRD query to re-confirm what got it here.
+        # membership check) - no need for a THIRD query to re-confirm what got it here.
         out = push(out, make_map("slot", WARP_SLOTS_LIST.get(i), "icon", warp_icon_of(row),
             "name", "<yellow>" + name,
             "lore", warp_lore_of(row, true, arr_contains(ban_ids, row.get("id"))),
@@ -922,7 +922,7 @@ def managewarp_title():
         state_img = "cml:pwarp_setting_disabled"
     end
     # Source (managewarp.yml): %nexo_shift_-8%%nexo_playerwarps_manage%%nexo_shift_-170%<state
-    # icon>%nexo_shift_-58%<title text> — MenuText#shiftOnly/imageTitle chain this project's
+    # icon>%nexo_shift_-58%<title text> - MenuText#shiftOnly/imageTitle chain this project's
     # offset_chars.yml glyphs (neg_1..16, neg_32/48/64/128/256) to hit exact arbitrary magnitudes,
     # so these match the source pack's pixel offsets precisely, not just the right direction.
     return "{Images.from('cml:player_warps_manage')}{Images.from('" + state_img + "', -129)}{Images.shift(-71)}<black> Manage > " + name
@@ -1036,7 +1036,7 @@ end
 
 # The whole point of keying every OTHER table by warp_id (a stable UUID) instead of the display
 # name: renaming is now JUST this one UPDATE. Every ban/favourite/visitor/rating row is still
-# attached — none of them ever referenced the name.
+# attached - none of them ever referenced the name.
 def on_rename_submit(value):
     old_name = current_warp()
     new_name = sanitize(value)
@@ -1086,7 +1086,7 @@ def banned_title():
 end
 
 # A REAL indexed query now (see __init__'s warp_bans table) instead of loading every ban and
-# filtering it in-script — the exact "search/filter" case the SQL motor exists for.
+# filtering it in-script - the exact "search/filter" case the SQL motor exists for.
 def banned_records():
     search = lower(Player.get_typed("warps_banned_search", "string"))
     wid = warp_id(current_warp())
@@ -1103,8 +1103,8 @@ def banned_records():
     return out
 end
 
-# Same "reopen the right page" convention as the warps/manage/favourite Search button — see
-# open_search_dialog/on_search_submit above — mirrored here for the banned/visited player lists
+# Same "reopen the right page" convention as the warps/manage/favourite Search button - see
+# open_search_dialog/on_search_submit above - mirrored here for the banned/visited player lists
 # (ported from bannedplayers.yml/visitedplayers.yml's own "search" section, slot 25).
 def open_banned_search_dialog():
     Dialog.base("Search Banned Players").input_text("value", "Player name", Player.get_typed("warps_banned_search", "string")).as_notice(Cmd, "Search", "warps.pf:on_banned_search_submit").show(Player)
@@ -1253,8 +1253,8 @@ def visitedit_title():
 end
 
 # visitedit is reached by right-clicking a warp row from THREE different list pages (browse/
-# manage/favourite — see their on_*_click handlers, which each stamp "warps_return_page" right
-# before opening this page) — a static "page:X" back button can only ever be right for one of
+# manage/favourite - see their on_*_click handlers, which each stamp "warps_return_page" right
+# before opening this page) - a static "page:X" back button can only ever be right for one of
 # them, which is exactly why it kept pointing at the wrong list. Falls back to "warps" if the flag
 # was somehow never set (e.g. this page reached some other way in the future).
 def on_visitedit_back():
@@ -1369,21 +1369,21 @@ def next_rate_page():
     Cmd.open_page("rate")
 end
 
-# ---- Chat command surface (config.yml's "sub-commands" list) — the command-line equivalent of
+# ---- Chat command surface (config.yml's "sub-commands" list) - the command-line equivalent of
 # the GUI actions above, for players who prefer typing over clicking (or for a use case the GUI
 # doesn't cover at all, like managing a warp you don't own via PERM_ADMIN_BYPASS). Every one of
-# these reuses the SAME underlying SQL the GUI handlers use — no separate logic path to drift out
+# these reuses the SAME underlying SQL the GUI handlers use - no separate logic path to drift out
 # of sync. See the PERM_ADMIN_BYPASS/can_manage note above for why ordinary commands don't check a
 # permission node beyond ownership, and cmds/warps.json for the three that DO (removeall/reload/
-# addwarps — hidden entirely from a player without the node via Brigadier's own "permission" field,
+# addwarps - hidden entirely from a player without the node via Brigadier's own "permission" field,
 # not just refused after the fact).
 #
-# NOT ported (documented, not silently dropped — none of the underlying systems exist in this
+# NOT ported (documented, not silently dropped - none of the underlying systems exist in this
 # engine and building them now would be its own separate project): password protection, whitelist,
 # managers (co-owners), warp renting, sign-based warping, /pw near, /pw rtp, per-warp teleport
 # COST overrides (this addon only has the one global WARP_TELEPORT_COST), and PAPI placeholders in
 # descriptions/ratings. "/pw list/amount [player]" became separate "list"/"listof" and "amount"/
-# "amountof" commands instead of one command with an optional trailing player arg — this command
+# "amountof" commands instead of one command with an optional trailing player arg - this command
 # engine's arg chains don't support an optional value arg cleanly.
 
 def cmd_help():
@@ -1666,7 +1666,7 @@ def cmd_ban_set():
 end
 
 # Target is a plain string (not a "player" arg) so an OFFLINE player already banned can still be
-# unbanned by name — matching against the name stored on the ban row itself, since that's the only
+# unbanned by name - matching against the name stored on the ban row itself, since that's the only
 # record of them this table keeps.
 def cmd_ban_remove():
     name = Cmd.arg("name")
@@ -1698,7 +1698,7 @@ def cmd_favourite():
     toggle_favourite(name)
 end
 
-# ---- Admin-only (hidden from a player without the node at all — see cmds/warps.json's
+# ---- Admin-only (hidden from a player without the node at all - see cmds/warps.json's
 # "permission" field on these three; the has_permission check here is just defense-in-depth). -----
 
 def cmd_removeall():

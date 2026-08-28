@@ -1,4 +1,4 @@
-# Jump Pad — launches entities in facing direction + upward arc.
+# Jump Pad - launches entities in facing direction + upward arc.
 
 force = Machine.get_typed("force", "int")
 if force <= 0:

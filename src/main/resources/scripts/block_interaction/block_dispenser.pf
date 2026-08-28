@@ -1,4 +1,4 @@
-# Block Dispenser — if facing space is empty: place block from inventory.
+# Block Dispenser - if facing space is empty: place block from inventory.
 #                  If facing space is occupied: break it and collect drops.
 # Uses facing_block's own place_from_item/break_and_drop for proper block state handling.
 

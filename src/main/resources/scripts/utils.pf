@@ -1,12 +1,12 @@
 # Shared helpers, imported via `import "utils.pf"` (or `import "utils.pf" { name1, name2 }` to pull
-# in only specific ones) — see ScriptRegistry#getOrLoadByPath / ScriptProgram's import statement.
+# in only specific ones) - see ScriptRegistry#getOrLoadByPath / ScriptProgram's import statement.
 # Kept at the scripts/ ROOT (not under a category subfolder) since it's cross-cutting, not owned by
 # any one machine family.
 
-# Whether `entity` is an item entity resting directly on THIS machine's own top surface — the same
+# Whether `entity` is an item entity resting directly on THIS machine's own top surface - the same
 # radius-independent height check depot_tick.pf and the saw's ground-pickup intake both duplicated
 # before this existed. Callers still choose their own Machine.nearby_entities(radius) and decide
-# what to do with a match (take it all, process one at a time, etc.) — this only answers "is this
+# what to do with a match (take it all, process one at a time, etc.) - this only answers "is this
 # specific entity a candidate at all".
 def is_resting_item(entity):
     if entity.type != "minecraft:item":

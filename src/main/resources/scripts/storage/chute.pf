@@ -1,4 +1,4 @@
-# Chute — plain vertical item chute, no filter, no redstone control (matches Create's own Chute
+# Chute - plain vertical item chute, no filter, no redstone control (matches Create's own Chute
 # vs Smart Chute split). Right-click with any glass block/pane toggles the see-through window;
 # sneak+right-click cycles its facing (straight down / diagonal).
 

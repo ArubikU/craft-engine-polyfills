@@ -111,8 +111,8 @@ pillars = [
     {"n": "4", "p": "Mundo cozy con identidad", "d": "Maderas custom, industria de sal, mobs variantes, economia (Cemelita) y cosmeticos rodean la fabrica para que el servidor se sienta vivo."},
 ]
 write("1 Vision.kd", "1 · Vision General", [
-    text("v-h", 0, "heading", "# 1 · Vision General — The Elevator Pitch"),
-    callout("v-pitch", 1, "factory", "**CML SMP** es un servidor survival de *industria victoriana a vapor*. El jugador construye fabricas fisicas y visibles —tuberias, tanques, vapor, engranajes— donde cada maquina es un bloque que trabaja a la vista. La fabrica **existe en el mundo**, no en menus."),
+    text("v-h", 0, "heading", "# 1 · Vision General - The Elevator Pitch"),
+    callout("v-pitch", 1, "factory", "**CML SMP** es un servidor survival de *industria victoriana a vapor*. El jugador construye fabricas fisicas y visibles -tuberias, tanques, vapor, engranajes- donde cada maquina es un bloque que trabaja a la vista. La fabrica **existe en el mundo**, no en menus."),
     text("v-loop-h", 2, "heading", "## Core Loop"),
     diagram("v-loop", 3, v_loop),
     text("v-end", 4, "paragraph", "**Endgame:** no es un jefe ni un item final. Es una **planta industrial victoriana funcionando sola**. El estatus se mide por la escala y elegancia de tu fabrica, no por stats de combate."),
@@ -120,7 +120,7 @@ write("1 Vision.kd", "1 · Vision General", [
     beauty("v-pill", 6, "4 Pilares de diseno",
            [("n", "#", "text"), ("p", "Pilar", "text"), ("d", "Significado para el jugador", "text")],
            pillars),
-    callout("v-diff", 7, "sparkles", "**Diferenciador:** se siente como industria *victoriana fisica* (vapor, presion, tuberias, materiales reales) — NO como Create/Mekanism modernos. El foco es la arquitectura visible de la fabrica."),
+    callout("v-diff", 7, "sparkles", "**Diferenciador:** se siente como industria *victoriana fisica* (vapor, presion, tuberias, materiales reales) - NO como Create/Mekanism modernos. El foco es la arquitectura visible de la fabrica."),
 ])
 
 # ============ 2 ITEM CATALOG ============
@@ -266,7 +266,7 @@ write("3 Recipes.kd", "3 · Recetas y Procesamiento", [
 ])
 
 # ============ 4 MECHANICS ============
-pc_gas = """# GAS PUMP — extraccion de nitrogeno
+pc_gas = """# GAS PUMP - extraccion de nitrogeno
 ON tick(gas_pump):
   IF block_below IS nitrogenated_cal AND has_fuel:
      vein   = flood_fill(cal_blocks)          # full=4, mid=2, empty=1 puntos
@@ -274,7 +274,7 @@ ON tick(gas_pump):
      IF pump_is_owner(vein):                  # 1 bomba/vein (5 con Pressurizer)
         buffer += points * 10 mB  every 20t   # buffer interno 4000 mB
         push nitrogen out TOP face"""
-pc_fan = """# COPPER FAN — el bloque-proceso decide el resultado
+pc_fan = """# COPPER FAN - el bloque-proceso decide el resultado
 ON gas_available(fan):
   blow_air_column(facing, reach_by_gas)       # steam=5, heavy=7, nitrogen=8
   block = first_process_block_in_column()
@@ -291,7 +291,7 @@ ON tick(pump):
   stamp pressure = 8
   push UP: pressure -= 1 per block             # sube ~8 bloques
   push DOWN / horizontal: pressure unchanged   # viaja sin perder fuerza"""
-pc_steel = """# COPPER FURNACE — vapor + acero
+pc_steel = """# COPPER FURNACE - vapor + acero
 ON tick(furnace) WHILE has_fuel:
   IF tank == water: water 500mB -> steam 500mB (out TOP)   # 120t
   IF tank == lava AND inputs == [4 raw_iron, 4 coal]:
@@ -315,7 +315,7 @@ systems = [
     {"s": "Presion de fluidos", "d": "Los fluidos solo SUBEN si tienen presion (bomba estampa 8; -1 por bloque). Mecanica fisica, no instantanea."},
     {"s": "Veins de gas", "d": "Nitrogenated Cal NO se agota (estilo Satisfactory). Riqueza por bloque. 1 bomba/vein; Pressurizer Well la sube a 5."},
     {"s": "Economia", "d": "Moneda Cemelita (bunch/pack/sack) + tickets (cosmetic/pet, common/silver/golden). Capa social/comercial."},
-    {"s": "Cosmeticos (HMC)", "d": "Backpacks, jetpacks, wings, hats, balloons, kites — capa de expresion del jugador, sin impacto en balance."},
+    {"s": "Cosmeticos (HMC)", "d": "Backpacks, jetpacks, wings, hats, balloons, kites - capa de expresion del jugador, sin impacto en balance."},
 ]
 write("4 Mechanics.kd", "4 · Mecanicas de Juego", [
     text("m-h", 0, "heading", "# 4 · Mecanicas de Juego (pseudo-codigo)"),
@@ -366,15 +366,15 @@ write("5 Ages.kd", "5 · Las 3 Edades", [
     text("a-h", 0, "heading", "# 5 · Las 3 Edades"),
     callout("a-i", 1, "milestone", "La progresion NO es por poder bruto sino por **eficiencia**. Cada edad reusa las mecanicas de la anterior y desbloquea materiales + multibloques nuevos."),
     diagram("a-flow", 2, ages_flow),
-    text("a-c-h", 3, "heading", "## Copper Age — Supervivencia industrial"),
+    text("a-c-h", 3, "heading", "## Copper Age - Supervivencia industrial"),
     callout("a-c-d", 4, "flame", "**Tema:** arrancar de cero. Introduce las 3 redes (vapor->RPM, gas, fluidos con presion). **Idea de diseno:** que el jugador VEA su primera fabrica trabajar; deco pendiente: Steam Vent (particulas), Pressure Gauge (aguja LOW/MED/HIGH), Copper Grate/Catwalk/Beam."),
-    beauty("a-c-t", 5, "Copper Age — contenido", [("i", "Item", "text"), ("k", "Tipo", "text"), ("n", "Nota", "text")], copper_tbl),
-    text("a-s-h", 6, "heading", "## Steel Age — Industria pesada"),
+    beauty("a-c-t", 5, "Copper Age - contenido", [("i", "Item", "text"), ("k", "Tipo", "text"), ("n", "Nota", "text")], copper_tbl),
+    text("a-s-h", 6, "heading", "## Steel Age - Industria pesada"),
     callout("a-s-d", 7, "factory", "**Tema:** multibloques y gas a presion. El Steel se hace en el MISMO Copper Furnace (lava=calor), recompensando al jugador por dominar fluidos. **Ideas:** Riveted Steel, Steel Support Beam, Steel Catwalk, Industrial Window, Factory Floor; futuro Steel Furnace MK2 con Salt Bricks."),
-    beauty("a-s-t", 8, "Steel Age — contenido", [("i", "Item", "text"), ("k", "Tipo", "text"), ("n", "Nota", "text")], steel_tbl),
-    text("a-a-h", 9, "heading", "## Aluminum Age — Optimizacion"),
+    beauty("a-s-t", 8, "Steel Age - contenido", [("i", "Item", "text"), ("k", "Tipo", "text"), ("n", "Nota", "text")], steel_tbl),
+    text("a-a-h", 9, "heading", "## Aluminum Age - Optimizacion"),
     callout("a-a-d", 10, "zap", "**Tema:** eficiencia, NO mas poder. Cierra el bucle: la cadena de aluminio usa Crusher + Refinery + Smeltery + agua + steam EN SERIE. **Ideas:** variantes de aluminio (Fan/Pump/Crusher mas eficientes), Aluminum Panel/Vent, White Factory Tiles, Industrial Light Housing."),
-    beauty("a-a-t", 11, "Aluminum Age — contenido", [("i", "Item", "text"), ("k", "Tipo", "text"), ("n", "Nota", "text")], alu_tbl),
+    beauty("a-a-t", 11, "Aluminum Age - contenido", [("i", "Item", "text"), ("k", "Tipo", "text"), ("n", "Nota", "text")], alu_tbl),
 ])
 
 # ============ 6 WORLD ============
@@ -426,7 +426,7 @@ mobs = [
     {"m": "Pig", "v": "dried_muddy, mottled, muddy, pale, piebald, pink_footed, sooty, spotted"},
 ]
 write("6 World.kd", "6 · World (Mundo)", [
-    text("w-h", 0, "heading", "# 6 · World — Contenido de mundo"),
+    text("w-h", 0, "heading", "# 6 · World - Contenido de mundo"),
     callout("w-i", 1, "trees", "Capa survival/cozy alrededor de la fabrica. Lista exhaustiva: @[doc:5 Reference/Catalog - Woods.kd:Reference / Catalogo]."),
     diagram("w-pie", 2, world_pie),
     text("w-wood-h", 3, "heading", "## Maderas & Arboles"),
