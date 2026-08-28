@@ -151,6 +151,18 @@ dev.arubik.craftengine.rotation.KineticMember {
      * checking it every tick would put a scan of the player list back into the path this exists to
      * make cheaper.
      */
+    /**
+     * Last rotation quaternion per spec, and the three angles it was built from.
+     *
+     * <p>Every active display rebuilt one every tick — an allocation and three
+     * {@code Math.toRadians} each — from angles that, on any tick a renderer was not re-evaluated,
+     * were the same angles as last time. With update periods now stretched by distance, most ticks
+     * are exactly that. A spinning display still gets a fresh quaternion on the ticks its rotation
+     * actually advances.
+     */
+    private Quaternionf[] specQuats;
+    private double[] specQuatRots;
+
     private static final long LOD_RECHECK_TICKS = 20;
     /** Renderer update periods are multiplied by this — see RendererManager#setLodFactor. */
     private int lodFactor = 1;
@@ -816,6 +828,8 @@ dev.arubik.craftengine.rotation.KineticMember {
             int n = definition.renderers().size();
             this.specDisplays = new ConveyorItemDisplay[n];
             this.specDisplayHashes = new int[n];
+            this.specQuats = new Quaternionf[n];
+            this.specQuatRots = new double[n * 3];
         }
         INSTANCES.add(this);
     }
@@ -831,6 +845,8 @@ dev.arubik.craftengine.rotation.KineticMember {
                 int n = eff.renderers().size();
                 this.specDisplays = new ConveyorItemDisplay[n];
                 this.specDisplayHashes = new int[n];
+                this.specQuats = new Quaternionf[n];
+                this.specQuatRots = new double[n * 3];
             }
         }
     }
@@ -1535,7 +1551,18 @@ dev.arubik.craftengine.rotation.KineticMember {
                         double wx = (double)pos.getX() + 0.5 + eid.offsetX();
                         double wy = (double)pos.getY() + eid.offsetY();
                         double wz = (double)pos.getZ() + 0.5 + eid.offsetZ();
-                        Quaternionf q = new Quaternionf().rotateY((float)Math.toRadians(eid.rotY())).rotateX((float)Math.toRadians(eid.rotX())).rotateZ((float)Math.toRadians(eid.rotZ()));
+                        Quaternionf q = this.specQuats != null && i < this.specQuats.length ? this.specQuats[i] : null;
+                        if (q == null || this.specQuatRots[i * 3] != eid.rotX()
+                                || this.specQuatRots[i * 3 + 1] != eid.rotY()
+                                || this.specQuatRots[i * 3 + 2] != eid.rotZ()) {
+                            q = new Quaternionf().rotateY((float)Math.toRadians(eid.rotY())).rotateX((float)Math.toRadians(eid.rotX())).rotateZ((float)Math.toRadians(eid.rotZ()));
+                            if (this.specQuats != null && i < this.specQuats.length) {
+                                this.specQuats[i] = q;
+                                this.specQuatRots[i * 3] = eid.rotX();
+                                this.specQuatRots[i * 3 + 1] = eid.rotY();
+                                this.specQuatRots[i * 3 + 2] = eid.rotZ();
+                            }
+                        }
                         // Light rarely changes tick-to-tick — the 6-neighbor brightness scan this
                         // does is real per-tick CPU for every active display; only pay for it every
                         // LIGHT_CHECK_INTERVAL ticks.
