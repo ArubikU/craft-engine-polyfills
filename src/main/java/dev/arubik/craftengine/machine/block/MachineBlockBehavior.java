@@ -643,7 +643,7 @@ WorldlyContainerHolder {
                     String faceStr = (String) facesArg;
                     switch (faceStr.toLowerCase()) {
                         case "all": {
-                            for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+                            for (net.minecraft.core.Direction d : dev.arubik.craftengine.util.Utils.DIRECTIONS) {
                                 faces.add(d);
                             }
                             break block27;
@@ -683,7 +683,7 @@ WorldlyContainerHolder {
                 }
             }
             if (faces.isEmpty()) {
-                for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+                for (net.minecraft.core.Direction d : dev.arubik.craftengine.util.Utils.DIRECTIONS) {
                     faces.add(d);
                 }
             }

@@ -148,7 +148,7 @@ public final class ConveyorItemDisplay {
         if (bl == 0 && sl == 0) {
             int sumBl = 0;
             int sumSl = 0;
-            for (Direction dir : Direction.values()) {
+            for (Direction dir : dev.arubik.craftengine.util.Utils.DIRECTIONS) {
                 BlockPos n = pos.relative(dir);
                 sumBl += level.getBrightness(LightLayer.BLOCK, n);
                 sumSl += level.getBrightness(LightLayer.SKY, n);

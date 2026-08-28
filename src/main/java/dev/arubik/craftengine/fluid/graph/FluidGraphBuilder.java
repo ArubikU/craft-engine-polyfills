@@ -73,7 +73,7 @@ public final class FluidGraphBuilder {
 
             boolean dbgPump = dev.arubik.craftengine.fluid.graph.FluidEngine.DEBUG
                     && pumpAt(level, pos) != null;
-            for (Direction dir : Direction.values()) {
+            for (Direction dir : dev.arubik.craftengine.util.Utils.DIRECTIONS) {
                 BlockPos np = pos.relative(dir);
                 if (dbgPump) {
                     boolean carr = isCarrier(level, np);

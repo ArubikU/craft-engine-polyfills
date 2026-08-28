@@ -89,7 +89,7 @@ public final class EnergyEngine {
             int ai = idx(index, positions, pos);
             EnergyCarrier selfCarrier = carrier(level, pos, carrierCache);
             ConnectableBlockBehavior selfConn = connectable(level, pos, connCache);
-            for (Direction dir : Direction.values()) {
+            for (Direction dir : dev.arubik.craftengine.util.Utils.DIRECTIONS) {
                 BlockPos np = pos.relative(dir);
                 EnergyCarrier otherCarrier = carrier(level, np, carrierCache);
                 if (otherCarrier == null || !connected(selfConn, connectable(level, np, connCache), level, pos, np, dir))

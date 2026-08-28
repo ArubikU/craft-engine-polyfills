@@ -158,7 +158,7 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior
             if (!isTank(level, p))
                 continue;
             comp.add(p);
-            for (Direction d : Direction.values()) {
+            for (Direction d : dev.arubik.craftengine.util.Utils.DIRECTIONS) {
                 BlockPos np = p.relative(d);
                 if (!inComp.contains(np.asLong()) && isTank(level, np)) {
                     inComp.add(np.asLong());
@@ -214,7 +214,7 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior
     /** Local tank-topology signature (6-neighbour mask) — a change means a tank was placed/removed nearby. */
     public int neighborSig(Level level, BlockPos pos) {
         int m = 0, i = 0;
-        for (Direction d : Direction.values()) {
+        for (Direction d : dev.arubik.craftengine.util.Utils.DIRECTIONS) {
             if (isTank(level, pos.relative(d)))
                 m |= (1 << i);
             i++;
@@ -320,7 +320,7 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior
             Controller be = controllerBE(level, p);
             if (be != null)
                 be.windowed = next;
-            for (Direction d : Direction.values()) {
+            for (Direction d : dev.arubik.craftengine.util.Utils.DIRECTIONS) {
                 BlockPos np = p.relative(d);
                 if (seen.add(np.asLong()) && isTank(level, np))
                     q.add(np.immutable());
@@ -666,7 +666,7 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior
                 BlockPos pos = (BlockPos) Utils.fromPos(blockEntity().pos());
                 FluidTankRender.remove(level, pos);
                 FluidShellRender.remove(level, pos);
-                for (Direction d : Direction.values()) {
+                for (Direction d : dev.arubik.craftengine.util.Utils.DIRECTIONS) {
                     BlockPos np = pos.relative(d);
                     if (behavior.isTank(level, np)) {
                         behavior.recomputeArea(level, np);

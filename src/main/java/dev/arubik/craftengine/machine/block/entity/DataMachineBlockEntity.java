@@ -1390,7 +1390,7 @@ dev.arubik.craftengine.rotation.KineticMember {
                 Level level = this.getNMSLevel();
                 BlockPos pos = this.getMachinePos();
                 if (level != null && pos != null) {
-                    for (Direction d : Direction.values()) {
+                    for (Direction d : dev.arubik.craftengine.util.Utils.DIRECTIONS) {
                         try {
                             BlockEntityController blockEntityController;
                             BlockEntity adjBe = BukkitBlockEntityTypes.getIfLoaded(level, pos.relative(d));
@@ -1566,7 +1566,7 @@ dev.arubik.craftengine.rotation.KineticMember {
             float before = this.inputRpm;
             this.pullRotationalPower(level);
             if (before != this.inputRpm && (pos = this.getMachinePos()) != null) {
-                for (Direction d : Direction.values()) {
+                for (Direction d : dev.arubik.craftengine.util.Utils.DIRECTIONS) {
                     try {
                         BlockEntityController blockEntityController;
                         BlockEntity adjBe = BukkitBlockEntityTypes.getIfLoaded(level, pos.relative(d));
@@ -1632,7 +1632,7 @@ dev.arubik.craftengine.rotation.KineticMember {
         Direction bestInputFace = null;
         long bestStamp = -1L;
         boolean sawConflict = false;
-        for (Direction d : Direction.values()) {
+        for (Direction d : dev.arubik.craftengine.util.Utils.DIRECTIONS) {
             float pot;
             int providerDist;
             BlockEntityController blockEntityController;
@@ -1848,7 +1848,7 @@ dev.arubik.craftengine.rotation.KineticMember {
      */
     private void pushRotationalPower(Level level) {
         if (this.definition == null || !this.definition.kinetics()) return;
-        for (Direction d : Direction.values()) {
+        for (Direction d : dev.arubik.craftengine.util.Utils.DIRECTIONS) {
             if (!this.isValidOutputFace(d, level)) continue;
             BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, this.getMachinePos().relative(d));
             if (be == null) continue;

@@ -25,6 +25,20 @@ import net.minecraft.world.phys.BlockHitResult;
  */
 public class Utils {
 
+    /**
+     * The six directions, shared.
+     *
+     * <p>{@code Direction.values()} clones its array on every call — that is what an enum's
+     * generated {@code values()} does — and this plugin walks the six faces inside per-tick loops
+     * for every machine, pipe and energy node on the server. The clones showed up on the server
+     * thread as 0.40% of its time in {@code getEnumConstantsShared}, allocating six-element arrays
+     * nothing ever writes to.
+     *
+     * <p>Never mutate it. It is shared by every caller precisely so that no copy is made.
+     */
+    public static final net.minecraft.core.Direction[] DIRECTIONS = net.minecraft.core.Direction.values();
+
+
     public static Direction oppositeDirection(Direction direction) {
         return switch (direction) {
             case NORTH -> Direction.SOUTH;

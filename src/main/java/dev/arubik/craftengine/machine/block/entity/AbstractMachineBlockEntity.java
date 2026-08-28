@@ -657,7 +657,7 @@ ConveyorDisplayReceiver {
         IOConfiguration.Simple copy = new IOConfiguration.Simple();
         if (current != null) {
             for (IOConfiguration.IOType type : IOConfiguration.IOType.values()) {
-                for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.values()) {
+                for (net.minecraft.core.Direction dir : dev.arubik.craftengine.util.Utils.DIRECTIONS) {
                     try {
                         if (current.acceptsInput(type, dir)) copy.addInput(type, dir);
                         if (current.providesOutput(type, dir)) copy.addOutput(type, dir);
@@ -1846,7 +1846,7 @@ ConveyorDisplayReceiver {
             return;
         }
         BlockPos pos = this.getMachinePos();
-        for (net.minecraft.core.Direction world : net.minecraft.core.Direction.values()) {
+        for (net.minecraft.core.Direction world : dev.arubik.craftengine.util.Utils.DIRECTIONS) {
             net.minecraft.core.Direction local = this.toLocalItemDir(world);
             BlockPos src = pos.relative(world);
             net.minecraft.core.Direction sideFromSrc = world.getOpposite();
@@ -2015,7 +2015,7 @@ ConveyorDisplayReceiver {
         if (this.ioConfiguration == null) {
             return false;
         }
-        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+        for (net.minecraft.core.Direction d : dev.arubik.craftengine.util.Utils.DIRECTIONS) {
             if (!this.ioConfiguration.acceptsInput(IOConfiguration.IOType.FUNNEL, d)) continue;
             return true;
         }
@@ -2113,7 +2113,7 @@ ConveyorDisplayReceiver {
         if (this.ioConfiguration == null || !this.providesAnyFunnelOutput()) {
             return;
         }
-        block0: for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+        block0: for (net.minecraft.core.Direction d : dev.arubik.craftengine.util.Utils.DIRECTIONS) {
             ConveyorReceiver recv;
             Object object;
             BlockEntity be;
@@ -2240,7 +2240,7 @@ ConveyorDisplayReceiver {
     }
 
     private boolean providesAnyFunnelOutput() {
-        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+        for (net.minecraft.core.Direction d : dev.arubik.craftengine.util.Utils.DIRECTIONS) {
             if (!this.ioConfiguration.providesOutput(IOConfiguration.IOType.FUNNEL, d)) continue;
             return true;
         }

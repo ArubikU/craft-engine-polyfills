@@ -64,7 +64,7 @@ public final class FluidShellRender {
                 continue; // only THIS group's cells
             BlockPos cell = BlockPos.of(e.getKey());
             Location center = new Location(world, cell.getX() + 0.5, cell.getY() + 0.5, cell.getZ() + 0.5);
-            for (Direction d : Direction.values()) {
+            for (Direction d : dev.arubik.craftengine.util.Utils.DIRECTIONS) {
                 BlockPos np = cell.relative(d);
                 long[] na = owner.get(np.asLong());
                 boolean interior = na != null && na[0] == ctrl; // neighbour in SAME group -> hidden

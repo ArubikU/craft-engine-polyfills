@@ -92,7 +92,7 @@ public final class GasEngine {
             GasCarrier selfCarrier = carrier(level, pos, carrierCache);
             ConnectableBlockBehavior selfConn = connectable(level, pos, connCache);
             boolean selfClosedValve = closedValve(level, pos, valveCache);
-            for (Direction dir : Direction.values()) {
+            for (Direction dir : dev.arubik.craftengine.util.Utils.DIRECTIONS) {
                 BlockPos np = pos.relative(dir);
                 GasCarrier otherCarrier = carrier(level, np, carrierCache);
                 if (DEBUG && start.equals(pos))

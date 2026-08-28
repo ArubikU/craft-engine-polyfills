@@ -77,10 +77,26 @@ public final class ScriptContext {
      */
     private static final int MAX_LAYERS = 6;
 
+    /**
+     * A one-layer equivalent of {@code ctx}, computed once per context.
+     *
+     * <p>The caller is {@link Builder#over}, deciding a chain has grown too deep to keep walking.
+     * What it hands over is almost always the SAME object every time: a UserFunction's defining
+     * context, flattened again on every single call of that function. The chain is immutable, so
+     * the flattened form is too, and one copy can serve every call instead of one copy per call.
+     */
+    private ScriptContext flattenedMemo;
+
     private static ScriptContext flattenOf(ScriptContext ctx) {
+        ScriptContext memo = ctx.flattenedMemo;
+        if (memo != null) return memo;
         Builder flat = new Builder();
         flat.copyFrom(ctx);
-        return new ScriptContext(flat.vars, flat.classes);
+        memo = new ScriptContext(flat.vars, flat.classes);
+        // Its own flattening is itself: depth 1, and this stops a re-flatten ever copying again.
+        memo.flattenedMemo = memo;
+        ctx.flattenedMemo = memo;
+        return memo;
     }
 
     private int depth() { return this.depth; }

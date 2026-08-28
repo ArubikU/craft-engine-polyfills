@@ -405,7 +405,7 @@ extends AbstractMachineBlockEntity {
             if (prov == null || prov.gasType() != gas || prov.extractionPoints() <= 0.0) continue;
             scan.points += prov.extractionPoints();
             scan.blocks.add(p);
-            for (Direction d : Direction.values()) {
+            for (Direction d : dev.arubik.craftengine.util.Utils.DIRECTIONS) {
                 GasProviderBehavior np;
                 BlockPos n = p.relative(d);
                 if (!seen.add(n.asLong()) || (np = GasPumpBlockEntity.providerAt(level, n)) == null || np.gasType() != gas || !(np.extractionPoints() > 0.0)) continue;
