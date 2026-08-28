@@ -60,7 +60,13 @@ public record UserFunction(String name, List<String> params, ScriptContext defin
             // so building a whole second defensive copy just for that was pure waste.
             ScriptContext.Builder resultB = ScriptContext.builder().copyFrom(fb.peek());
             executor.accept(fb.peek(), resultB);
-            return resultB.build().getVar("__return__");
+            // peek(), not build(), for the same reason the two above are: resultB is dead after
+            // this line, so build()'s defensive copy of BOTH maps existed only to read one key out
+            // of it and throw the context away. On a real server that showed up as
+            // LinkedHashMap.<init>/putMapEntries dominating every script call in the profile.
+            // peek() is a live view over the same maps — identical read semantics, including the
+            // TRACKED_VARS bookkeeping getVar does — with nothing copied.
+            return resultB.peek().getVar("__return__");
         } finally {
             depth[0]--;
             callStack.poll();

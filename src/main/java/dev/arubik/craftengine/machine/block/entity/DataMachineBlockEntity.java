@@ -2700,7 +2700,11 @@ dev.arubik.craftengine.rotation.KineticMember {
             // than re-allocating them here on every single tick for every machine on the server.
             b.typedAll(dev.arubik.craftengine.script.ScriptBootstrap.globalSingletons());
             if (level instanceof ServerLevel sl) b.world(sl);
-            return b.build();
+            // peek(), not build(): `b` is a local that dies with this return, so nothing can ever
+            // mutate the maps the returned context wraps. build()'s defensive copy of both maps was
+            // pure cost on a per-machine, per-tick path — it showed up in a server profile as
+            // LinkedHashMap.putMapEntries under buildScriptContext.
+            return b.peek();
         }
         catch (Throwable ignored) {
             return null;

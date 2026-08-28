@@ -332,13 +332,16 @@ public final class ScriptProgram {
                 return ScriptContext.builder().copyFrom(ctx)
                         .valsAll(defs.vars())
                         .typedAll(defs.classInstances())
-                        .build();
+                        .peek(); // the builder is a temporary — see the peek() below
             }
         }
         ScriptContext.Builder b = ScriptContext.builder().copyFrom(ctx);
         try { runStatements(statements, b); }
         catch (ReturnSignal rs) { b.val("__return__", rs.value); }
-        return b.build();
+        // peek(), not build(): `b` is local and dead the moment this returns, so the context is the
+        // only thing that can reach these maps. Copying them defensively protected against nothing
+        // and cost a full LinkedHashMap rebuild on every script evaluation.
+        return b.peek();
     }
 
     /** Determines (once, lazily — see {@link #topLevelCacheable}'s own doc) whether this file's
