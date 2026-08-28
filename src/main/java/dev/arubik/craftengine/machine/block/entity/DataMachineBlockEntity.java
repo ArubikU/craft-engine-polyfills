@@ -2760,6 +2760,14 @@ dev.arubik.craftengine.rotation.KineticMember {
     private void runActionScript(String scriptRef) {
         dev.arubik.craftengine.script.ScriptCall call = dev.arubik.craftengine.script.ScriptCall.parse(scriptRef);
         if (call == null) return;
+        // Checked BEFORE building the context, because building it is the expensive part and a
+        // whole-file call whose top level is inert cannot use it for anything. A "file:func" call
+        // is never inert - it invokes the function.
+        if (call.funcName() == null) {
+            dev.arubik.craftengine.script.ScriptProgram prog =
+                    dev.arubik.craftengine.script.ScriptRegistry.get(call.scriptName());
+            if (prog != null && prog.topLevelIsInert()) return;
+        }
         try {
             ScriptContext ctx = this.buildScriptContext();
             if (ctx == null) return;

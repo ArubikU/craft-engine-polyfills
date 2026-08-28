@@ -326,6 +326,25 @@ public final class ScriptProgram {
     /**
      * Run the script against {@code ctx}, returning an updated context with new variable values.
      */
+    /**
+     * True when running this file's top level cannot do anything observable.
+     *
+     * <p>A file of nothing but {@code def}s is exactly that: evaluating it declares functions into a
+     * context the caller throws away. shaft.pf is two defs and no top-level body, and it is a
+     * machine's {@code action_script} — so seventy-nine shafts were building a full ScriptContext
+     * and evaluating that file every single tick to produce nothing.
+     *
+     * <p>Deliberately NOT the same as {@link #pureDefs}, which also allows imports. An import
+     * evaluates the file it names, and THAT file's top level can do anything at all — so a file
+     * with imports is not inert no matter how inert its own statements look.
+     */
+    public boolean topLevelIsInert() {
+        for (Statement st : statements) {
+            if (!(st instanceof Statement.FunctionDef)) return false;
+        }
+        return true;
+    }
+
     public ScriptContext evaluate(ScriptContext ctx) {
         // isTopLevelCacheable is what POPULATES cachedDefsResult, so it has to run even when
         // pureDefs already implies the answer. Written the other way round, || short-circuited past
