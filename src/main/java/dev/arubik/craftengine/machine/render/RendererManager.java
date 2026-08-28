@@ -237,6 +237,35 @@ public final class RendererManager {
     private int scopeTick = -1;
 
     /**
+     * Everything this machine's renderers depend on, as of the last full evaluation.
+     *
+     * <p>The shared-formula cache already establishes what a cacheable formula's result depends on:
+     * the block state and a specific set of context variables. If NONE of those changed since the
+     * last tick, every formula this manager evaluates would produce the value it already produced —
+     * so the whole evaluation pass can be skipped, not merely cache-hit. That is the difference
+     * between 92.6% cheap lookups and no lookups at all.
+     *
+     * <p>Only taken when every formula seen so far was cacheable. One that reads instance state
+     * (a get_typed, an inventory) is marked uncacheable by computeSignature, and a manager with any
+     * such formula never skips — the same rule the cache itself uses, applied a level up.
+     */
+    private net.minecraft.world.level.block.state.BlockState lastInputState;
+    private double[] lastInputVars;
+    private java.util.List<String> lastInputVarNames;
+    private boolean lastPassAllCacheable;
+    private boolean sawUncacheableThisPass;
+    private boolean sawPerPlayerThisPass;
+    private int lastFullEvalTick = Integer.MIN_VALUE;
+
+    /**
+     * Forces a full pass at least this often regardless. A missed dependency then self-corrects
+     * within a second instead of leaving a display wrong until something else happens to change —
+     * the failure this optimisation would otherwise introduce is a renderer that silently freezes,
+     * which is precisely the class of bug it must not create.
+     */
+    private static final int MAX_SKIPPED_TICKS = 20;
+
+    /**
      * The cache key, built without allocating for the values.
      *
      * <p>It used to carry a {@code List<Object>} of the key variables, which meant an ArrayList, a
@@ -296,7 +325,11 @@ public final class RendererManager {
         ScriptContext sctx = scopeCtx != null ? scopeCtx : evalCtx.toScriptContext();
         if (serverLevel == null) return ScriptFormula.compile(expr).evaluate(sctx);
         FormulaSignature sig = FORMULA_SIGNATURES.computeIfAbsent(expr, e -> computeSignature(e, evalCtx));
-        if (!sig.cacheable()) { SHARED_UNCACHEABLE++; return ScriptFormula.compile(expr).evaluate(sctx); }
+        if (!sig.cacheable()) {
+            SHARED_UNCACHEABLE++;
+            this.sawUncacheableThisPass = true;
+            return ScriptFormula.compile(expr).evaluate(sctx);
+        }
         int tick = scopeTick;
         net.minecraft.world.level.block.state.BlockState state = scopeState;
         if (state == null) {
@@ -511,6 +544,9 @@ public final class RendererManager {
                 this.scopeState = null;
             }
         }
+        if (canSkipThisTick(ctx)) return;
+        this.sawUncacheableThisPass = false;
+        this.sawPerPlayerThisPass = false;
         try {
         for (int i = 0; i < this.specs.size(); ++i) {
             String blockId;
@@ -600,6 +636,7 @@ public final class RendererManager {
                     }
                     this.evalResults[i].qualifyingPlayers = qualifying;
                     this.evalResults[i].active = active = !qualifying.isEmpty();
+                    this.sawPerPlayerThisPass = true;
                 } else {
                     this.evalResults[i].qualifyingPlayers = null;
                 }
@@ -903,6 +940,7 @@ public final class RendererManager {
             display.update(serverLevel, wp6[0], wp6[1], wp6[2], blockId, scaleVal);
         }
         } finally {
+            recordInputs();
             // Cleared so a sharedEval reached from OUTSIDE a tick cannot read a stale block state
             // from whenever this manager last ticked.
             this.scopeCtx = null;
@@ -1074,6 +1112,59 @@ public final class RendererManager {
             }
         }
         return new LocationPlan(LocationPlan.Kind.EXPRESSION, null, null, null, null);
+    }
+
+    /** Whether nothing this machine's renderers read has changed since the last full pass. */
+    private boolean canSkipThisTick(MachineRenderContext ctx) {
+        if (!this.lastPassAllCacheable || this.lastInputState == null) return false;
+        if (this.scopeState != this.lastInputState) return false;
+        if (this.scopeTick - this.lastFullEvalTick >= MAX_SKIPPED_TICKS) return false;
+        java.util.List<String> names = this.lastInputVarNames;
+        if (names == null || this.lastInputVars == null) return false;
+        ScriptContext sctx = this.scopeCtx != null ? this.scopeCtx : ctx.toScriptContext();
+        for (int i = 0; i < names.size(); i++) {
+            if (sctx.getVar(names.get(i)).asNum() != this.lastInputVars[i]) return false;
+        }
+        return true;
+    }
+
+    /** Snapshots what the pass just read, as the basis for skipping the next one. */
+    private void recordInputs() {
+        // A per-player condition depends on where players are, which is in no formula signature,
+        // so a manager with one never skips.
+        this.lastPassAllCacheable = !this.sawUncacheableThisPass && !this.sawPerPlayerThisPass;
+        this.lastInputState = this.scopeState;
+        this.lastFullEvalTick = this.scopeTick;
+        if (!this.lastPassAllCacheable || this.scopeCtx == null) {
+            this.lastInputVarNames = null;
+            return;
+        }
+        java.util.LinkedHashSet<String> union = new java.util.LinkedHashSet<>();
+        for (RendererSpec spec : this.specs) {
+            for (String expr : exprsOf(spec)) {
+                FormulaSignature sig = FORMULA_SIGNATURES.get(expr);
+                if (sig != null && sig.cacheable()) union.addAll(sig.keyVars());
+            }
+        }
+        this.lastInputVarNames = java.util.List.copyOf(union);
+        this.lastInputVars = new double[this.lastInputVarNames.size()];
+        for (int i = 0; i < this.lastInputVars.length; i++) {
+            this.lastInputVars[i] = this.scopeCtx.getVar(this.lastInputVarNames.get(i)).asNum();
+        }
+    }
+
+    /** Every formula string a spec can evaluate, for collecting its dependency set. */
+    private static java.util.List<String> exprsOf(RendererSpec spec) {
+        RendererSpec inner = spec instanceof RendererSpec.PositionedSpec ps ? ps.inner() : spec;
+        java.util.List<String> out = new java.util.ArrayList<>();
+        out.add(inner.whenExpr() == null ? null : inner.whenExpr().raw());
+        out.add(inner.locationExpr());
+        if (inner instanceof RendererSpec.ItemDisplaySpec id) {
+            out.add(id.itemExpr()); out.add(id.scale());
+            out.add(id.rotX()); out.add(id.rotY()); out.add(id.rotZ());
+        }
+        out.removeIf(java.util.Objects::isNull);
+        return out;
     }
 
     private double[] resolveBoneLocation(LocationPlan plan) {
