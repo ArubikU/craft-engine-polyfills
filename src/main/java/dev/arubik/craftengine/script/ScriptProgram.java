@@ -512,6 +512,41 @@ public final class ScriptProgram {
      */
     private void runStatements(List<Statement> stmts, ScriptContext.Builder b,
                                ScriptContext inherited, LinkedHashMap<String, ScriptValue> ownDecls) {
+        runStatements(stmts, b, inherited, ownDecls, new ScriptContext[]{inherited});
+    }
+
+    /**
+     * The file's scope as of right now, built by EXTENDING the previous def's scope rather than
+     * copying every declaration again.
+     *
+     * <p>Each def needs the declarations made before it, and ownDecls only ever grows, so def N+1's
+     * scope is def N's plus whatever was declared in between — usually one name. Copying the whole
+     * map per def cost a LinkedHashMap allocation and rehash each time; with an action script's top
+     * level re-running every tick for every machine, that was 1.36% of server wall time in
+     * LinkedHashMap.&lt;init&gt; alone.
+     *
+     * <p>{@code carrier} holds the running scope across calls (a one-element array because this
+     * threads through recursion into if/for/while bodies). Flattened when the chain gets deep, for
+     * the same reason ScriptContext.stack flattens: past a handful of layers a lookup walks more
+     * maps than one copy would have cost.
+     */
+    private static ScriptContext fileScopeSoFar(ScriptContext inherited,
+                                                 LinkedHashMap<String, ScriptValue> ownDecls,
+                                                 ScriptContext[] carrier) {
+        ScriptContext current = carrier[0] == null ? inherited : carrier[0];
+        LinkedHashMap<String, ScriptValue> pending = new LinkedHashMap<>();
+        for (Map.Entry<String, ScriptValue> e : ownDecls.entrySet()) {
+            if (current.peekVar(e.getKey()) != e.getValue()) pending.put(e.getKey(), e.getValue());
+        }
+        if (pending.isEmpty()) return current;
+        ScriptContext next = ScriptContext.layered(current, pending, new LinkedHashMap<>());
+        carrier[0] = next;
+        return next;
+    }
+
+    private void runStatements(List<Statement> stmts, ScriptContext.Builder b,
+                               ScriptContext inherited, LinkedHashMap<String, ScriptValue> ownDecls,
+                               ScriptContext[] scopeCarrier) {
         for (Statement stmt : stmts) {
             switch (stmt) {
                 case Statement.Assign a -> {
@@ -567,7 +602,7 @@ public final class ScriptProgram {
                                 taken = false;
                             }
                         }
-                        if (taken) { runStatements(clause.body(), b, inherited, ownDecls); break; }
+                        if (taken) { runStatements(clause.body(), b, inherited, ownDecls, scopeCarrier); break; }
                     }
                 }
                 case Statement.ForStatement fs -> {
@@ -595,7 +630,7 @@ public final class ScriptProgram {
                                 catch (Throwable ignored) { pass = false; }
                                 if (!pass) continue;
                             }
-                            try { runStatements(fs.body(), b, inherited, ownDecls); }
+                            try { runStatements(fs.body(), b, inherited, ownDecls, scopeCarrier); }
                             catch (BreakSignal ignored) { break outer; }
                             catch (ContinueSignal ignored) { /* next iteration */ }
                         }
@@ -610,7 +645,7 @@ public final class ScriptProgram {
                         try { cond = ScriptFormula.compile(ws.condExpr()).evaluateBool(snap); }
                         catch (Throwable ignored) { break; }
                         if (!cond) break;
-                        try { runStatements(ws.body(), b, inherited, ownDecls); }
+                        try { runStatements(ws.body(), b, inherited, ownDecls, scopeCarrier); }
                         catch (BreakSignal ignored) { break outer; }
                         catch (ContinueSignal ignored) { /* next iteration */ }
                     }
@@ -639,8 +674,7 @@ public final class ScriptProgram {
                     // tick. Inside a function body (inherited == null) there is no file scope to
                     // layer over, so it stays a real snapshot of the local builder.
                     ScriptContext definingCtx = inherited != null
-                            ? ScriptContext.layered(inherited,
-                                    new LinkedHashMap<>(ownDecls), new LinkedHashMap<>())
+                            ? fileScopeSoFar(inherited, ownDecls, scopeCarrier)
                             : b.build();
                     java.lang.reflect.Method compiledMethod = compiledMethodFor(fd.name());
                     UserFunction fn = new UserFunction(fd.name(), capturedParams, definingCtx,

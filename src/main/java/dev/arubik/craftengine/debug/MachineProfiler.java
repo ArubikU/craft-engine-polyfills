@@ -100,6 +100,7 @@ public final class MachineProfiler {
     // ---- control -----------------------------------------------------------
 
     public static synchronized void start() {
+        dev.arubik.craftengine.machine.render.RendererManager.resetSharedCacheStats();
         java.util.Arrays.fill(phaseNanos, 0L);
         perType.clear();
         serverTicks = 0;
@@ -138,6 +139,7 @@ public final class MachineProfiler {
         out.add("  <yellow>total <white>" + String.format(java.util.Locale.ROOT, "%.3f", r.totalMsPerTick())
                 + " ms/tick");
 
+        out.add("  <gray>" + dev.arubik.craftengine.machine.render.RendererManager.sharedCacheStats());
         out.add("<gold>Machines by type <gray>(loaded / ticking)");
         int shown = 0, loadedAll = 0, tickingAll = 0;
         for (TypeRow t : r.types()) { loadedAll += t.loaded(); tickingAll += t.ticking(); }

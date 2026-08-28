@@ -236,8 +236,45 @@ public final class RendererManager {
     private net.minecraft.world.level.block.state.BlockState scopeState;
     private int scopeTick = -1;
 
-    private record SharedFormulaKey(String expr, net.minecraft.world.level.block.state.BlockState state, java.util.List<Object> keyVals) {}
+    /**
+     * The cache key, built without allocating for the values.
+     *
+     * <p>It used to carry a {@code List<Object>} of the key variables, which meant an ArrayList, a
+     * boxed Double per variable, and a list hash on EVERY lookup — including the 92.6% that hit.
+     * At ~2150 lookups per tick the key was costing more than the evaluation it saved: renderers
+     * measured 1.5us per sharedEval call, where a hit should be a hash and a compare.
+     *
+     * <p>Nearly every cacheable formula keys on none or one variable (a shaft's rotation on rpm), so
+     * two are held inline as raw {@code doubleToLongBits} - exact, not a hash, so there is no
+     * collision to reason about. Anything wider falls back to the list, which is then rare enough
+     * not to matter.
+     */
+    private record SharedFormulaKey(String expr, net.minecraft.world.level.block.state.BlockState state,
+                                     long k0, long k1, java.util.List<Object> rest) {}
     private record SharedFormulaEntry(int tick, ScriptValue value) {}
+
+    /**
+     * Whether the cross-instance cache is actually collapsing work, which is the only thing that
+     * makes it worth its key-building cost. Server-thread only, so plain longs.
+     *
+     * <p>Worth counting rather than assuming: seventy-nine shafts on one kinetic network at the
+     * same rpm SHOULD evaluate each formula once between them. If they are missing instead, every
+     * one of them pays the full evaluation AND the key, which is worse than having no cache.
+     */
+    private static long SHARED_HITS, SHARED_MISSES, SHARED_UNCACHEABLE;
+
+    public static String sharedCacheStats() {
+        long total = SHARED_HITS + SHARED_MISSES;
+        if (total == 0 && SHARED_UNCACHEABLE == 0) return "shared formula cache: no evaluations";
+        return String.format(java.util.Locale.ROOT,
+                "shared formula cache: %d hits, %d misses (%.1f%% hit), %d refused as uncacheable",
+                SHARED_HITS, SHARED_MISSES, total == 0 ? 0 : 100.0 * SHARED_HITS / total,
+                SHARED_UNCACHEABLE);
+    }
+
+    public static void resetSharedCacheStats() {
+        SHARED_HITS = SHARED_MISSES = SHARED_UNCACHEABLE = 0;
+    }
     private static final int SHARED_FORMULA_CACHE_MAX = 4096;
     private static final java.util.LinkedHashMap<SharedFormulaKey, SharedFormulaEntry> SHARED_FORMULA_CACHE =
         new java.util.LinkedHashMap<>(512, 0.75f, true) {
@@ -259,7 +296,7 @@ public final class RendererManager {
         ScriptContext sctx = scopeCtx != null ? scopeCtx : evalCtx.toScriptContext();
         if (serverLevel == null) return ScriptFormula.compile(expr).evaluate(sctx);
         FormulaSignature sig = FORMULA_SIGNATURES.computeIfAbsent(expr, e -> computeSignature(e, evalCtx));
-        if (!sig.cacheable()) return ScriptFormula.compile(expr).evaluate(sctx);
+        if (!sig.cacheable()) { SHARED_UNCACHEABLE++; return ScriptFormula.compile(expr).evaluate(sctx); }
         int tick = scopeTick;
         net.minecraft.world.level.block.state.BlockState state = scopeState;
         if (state == null) {
@@ -268,11 +305,20 @@ public final class RendererManager {
             catch (Throwable ignored) { return ScriptFormula.compile(expr).evaluate(sctx); }
             state = serverLevel.getBlockState(net.minecraft.core.BlockPos.containing(x, y, z));
         }
-        java.util.List<Object> keyVals = new java.util.ArrayList<>(sig.keyVars().size());
-        for (String var : sig.keyVars()) keyVals.add(sctx.getVar(var).asNum());
-        SharedFormulaKey key = new SharedFormulaKey(expr, state, keyVals);
+        java.util.List<String> keyVars = sig.keyVars();
+        int n = keyVars.size();
+        long k0 = 0L, k1 = 0L;
+        java.util.List<Object> rest = null;
+        if (n > 0) k0 = Double.doubleToLongBits(sctx.getVar(keyVars.get(0)).asNum());
+        if (n > 1) k1 = Double.doubleToLongBits(sctx.getVar(keyVars.get(1)).asNum());
+        if (n > 2) {
+            rest = new java.util.ArrayList<>(n - 2);
+            for (int i = 2; i < n; i++) rest.add(sctx.getVar(keyVars.get(i)).asNum());
+        }
+        SharedFormulaKey key = new SharedFormulaKey(expr, state, k0, k1, rest);
         SharedFormulaEntry cached = SHARED_FORMULA_CACHE.get(key);
-        if (cached != null && cached.tick() == tick) return cached.value();
+        if (cached != null && cached.tick() == tick) { SHARED_HITS++; return cached.value(); }
+        SHARED_MISSES++;
         ScriptValue val = ScriptFormula.compile(expr).evaluate(sctx);
         SHARED_FORMULA_CACHE.put(key, new SharedFormulaEntry(tick, val));
         return val;

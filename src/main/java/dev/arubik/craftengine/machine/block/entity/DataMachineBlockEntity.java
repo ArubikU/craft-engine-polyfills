@@ -2654,27 +2654,40 @@ dev.arubik.craftengine.rotation.KineticMember {
             if (level == null || pos == null) {
                 return null;
             }
-            LinkedHashMap<String, double[]> fluidTankData = new LinkedHashMap<String, double[]>();
-            for (MachineDefinition.TankSpec tankSpec : this.definition.fluidTanks()) {
-                FluidTank fluidTank = this.fluidTank(tankSpec.name());
-                if (fluidTank == null) continue;
-                FluidStack stored = fluidTank.getFluid(level, pos);
-                fluidTankData.put(tankSpec.name(), new double[]{stored.getAmount(), fluidTank.getCapacity()});
+            // Allocated only when the machine HAS tanks. Most machines do not - a shaft, a cogwheel,
+            // a gearbox - and they are the numerous ones, so an empty LinkedHashMap each, twice, per
+            // machine per tick was pure allocation for a map nothing would ever read.
+            Map<String, double[]> fluidTankData = java.util.Map.of();
+            if (!this.definition.fluidTanks().isEmpty()) {
+                LinkedHashMap<String, double[]> m = new LinkedHashMap<String, double[]>();
+                for (MachineDefinition.TankSpec tankSpec : this.definition.fluidTanks()) {
+                    FluidTank fluidTank = this.fluidTank(tankSpec.name());
+                    if (fluidTank == null) continue;
+                    FluidStack stored = fluidTank.getFluid(level, pos);
+                    m.put(tankSpec.name(), new double[]{stored.getAmount(), fluidTank.getCapacity()});
+                }
+                fluidTankData = m;
             }
-            LinkedHashMap<String, double[]> gasTankData = new LinkedHashMap<String, double[]>();
-            for (MachineDefinition.TankSpec tankSpec : this.definition.gasTanks()) {
-                GasTank tank = this.gasTank(tankSpec.name());
-                if (tank == null) continue;
-                GasStack stored = tank.getGas(level, pos);
-                gasTankData.put(tankSpec.name(), new double[]{stored.getAmount(), tank.getCapacity()});
+            Map<String, double[]> gasTankData = java.util.Map.of();
+            if (!this.definition.gasTanks().isEmpty()) {
+                LinkedHashMap<String, double[]> m = new LinkedHashMap<String, double[]>();
+                for (MachineDefinition.TankSpec tankSpec : this.definition.gasTanks()) {
+                    GasTank tank = this.gasTank(tankSpec.name());
+                    if (tank == null) continue;
+                    GasStack stored = tank.getGas(level, pos);
+                    m.put(tankSpec.name(), new double[]{stored.getAmount(), tank.getCapacity()});
+                }
+                gasTankData = m;
             }
-            LinkedHashMap<String, Integer> linkedHashMap = new LinkedHashMap<String, Integer>();
+            Map<String, Integer> linkedHashMap = java.util.Map.of();
             if (!this.upgradeDefs.isEmpty()) {
+                linkedHashMap = new LinkedHashMap<String, Integer>();
                 for (int upSlot : this.definition.upgrades().slots()) {
                     net.minecraft.world.item.ItemStack nmsItem = this.getItem(upSlot);
                     Key uid = this.upgradeItemId(nmsItem);
                     if (uid == null) continue;
-                    linkedHashMap.merge(uid.namespace() + ":" + uid.value(), 1, Integer::sum);
+                    ((LinkedHashMap<String, Integer>) linkedHashMap)
+                            .merge(uid.namespace() + ":" + uid.value(), 1, Integer::sum);
                 }
             }
             boolean bl = false;
