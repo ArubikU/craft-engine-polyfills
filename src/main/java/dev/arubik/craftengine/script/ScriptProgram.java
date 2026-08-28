@@ -3,6 +3,7 @@ package dev.arubik.craftengine.script;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.LinkedHashMap;
 import java.util.logging.Logger;
 
 /**
@@ -339,7 +340,7 @@ public final class ScriptProgram {
             }
         }
         ScriptContext.Builder b = ScriptContext.builder().copyFrom(ctx);
-        try { runStatements(statements, b); }
+        try { runStatements(statements, b, ctx, new LinkedHashMap<>()); }
         catch (ReturnSignal rs) { b.val("__return__", rs.value); }
         // peek(), not build(): `b` is local and dead the moment this returns, so the context is the
         // only thing that can reach these maps. Copying them defensively protected against nothing
@@ -497,6 +498,20 @@ public final class ScriptProgram {
     // declared in file A that reads/writes a `static` var must always hit file A's shared slot,
     // never some other file's, even when called indirectly (imported, or invoked as a callback).
     private void runStatements(List<Statement> stmts, ScriptContext.Builder b) {
+        runStatements(stmts, b, null, null);
+    }
+
+    /**
+     * @param inherited the context this file's top level was evaluated against, or null when these
+     *                  statements are not file scope (a function body). Non-null enables the cheap
+     *                  layered {@code def} snapshot.
+     * @param ownDecls  names this file's top level has declared so far, mirrored as they are bound.
+     *                  Only the file's OWN declarations go in — that is the whole point: a {@code
+     *                  def}'s snapshot then costs a copy of this small map instead of a copy of the
+     *                  entire inherited context, which the function receives from its caller anyway.
+     */
+    private void runStatements(List<Statement> stmts, ScriptContext.Builder b,
+                               ScriptContext inherited, LinkedHashMap<String, ScriptValue> ownDecls) {
         for (Statement stmt : stmts) {
             switch (stmt) {
                 case Statement.Assign a -> {
@@ -512,6 +527,7 @@ public final class ScriptProgram {
                         // `static` genuinely mutable shared state instead of a one-shot constant.
                         if (staticStore.containsKey(a.name())) staticStore.put(a.name(), v);
                         b.val(a.name(), v);
+                        if (ownDecls != null) ownDecls.put(a.name(), v);
                     } catch (Throwable t) { logStatementFailure("assign", a.name() + " = " + a.formula(), t); }
                 }
                 case Statement.StaticDecl sd -> {
@@ -528,6 +544,7 @@ public final class ScriptProgram {
                         }
                     });
                     b.val(sd.name(), v);
+                    if (ownDecls != null) ownDecls.put(sd.name(), v);
                 }
                 case Statement.ExprStatement es -> {
                     ScriptContext snap = b.peek();
@@ -550,7 +567,7 @@ public final class ScriptProgram {
                                 taken = false;
                             }
                         }
-                        if (taken) { runStatements(clause.body(), b); break; }
+                        if (taken) { runStatements(clause.body(), b, inherited, ownDecls); break; }
                     }
                 }
                 case Statement.ForStatement fs -> {
@@ -578,7 +595,7 @@ public final class ScriptProgram {
                                 catch (Throwable ignored) { pass = false; }
                                 if (!pass) continue;
                             }
-                            try { runStatements(fs.body(), b); }
+                            try { runStatements(fs.body(), b, inherited, ownDecls); }
                             catch (BreakSignal ignored) { break outer; }
                             catch (ContinueSignal ignored) { /* next iteration */ }
                         }
@@ -593,7 +610,7 @@ public final class ScriptProgram {
                         try { cond = ScriptFormula.compile(ws.condExpr()).evaluateBool(snap); }
                         catch (Throwable ignored) { break; }
                         if (!cond) break;
-                        try { runStatements(ws.body(), b); }
+                        try { runStatements(ws.body(), b, inherited, ownDecls); }
                         catch (BreakSignal ignored) { break outer; }
                         catch (ContinueSignal ignored) { /* next iteration */ }
                     }
@@ -615,7 +632,16 @@ public final class ScriptProgram {
                     // javadoc for why this function needs it, not just the eventual caller's scope.
                     List<Statement> capturedBody = fd.body();
                     List<String> capturedParams = fd.params();
-                    ScriptContext definingCtx = b.build();
+                    // At file scope this is a LAYER over the inherited context rather than a copy
+                    // of it: same visibility and same shadowing, but it copies only what this file
+                    // declared. b.build() here was 7.79% of server wall time — a full copy of both
+                    // maps per def, per execution, and an action script's top level re-runs every
+                    // tick. Inside a function body (inherited == null) there is no file scope to
+                    // layer over, so it stays a real snapshot of the local builder.
+                    ScriptContext definingCtx = inherited != null
+                            ? ScriptContext.layered(inherited,
+                                    new LinkedHashMap<>(ownDecls), new LinkedHashMap<>())
+                            : b.build();
                     java.lang.reflect.Method compiledMethod = compiledMethodFor(fd.name());
                     UserFunction fn = new UserFunction(fd.name(), capturedParams, definingCtx,
                         compiledMethod != null
@@ -639,9 +665,23 @@ public final class ScriptProgram {
                                 try { runStatements(capturedBody, resultB); }
                                 catch (ReturnSignal rs) { resultB.val("__return__", rs.value); }
                             });
-                    b.val(fd.name(), ScriptValue.ofObj(UserFunction.TYPE, fn));
+                    ScriptValue fnValue = ScriptValue.ofObj(UserFunction.TYPE, fn);
+                    b.val(fd.name(), fnValue);
+                    if (ownDecls != null) ownDecls.put(fd.name(), fnValue);
                 }
-                case Statement.Import imp -> applyImport(b, imp.path(), imp.alias(), imp.symbols());
+                case Statement.Import imp -> {
+                    // applyImport binds straight into the builder, so what it added is only
+                    // discoverable by diffing. Imports are rare and run once per pass, unlike the
+                    // per-def snapshot this feeds, so the scan is not on the hot path.
+                    java.util.Set<String> before = ownDecls == null
+                            ? null : new java.util.HashSet<>(b.peek().rawVars().keySet());
+                    applyImport(b, imp.path(), imp.alias(), imp.symbols());
+                    if (ownDecls != null) {
+                        for (Map.Entry<String, ScriptValue> e : b.peek().rawVars().entrySet()) {
+                            if (!before.contains(e.getKey())) ownDecls.put(e.getKey(), e.getValue());
+                        }
+                    }
+                }
             }
         }
     }

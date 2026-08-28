@@ -22,10 +22,41 @@ public final class ScriptContext {
 
     private final Map<String, ScriptValue> vars;
     private final Map<String, ScriptValue> classInstances;
+    /**
+     * An outer context this one is layered OVER, or null for a flat context.
+     *
+     * <p>Exists for exactly one caller: the snapshot {@code ScriptProgram} takes of a file's scope
+     * for each {@code def} it declares. That snapshot used to be a full copy of both maps, taken
+     * once per def per execution — and since an action script's top level re-runs every tick, it
+     * was the single hottest thing on the server thread at 7.79% of wall time, most of it copying
+     * an inherited context the function would have received from its caller anyway.
+     *
+     * <p>Layering makes that snapshot share the inherited context by REFERENCE and copy only the
+     * handful of names the file itself declared. It is exactly equivalent, not an approximation:
+     * the old snapshot was {@code copyFrom(inherited)} followed by the file's own puts, so the
+     * file's own names shadowed the inherited ones — which is precisely what "check own, then
+     * parent" does. Both are immutable once built, so sharing is safe.
+     */
+    private final ScriptContext parent;
 
     private ScriptContext(Map<String, ScriptValue> vars, Map<String, ScriptValue> classInstances) {
+        this(vars, classInstances, null);
+    }
+
+    private ScriptContext(Map<String, ScriptValue> vars, Map<String, ScriptValue> classInstances,
+                          ScriptContext parent) {
         this.vars = vars;
         this.classInstances = classInstances;
+        this.parent = parent;
+    }
+
+    /**
+     * A context holding {@code ownVars}/{@code ownClasses} layered over {@code parent} — the
+     * cheap form of "copy {@code parent}, then apply these". See {@link #parent}.
+     */
+    static ScriptContext layered(ScriptContext parent, Map<String, ScriptValue> ownVars,
+                                 Map<String, ScriptValue> ownClasses) {
+        return new ScriptContext(ownVars, ownClasses, parent);
     }
 
     /** Set only while {@link #beginTracking} is active — records every {@code getVar} name read
@@ -52,7 +83,15 @@ public final class ScriptContext {
     public ScriptValue getVar(String name) {
         java.util.Set<String> tracked = TRACKED_VARS.get();
         if (tracked != null) tracked.add(name);
-        return vars.getOrDefault(name, ScriptValue.NULL);
+        ScriptValue v = vars.get(name);
+        if (v != null) return v;
+        // Recorded once above, not per layer: the name read is the same name whichever layer
+        // answers it.
+        for (ScriptContext p = parent; p != null; p = p.parent) {
+            v = p.vars.get(name);
+            if (v != null) return v;
+        }
+        return ScriptValue.NULL;
     }
 
     /** Same lookup as {@link #getVar}, but never recorded by an active {@link #beginTracking}
@@ -68,11 +107,23 @@ public final class ScriptContext {
      *  formula truly reads nothing new" apart from "this formula reads a real ctx var that just
      *  happened to miss during the probe" — the latter was a real caching-correctness bug. */
     public ScriptValue peekVar(String name) {
-        return vars.getOrDefault(name, ScriptValue.NULL);
+        ScriptValue v = vars.get(name);
+        if (v != null) return v;
+        for (ScriptContext p = parent; p != null; p = p.parent) {
+            v = p.vars.get(name);
+            if (v != null) return v;
+        }
+        return ScriptValue.NULL;
     }
 
     public ScriptValue getClassInstance(String name) {
-        return classInstances.getOrDefault(name, ScriptValue.NULL);
+        ScriptValue v = classInstances.get(name);
+        if (v != null) return v;
+        for (ScriptContext p = parent; p != null; p = p.parent) {
+            v = p.classInstances.get(name);
+            if (v != null) return v;
+        }
+        return ScriptValue.NULL;
     }
 
     /**
@@ -86,8 +137,18 @@ public final class ScriptContext {
      * the generated code; it is one question with one answer.
      */
     public ScriptValue getClassOrVar(String name) {
-        ScriptValue sv = classInstances.getOrDefault(name, ScriptValue.NULL);
-        return sv != ScriptValue.NULL ? sv : getVar(name);
+        ScriptValue sv = parent == null ? classInstances.get(name) : getClassInstanceOrNull(name);
+        return sv != null && sv != ScriptValue.NULL ? sv : getVar(name);
+    }
+
+    private ScriptValue getClassInstanceOrNull(String name) {
+        ScriptValue v = classInstances.get(name);
+        if (v != null) return v;
+        for (ScriptContext p = parent; p != null; p = p.parent) {
+            v = p.classInstances.get(name);
+            if (v != null) return v;
+        }
+        return null;
     }
 
     /**
@@ -114,11 +175,19 @@ public final class ScriptContext {
     }
 
     public boolean hasVar(String name) {
-        return vars.containsKey(name);
+        if (vars.containsKey(name)) return true;
+        for (ScriptContext p = parent; p != null; p = p.parent) {
+            if (p.vars.containsKey(name)) return true;
+        }
+        return false;
     }
 
     public boolean hasClass(String name) {
-        return classInstances.containsKey(name);
+        if (classInstances.containsKey(name)) return true;
+        for (ScriptContext p = parent; p != null; p = p.parent) {
+            if (p.classInstances.containsKey(name)) return true;
+        }
+        return false;
     }
 
     /**
@@ -131,14 +200,27 @@ public final class ScriptContext {
      * hottest frames on the whole server thread. Internal copying uses {@link #rawVars} and pays
      * none of it; callers outside still cannot mutate anything.
      */
-    public Map<String, ScriptValue> vars() { return java.util.Collections.unmodifiableMap(vars); }
+    public Map<String, ScriptValue> vars() {
+        return java.util.Collections.unmodifiableMap(parent == null ? vars : flatten(true));
+    }
     public Map<String, ScriptValue> classInstances() {
-        return java.util.Collections.unmodifiableMap(classInstances);
+        return java.util.Collections.unmodifiableMap(parent == null ? classInstances : flatten(false));
     }
 
-    /** The backing maps, for copying inside this class only — never handed out. */
+    /** Outermost layer first, so nearer layers overwrite — the order the old flat copy produced. */
+    private Map<String, ScriptValue> flatten(boolean wantVars) {
+        LinkedHashMap<String, ScriptValue> out = new LinkedHashMap<>();
+        java.util.ArrayDeque<ScriptContext> chain = new java.util.ArrayDeque<>();
+        for (ScriptContext c = this; c != null; c = c.parent) chain.push(c);
+        for (ScriptContext c : chain) out.putAll(wantVars ? c.vars : c.classInstances);
+        return out;
+    }
+
+    /** This layer's OWN backing maps, for copying inside this class only — never handed out.
+     *  A caller that needs the whole chain must walk {@link #parentOrNull} itself. */
     Map<String, ScriptValue> rawVars() { return vars; }
     Map<String, ScriptValue> rawClasses() { return classInstances; }
+    ScriptContext parentOrNull() { return parent; }
 
     public static Builder builder() { return new Builder(); }
 
@@ -285,6 +367,9 @@ public final class ScriptContext {
         }
 
         public Builder copyFrom(ScriptContext other) {
+            // Outermost layer first: a nearer layer must overwrite the one it shadows, which is
+            // what the flat snapshot this replaced did by construction.
+            if (other.parentOrNull() != null) copyFrom(other.parentOrNull());
             vars.putAll(other.rawVars());
             classes.putAll(other.rawClasses());
             return this;
