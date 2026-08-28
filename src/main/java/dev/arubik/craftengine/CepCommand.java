@@ -702,6 +702,42 @@ public class CepCommand implements CommandExecutor, TabCompleter {
             return true;
         });
 
+        // /cep debug machines <seconds> - the three panels from the in-game profiler HUD, as chat:
+        // ms/tick per gating flag, machines by type (loaded vs ticking), and cost per type
+        // (ms each and ms/tick). A sampling profile says WHERE time goes; this says which machine
+        // type and which flag, which is what a fix needs.
+        cases.put(new ArgumentList("debug^", "machines^", Integer.class), (sender, parsed) -> {
+            int seconds = Math.max(1, Math.min(60, (Integer) parsed[2]));
+            if (dev.arubik.craftengine.debug.MachineProfiler.isEnabled()) {
+                sender.sendMessage(MiniMessage.miniMessage().deserialize(
+                        "<red>Already sampling - wait for it to finish."));
+                return true;
+            }
+            dev.arubik.craftengine.debug.MachineProfiler.start();
+            // Counts SERVER ticks, which is what ms/tick is per. Machine tick counts cannot stand
+            // in for it: a machine in an unloaded chunk contributes none, so dividing by those
+            // would inflate every figure by however idle the server happened to be.
+            org.bukkit.scheduler.BukkitTask ticker = org.bukkit.Bukkit.getScheduler().runTaskTimer(
+                    CraftEnginePolyfills.instance(),
+                    dev.arubik.craftengine.debug.MachineProfiler::countServerTick, 1L, 1L);
+            sender.sendMessage(MiniMessage.miniMessage().deserialize(
+                    "<gold>Machine profiler active for <white>" + seconds + "s<gold>. "
+                    + "<gray>Expect degraded performance - it times every phase of every machine.</gray>"));
+            org.bukkit.Bukkit.getScheduler().runTaskLater(CraftEnginePolyfills.instance(), () -> {
+                ticker.cancel();
+                dev.arubik.craftengine.debug.MachineProfiler.stop();
+                // Also logged, plain: the report arrives seconds after the command returns, and an
+                // RCON sender has disconnected by then - so a console-driven run would produce
+                // nothing readable anywhere. Which is exactly the case this command exists for.
+                java.util.logging.Logger log = java.util.logging.Logger.getLogger("CraftEnginePolyfills");
+                for (String line : dev.arubik.craftengine.debug.MachineProfiler.render()) {
+                    sender.sendMessage(MiniMessage.miniMessage().deserialize(line));
+                    log.info("[machines] " + line.replaceAll("<[^>]*>", ""));
+                }
+            }, seconds * 20L);
+            return true;
+        });
+
         // /cep debug heap - a .hprof for a heap analyser AND a class histogram in plain text, which
         // is the half that can be read without one. Pauses the server while it walks the heap.
         cases.put(new ArgumentList("debug^", "heap^"), (sender, parsed) -> {

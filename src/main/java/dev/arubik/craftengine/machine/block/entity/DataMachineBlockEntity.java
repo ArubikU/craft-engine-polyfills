@@ -757,6 +757,11 @@ dev.arubik.craftengine.rotation.KineticMember {
         super(blockEntity, definition.menuSize());
         FluidType filter;
         this.definition = definition;
+        // Counted here rather than on first tick, so a machine that is loaded but never ticks -
+        // which is most of them, and the whole point of showing loaded next to ticking - is seen.
+        dev.arubik.craftengine.debug.MachineProfiler.onLoaded(String.valueOf(definition.id()),
+                dev.arubik.craftengine.machine.CelledMachineDefinition.REGISTRY.get(definition.id()) != null
+                        ? "celled" : "classic");
         for (MachineDefinition.TankSpec spec : definition.fluidTanks()) {
             filter = spec.filter() == null ? null : FluidType.REGISTRY.get(spec.filter());
             this.addFluidTank(filter == null ? new FluidTank(spec.name(), spec.capacity()) : new FluidTank(spec.name(), spec.capacity(), filter));
@@ -1053,6 +1058,16 @@ dev.arubik.craftengine.rotation.KineticMember {
 
     @Override
     public void tick(Level level, BlockPos pos, ImmutableBlockState state) {
+        long profMachine = dev.arubik.craftengine.debug.MachineProfiler.begin();
+        try {
+            tick0(level, pos, state);
+        } finally {
+            dev.arubik.craftengine.debug.MachineProfiler.endMachine(this.definition == null ? null
+                    : String.valueOf(this.definition.id()), profMachine);
+        }
+    }
+
+    private void tick0(Level level, BlockPos pos, ImmutableBlockState state) {
         boolean needsRpm;
         this.ensureRenderer();
         if (!level.isClientSide() && level instanceof ServerLevel) {
@@ -1143,15 +1158,19 @@ dev.arubik.craftengine.rotation.KineticMember {
             // pulls via whatever's open by default, exactly like every other IO reader already does.
             if (this.definition.ioPull()
                     && (!this.gasTanks.isEmpty() || !this.fluidTanks.isEmpty() || this.getEnergyCapacityForCarrier() > 0)) {
+                long profIo = dev.arubik.craftengine.debug.MachineProfiler.begin();
                 this.pullFromInputFaces(level);
+                dev.arubik.craftengine.debug.MachineProfiler.end(dev.arubik.craftengine.debug.MachineProfiler.Phase.IO_PULL, profIo);
             }
             // noProcessing machines still need status evaluation for blockstate updates
             String statusRef = this.definition != null && this.definition.scripts() ? this.definition.statusScript() : null;
             if (statusRef != null && statusRef.contains(".pf:")) {
                 try {
+                    long profSt = dev.arubik.craftengine.debug.MachineProfiler.begin();
                     dev.arubik.craftengine.script.ScriptContext sctx = this.buildScriptContext();
                     if (sctx != null) {
                         String val = evalPfFuncStr(statusRef, sctx);
+                        dev.arubik.craftengine.debug.MachineProfiler.end(dev.arubik.craftengine.debug.MachineProfiler.Phase.SCRIPTS, profSt);
                         boolean active = !"false".equalsIgnoreCase(val) && !"0".equals(val) && !val.isEmpty();
                         this.maybeUpdateActivated(level, pos, state, active);
                     }
@@ -1238,8 +1257,10 @@ dev.arubik.craftengine.rotation.KineticMember {
                     n = this.cachedNeighborSignal(level, pos);
                     ctx = new MachineRenderContext(this.inputRpm, this.overclock, this.curFuelEff, this.progress, this.maxProgress, this.curGeneration, this.isProcessing(), this.inputRpm > 0.0f, this.isOverclocked(), this.burnTime > 0, null, linkedHashMap, fluidTankData, gasTankData, n);
                 }
+                long profR = dev.arubik.craftengine.debug.MachineProfiler.begin();
                 this.rendererManager.tick(ctx, (ServerLevel)level, pos.getX(), pos.getY(), pos.getZ(), yaw, facingName, (int[][]) null);
                 this.tickSpecDisplays((ServerLevel)level, pos);
+                dev.arubik.craftengine.debug.MachineProfiler.end(dev.arubik.craftengine.debug.MachineProfiler.Phase.RENDERERS, profR);
             }
             catch (Throwable throwable) {
                 logRendererFailureOnce(this.definition != null ? String.valueOf(this.definition.id()) : "?", throwable);
@@ -1247,7 +1268,9 @@ dev.arubik.craftengine.rotation.KineticMember {
         }
         if (this.definition != null && this.definition.scripts() && this.definition.actionScript() != null && ++this.actionTickCounter >= this.definition.actionInterval()) {
             this.actionTickCounter = 0;
+            long profS = dev.arubik.craftengine.debug.MachineProfiler.begin();
             this.runActionScript(this.definition.actionScript());
+            dev.arubik.craftengine.debug.MachineProfiler.end(dev.arubik.craftengine.debug.MachineProfiler.Phase.SCRIPTS, profS);
         }
         // Deliver this tick's RPM to neighbours that cannot pull for themselves. Machine-to-machine
         // links resolve by pull (pullRotationalPower), but plain RpmConsumers — conveyors, bearings,
@@ -1259,8 +1282,10 @@ dev.arubik.craftengine.rotation.KineticMember {
         // Tick script animation if one is active
         if (this.activeAnimation != null && this.definition.animations() && level instanceof ServerLevel sl) {
             try {
+                long profA = dev.arubik.craftengine.debug.MachineProfiler.begin();
                 dev.arubik.craftengine.script.ScriptContext animCtx = buildScriptContext();
                 this.activeAnimation.tickOn(sl, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, animCtx);
+                dev.arubik.craftengine.debug.MachineProfiler.end(dev.arubik.craftengine.debug.MachineProfiler.Phase.ANIMATIONS, profA);
                 if (!this.activeAnimation.isPlaying()) this.activeAnimation = null;
             } catch (Throwable ignored) {}
         }
@@ -1268,6 +1293,7 @@ dev.arubik.craftengine.rotation.KineticMember {
 
     @Override
     public void onRemove() {
+        dev.arubik.craftengine.debug.MachineProfiler.onUnloaded(this.definition == null ? null : String.valueOf(this.definition.id()));
         // Fire on_break hook before teardown, with a cancellable/adjustable BreakEvent pre-filled
         // with this machine's own container contents as the DEFAULT drops — a script that declares
         // on_break for an unrelated reason (a sound effect, a stat counter, ...) doesn't have to
@@ -2619,6 +2645,7 @@ dev.arubik.craftengine.rotation.KineticMember {
 
     @Override
     public ScriptContext buildScriptContext() {
+        long profCtx = dev.arubik.craftengine.debug.MachineProfiler.begin();
         try {
             float f;
             int n = 0;
@@ -2705,6 +2732,7 @@ dev.arubik.craftengine.rotation.KineticMember {
             // ScriptBootstrap, shared across every script-firing entry point in the plugin, rather
             // than re-allocating them here on every single tick for every machine on the server.
             if (level instanceof ServerLevel sl) b.world(sl);
+            dev.arubik.craftengine.debug.MachineProfiler.end(dev.arubik.craftengine.debug.MachineProfiler.Phase.CONTEXT, profCtx);
             // peek(), not build(): `b` is a local that dies with this return, so nothing can ever
             // mutate the maps the returned context wraps. build()'s defensive copy of both maps was
             // pure cost on a per-machine, per-tick path — it showed up in a server profile as
