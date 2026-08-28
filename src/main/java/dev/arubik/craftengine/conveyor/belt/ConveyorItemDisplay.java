@@ -89,13 +89,42 @@ public final class ConveyorItemDisplay {
         DisplayData.Scale.addEntityData(this.scale, values);
         DisplayData.BrightnessOverride.addEntityData(this.packedLight, values);
         DisplayData.LeftRotation.addEntityData(this.rotation, values);
-        // Widened from 1/2 to match ROTATION_PACKET_INTERVAL (DataMachineBlockEntity) — metadata
-        // packets for a continuously-spinning display are now throttled to every few ticks instead
-        // of every tick, so the client needs a matching interpolation window to smooth across the
-        // gap instead of holding still then snapping.
-        DisplayData.PosRotInterpolationDuration.addEntityData(4, values);
-        DisplayData.TransformationInterpolationDuration.addEntityData(4, values);
+        DisplayData.PosRotInterpolationDuration.addEntityData(this.interpolationTicks, values);
+        DisplayData.TransformationInterpolationDuration.addEntityData(this.interpolationTicks, values);
         return values;
+    }
+
+    /**
+     * How often a continuously animating display gets a fresh metadata packet.
+     *
+     * <p>Sending one every tick for a spinning shaft is most of what that display costs, and the
+     * client can interpolate the gap perfectly well.
+     */
+    public static final int UPDATE_INTERVAL_TICKS = 4;
+
+    /**
+     * How long the client should interpolate for, given how often this display is actually updated.
+     *
+     * <p>Deliberately LONGER than the update period, and it has to be derived from the REAL period
+     * of that particular display rather than from a global: a renderer with {@code update_when: 8}
+     * is refreshed every eight ticks, and a four-tick window leaves the client sitting still for
+     * four of them. Equal is wrong too, not merely fragile — with no margin the client finishes
+     * interpolating exactly when the next packet is due, so any tick jitter, GC pause or dropped
+     * packet becomes a visible stutter. A window ~25% wider (and at least one tick wider) means the
+     * client is still moving when the next value lands. The cost is that the display trails the
+     * true value slightly, which on a spinning model is invisible.
+     */
+    public static int interpolationTicksFor(int updatePeriodTicks) {
+        int p = Math.max(1, updatePeriodTicks);
+        return Math.max(p + 1, (int) Math.ceil(p * 1.25));
+    }
+
+    /** This display's own window, from its spec's update period. Defaults to the shaft-style
+     *  rotation throttle, which is what an unconfigured renderer gets. */
+    private int interpolationTicks = interpolationTicksFor(UPDATE_INTERVAL_TICKS);
+
+    public void setUpdatePeriodTicks(int period) {
+        this.interpolationTicks = interpolationTicksFor(period);
     }
 
     public void spawn(net.momirealms.craftengine.core.entity.player.Player player, double x, double y, double z) {

@@ -12,7 +12,7 @@
     "kinetics": false
   },
   "action_script": "storage/item_pipe_panel",
-  "action_interval": 1,
+  "action_interval": 4,
   "on_pipe_transfer": "storage/item_pipe_panel.pf:filter_item",
   "pages": [
     {

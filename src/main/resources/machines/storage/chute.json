@@ -12,7 +12,7 @@
   "on_right_click": "storage/chute.pf:on_right_click",
   "on_break": "storage/chute.pf:on_break",
   "action_script": "storage/chute.pf",
-  "action_interval": 1,
+  "action_interval": 4,
   "renderers": [
     {
       "type": "item_display",

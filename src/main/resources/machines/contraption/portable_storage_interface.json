@@ -12,7 +12,7 @@
     "kinetics": false
   },
   "action_script": "contraption/portable_storage_interface",
-  "action_interval": 1,
+  "action_interval": 4,
   "on_get_container": "contraption/portable_storage_interface.pf:on_get_container",
   "pages": [
     {

@@ -237,6 +237,28 @@ public final class RendererManager {
     private int scopeTick = -1;
 
     /**
+     * Whether this tick is one on which a rotation packet will actually be sent.
+     *
+     * <p>A continuously spinning display already has its metadata packet throttled to every
+     * ROTATION_PACKET_INTERVAL ticks, with the client's interpolation window widened to match, so it
+     * smooths across the gap. The EVALUATION was not throttled with it: {@code rot_x/rot_y/rot_z}
+     * were recomputed every tick and three out of four results were thrown away.
+     *
+     * <p>Set by the caller from the SAME counter the send decision uses. That alignment is the whole
+     * safety argument — the value is refreshed on exactly the ticks it is consumed, so it can never
+     * be stale when sent. An earlier attempt skipped on a schedule of its own and silently broke
+     * interpolation by sometimes skipping the send tick itself.
+     *
+     * <p>Defaults true so any caller that does not set it keeps evaluating every tick.
+     */
+    private boolean rotationTick = true;
+
+    /** Last evaluated rotation per spec, reused on the ticks in between. NaN means "never yet". */
+    private float[] lastRotX, lastRotY, lastRotZ;
+
+    public void setRotationTick(boolean sendingThisTick) { this.rotationTick = sendingThisTick; }
+
+    /**
      * The cache key, built without allocating for the values.
      *
      * <p>It used to carry a {@code List<Object>} of the key variables, which meant an ArrayList, a
@@ -632,9 +654,12 @@ public final class RendererManager {
                         // re-walking the same formula every tick. Falls through to the normal
                         // per-instance eval for anything that reads real instance state (rpm,
                         // progress, ...) — see DYNAMIC_MARKERS.
-                        float rotX = !Double.isNaN(wp2[3]) ? (float)wp2[3] : (float) this.sharedEvalNum(serverLevel, x, y, z, id.rotX() != null ? id.rotX() : "0", evalCtx);
-                        float rotY = !Double.isNaN(wp2[4]) ? (float)wp2[4] : (float) this.sharedEvalNum(serverLevel, x, y, z, id.rotY() != null ? id.rotY() : "0", evalCtx);
-                        float rotZ = !Double.isNaN(wp2[5]) ? (float)wp2[5] : (float) this.sharedEvalNum(serverLevel, x, y, z, id.rotZ() != null ? id.rotZ() : "0", evalCtx);
+                        float rotX = !Double.isNaN(wp2[3]) ? (float)wp2[3]
+                                : rotationValue(i, 0, id.rotX(), serverLevel, x, y, z, evalCtx);
+                        float rotY = !Double.isNaN(wp2[4]) ? (float)wp2[4]
+                                : rotationValue(i, 1, id.rotY(), serverLevel, x, y, z, evalCtx);
+                        float rotZ = !Double.isNaN(wp2[5]) ? (float)wp2[5]
+                                : rotationValue(i, 2, id.rotZ(), serverLevel, x, y, z, evalCtx);
                         this.evalResults[i].itemDisplay = new RendererSpec.EvaluatedItemDisplay(i, this.currentItems[i], relX, relY, relZ, (float) this.sharedEvalNum(serverLevel, x, y, z, id.scale() != null && !id.scale().isEmpty() ? id.scale() : "1", evalCtx), rotX, rotY, rotZ);
                     }
                     catch (Throwable wp2) {}
@@ -1074,6 +1099,38 @@ public final class RendererManager {
             }
         }
         return new LocationPlan(LocationPlan.Kind.EXPRESSION, null, null, null, null);
+    }
+
+    /**
+     * A rotation component, recomputed only on the ticks its value is actually sent.
+     *
+     * <p>Throttled ONLY for a formula that depends on {@code tick} — a continuously spinning one.
+     * Anything else produces the same value every tick anyway and goes through the shared cache, so
+     * throttling it would save nothing and only add a way to be wrong. A formula whose signature is
+     * not computed yet is evaluated normally, so the first pass is never throttled.
+     */
+    private float rotationValue(int specIndex, int axis, String expr, ServerLevel serverLevel,
+                                 double x, double y, double z, MachineRenderContext evalCtx) {
+        String e = expr != null ? expr : "0";
+        if (this.lastRotX == null) {
+            int n = this.specs.size();
+            this.lastRotX = new float[n]; this.lastRotY = new float[n]; this.lastRotZ = new float[n];
+            java.util.Arrays.fill(this.lastRotX, Float.NaN);
+            java.util.Arrays.fill(this.lastRotY, Float.NaN);
+            java.util.Arrays.fill(this.lastRotZ, Float.NaN);
+        }
+        float[] store = axis == 0 ? this.lastRotX : axis == 1 ? this.lastRotY : this.lastRotZ;
+        if (!this.rotationTick && !Float.isNaN(store[specIndex]) && dependsOnTick(e)) {
+            return store[specIndex];
+        }
+        float v = (float) this.sharedEvalNum(serverLevel, x, y, z, e, evalCtx);
+        store[specIndex] = v;
+        return v;
+    }
+
+    private static boolean dependsOnTick(String expr) {
+        FormulaSignature sig = FORMULA_SIGNATURES.get(expr);
+        return sig != null && sig.cacheable() && sig.keyVars().contains("tick");
     }
 
     private double[] resolveBoneLocation(LocationPlan plan) {

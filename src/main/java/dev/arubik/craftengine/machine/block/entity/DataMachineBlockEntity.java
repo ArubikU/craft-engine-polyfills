@@ -141,10 +141,12 @@ dev.arubik.craftengine.rotation.KineticMember {
     private ServerLevel lastKnownLevel;
     // Throttles for tickSpecDisplays() packet/CPU cost — see its use for why. Kept as a constant
     // rather than per-spec config: every continuously-rotating kinetic renderer wants the same
-    // treatment, and ConveyorItemDisplay's interpolation duration is widened to match
-    // ROTATION_PACKET_INTERVAL so the client still animates smoothly across the gap.
+    // treatment. The interval is now TAKEN FROM the display rather than restated here — the two
+    // were separate literals that happened to agree, and the client's interpolation window has to
+    // stay wider than this or a late packet shows as a stutter. See ConveyorItemDisplay's constants.
     private static final long LIGHT_CHECK_INTERVAL = 10;
-    private static final long ROTATION_PACKET_INTERVAL = 4;
+    private static final long ROTATION_PACKET_INTERVAL =
+            dev.arubik.craftengine.conveyor.belt.ConveyorItemDisplay.UPDATE_INTERVAL_TICKS;
     public static volatile boolean SPEC_DISPLAY_DEBUG = false;
     public static volatile boolean SCRIPT_DEBUG = false;
     private static final Set<DataMachineBlockEntity> INSTANCES = Collections.newSetFromMap(new WeakHashMap());
@@ -1258,6 +1260,10 @@ dev.arubik.craftengine.rotation.KineticMember {
                     ctx = new MachineRenderContext(this.inputRpm, this.overclock, this.curFuelEff, this.progress, this.maxProgress, this.curGeneration, this.isProcessing(), this.inputRpm > 0.0f, this.isOverclocked(), this.burnTime > 0, null, linkedHashMap, fluidTankData, gasTankData, n);
                 }
                 long profR = dev.arubik.craftengine.debug.MachineProfiler.begin();
+                // The same counter and phase the rotation packet decision uses below, so a spinning
+                // display's rotation is recomputed exactly on the ticks it is sent - never stale
+                // when it goes out, never computed for a tick that discards it.
+                this.rendererManager.setRotationTick(this.ticksAlive % ROTATION_PACKET_INTERVAL == 0);
                 this.rendererManager.tick(ctx, (ServerLevel)level, pos.getX(), pos.getY(), pos.getZ(), yaw, facingName, (int[][]) null);
                 this.tickSpecDisplays((ServerLevel)level, pos);
                 dev.arubik.craftengine.debug.MachineProfiler.end(dev.arubik.craftengine.debug.MachineProfiler.Phase.RENDERERS, profR);
@@ -1450,6 +1456,15 @@ dev.arubik.craftengine.rotation.KineticMember {
                         boolean justCreated = this.specDisplays[i] == null;
                         if (justCreated) {
                             this.specDisplays[i] = new ConveyorItemDisplay();
+                            // The client's interpolation window has to cover however often THIS
+                            // renderer is actually refreshed. A spec with update_when: 8 is updated
+                            // every eight ticks; a window sized for the four-tick rotation throttle
+                            // would leave it frozen for half of them.
+                            int period = (int) ROTATION_PACKET_INTERVAL;
+                            if (idSpec.updateWhen() instanceof dev.arubik.craftengine.machine.render.UpdateWhen.Interval iv) {
+                                period = Math.max(period, iv.ticks());
+                            }
+                            this.specDisplays[i].setUpdatePeriodTicks(period);
                         }
                         RendererSpec.EvaluatedItemDisplay eid = er.itemDisplay;
                         double wx = (double)pos.getX() + 0.5 + eid.offsetX();

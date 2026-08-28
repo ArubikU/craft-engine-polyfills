@@ -11,7 +11,7 @@
   "on_right_click": "conveyor/floor_funnel.pf:on_right_click",
   "on_break": "conveyor/floor_funnel.pf:on_break",
   "action_script": "conveyor/floor_funnel",
-  "action_interval": 1,
+  "action_interval": 4,
   "slots": {
     "input": [
       0
