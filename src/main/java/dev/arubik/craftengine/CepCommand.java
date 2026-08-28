@@ -634,6 +634,74 @@ public class CepCommand implements CommandExecutor, TabCompleter {
             return true;
         });
 
+        // /cep debug fakeplayer <name> - a player the server actually knows about: it holds chunk
+        // tickets, ticks, and is a real VIEWER, so display entities get built for it. Forced chunks
+        // cover the loading half of this; only a registered player covers the viewer half.
+        cases.put(new ArgumentList("debug^", "fakeplayer^", String.class), (sender, parsed) -> {
+            String name = (String) parsed[2];
+            net.minecraft.server.MinecraftServer server =
+                    ((org.bukkit.craftbukkit.CraftServer) org.bukkit.Bukkit.getServer()).getServer();
+            org.bukkit.Location at = sender instanceof Player p ? p.getLocation()
+                    : org.bukkit.Bukkit.getWorlds().get(0).getSpawnLocation();
+            net.minecraft.server.level.ServerLevel level = ((CraftWorld) at.getWorld()).getHandle();
+            String error = dev.arubik.craftengine.debug.FakePlayer.spawn(
+                    server, level, name, at.getX(), at.getY(), at.getZ());
+            if (error != null) {
+                sender.sendMessage(MiniMessage.miniMessage().deserialize(
+                        "<red>Could not spawn: <white>" + error));
+                return true;
+            }
+            // Everything the server writes to a fake player is BUILT - which is the work being
+            // exercised - and then has to go somewhere. Draining keeps the channel's queue from
+            // growing for as long as the player exists.
+            org.bukkit.Bukkit.getScheduler().runTaskTimer(CraftEnginePolyfills.instance(),
+                    dev.arubik.craftengine.debug.FakePlayer::drainOutbound, 20L, 20L);
+            sender.sendMessage(MiniMessage.miniMessage().deserialize(
+                    "<green>Spawned fake player <white>" + name + "<green>. It loads chunks, ticks "
+                    + "machines AND receives display entities. Remove with "
+                    + "<white>/cepolyfill debug fakeplayer-remove"));
+            return true;
+        });
+
+        // /cep debug fakeplayer-at <name> <world> <x> <y> <z> - the console form. The bare command
+        // uses the sender's position, which from RCON is world spawn, and machines are rarely there.
+        cases.put(new ArgumentList("debug^", "fakeplayer-at^", String.class, String.class,
+                Integer.class, Integer.class, Integer.class), (sender, parsed) -> {
+            org.bukkit.World world = org.bukkit.Bukkit.getWorld((String) parsed[3]);
+            if (world == null) {
+                sender.sendMessage(MiniMessage.miniMessage().deserialize(
+                        "<red>No world named <white>" + parsed[3]));
+                return true;
+            }
+            net.minecraft.server.MinecraftServer server =
+                    ((org.bukkit.craftbukkit.CraftServer) org.bukkit.Bukkit.getServer()).getServer();
+            String error = dev.arubik.craftengine.debug.FakePlayer.spawn(
+                    server, ((CraftWorld) world).getHandle(), (String) parsed[2],
+                    (Integer) parsed[4], (Integer) parsed[5], (Integer) parsed[6]);
+            if (error != null) {
+                sender.sendMessage(MiniMessage.miniMessage().deserialize(
+                        "<red>Could not spawn: <white>" + error));
+                return true;
+            }
+            org.bukkit.Bukkit.getScheduler().runTaskTimer(CraftEnginePolyfills.instance(),
+                    dev.arubik.craftengine.debug.FakePlayer::drainOutbound, 20L, 20L);
+            sender.sendMessage(MiniMessage.miniMessage().deserialize(
+                    "<green>Spawned fake player <white>" + parsed[2] + "<green> in <white>"
+                    + world.getName() + "<green> at " + parsed[4] + " " + parsed[5] + " " + parsed[6]));
+            return true;
+        });
+
+        // /cep debug fakeplayer-remove - disconnect every fake player. Leaving one behind would
+        // leave a player on the list that no human can log out.
+        cases.put(new ArgumentList("debug^", "fakeplayer-remove^"), (sender, parsed) -> {
+            net.minecraft.server.MinecraftServer server =
+                    ((org.bukkit.craftbukkit.CraftServer) org.bukkit.Bukkit.getServer()).getServer();
+            int n = dev.arubik.craftengine.debug.FakePlayer.removeAll(server);
+            sender.sendMessage(MiniMessage.miniMessage().deserialize(
+                    "<green>Removed <white>" + n + "<green> fake player(s)."));
+            return true;
+        });
+
         // /cep debug heap - a .hprof for a heap analyser AND a class histogram in plain text, which
         // is the half that can be read without one. Pauses the server while it walks the heap.
         cases.put(new ArgumentList("debug^", "heap^"), (sender, parsed) -> {

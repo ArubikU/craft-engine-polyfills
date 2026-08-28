@@ -15,12 +15,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * A self-contained sampling profiler for one thread, writing a report to a file.
  *
- * <h2>Why not spark</h2>
- * The server already runs spark, and its output is what surfaced the ScriptContext copying costs.
- * But spark's public API exposes only metrics — TPS, MSPT, CPU usage, {@code gc()} — and no way to
- * ask it for a profiler dump programmatically. Its profiles are produced by its own command and
- * uploaded to a paste service. So an agent that needs to read a profile from disk, unattended,
- * cannot get one out of spark at all. This is ~100 lines and needs nothing.
+ * <h2>Why the sampling is not spark's</h2>
+ * The server runs spark, and getting the profile FROM spark was the intent. It cannot be done, and
+ * that is established rather than assumed: the {@code spark-api} jar on this server's classpath
+ * contains exactly {@code Spark}, {@code SparkProvider}, {@code GarbageCollector},
+ * {@code PlaceholderResolver} and the {@code statistic} package — no profiler, sampler or dump type
+ * anywhere in it. spark's own profiler is driven by its command, and its results are UPLOADED:
+ * {@code plugins/spark/activity.json} records every past run as {@code "type": "url"} pointing at
+ * spark.lucko.me. Nothing reaches disk for something unattended to read.
+ *
+ * <p>What spark IS used for here is {@link SparkMetrics}, in the header of every report: TPS and
+ * MSPT. That is not a consolation prize — a sampler reports shares of WALL time, which cannot tell
+ * you whether a tick is in budget, and MSPT can. The two are only useful together.
  *
  * <h2>What it measures</h2>
  * It samples the target thread's stack at a fixed interval and aggregates the samples into a call
@@ -126,6 +132,9 @@ public final class ThreadSampler {
             w.write("duration  : " + durationMs + "ms at " + intervalMs + "ms intervals\n");
             w.write("samples   : " + taken + " taken, " + missed + " missed (thread idle/parked)\n");
             w.write("weight    : 1 sample ~ " + String.format(java.util.Locale.ROOT, "%.2f", msPerSample) + "ms\n");
+            // From spark's API — the one thing it genuinely offers here. The percentages below
+            // are shares of WALL time and say nothing about whether a tick is in budget; MSPT does.
+            w.write(SparkMetrics.describe());
             w.write("\n# Tree: <total%> <self%> <est ms> frame — a frame's total includes its callees.\n");
             w.write("# Frames under 0.5% of samples are omitted; sort by SELF to find real work.\n\n");
             writeNode(w, root, root.samples, msPerSample, 0);
