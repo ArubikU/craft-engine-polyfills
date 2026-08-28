@@ -610,6 +610,48 @@ public class CepCommand implements CommandExecutor, TabCompleter {
             return true;
         });
 
+        // /cep debug loadat <world> <x> <z> <radius> - the console/RCON form of "load". The player
+        // form below cannot be used by anything that is not a player, which defeats the point of
+        // these commands: being able to exercise machines with nobody there.
+        cases.put(new ArgumentList("debug^", "loadat^", String.class, Integer.class, Integer.class,
+                Integer.class), (sender, parsed) -> {
+            org.bukkit.World world = org.bukkit.Bukkit.getWorld((String) parsed[2]);
+            if (world == null) {
+                sender.sendMessage(MiniMessage.miniMessage().deserialize(
+                        "<red>No world named <white>" + parsed[2] + "<red>. Worlds: <white>"
+                        + org.bukkit.Bukkit.getWorlds().stream().map(org.bukkit.World::getName)
+                                .collect(java.util.stream.Collectors.joining(", "))));
+                return true;
+            }
+            int radius = Math.max(0, Math.min(8, (Integer) parsed[5]));
+            int added = dev.arubik.craftengine.debug.DebugLoader.force(
+                    world, (Integer) parsed[3], (Integer) parsed[4], radius);
+            sender.sendMessage(MiniMessage.miniMessage().deserialize(
+                    "<green>Forced <white>" + added + "<green> new chunk(s) in <white>"
+                    + world.getName() + "<green>; <white>"
+                    + dev.arubik.craftengine.debug.DebugLoader.forcedCount()
+                    + "<green> held in total."));
+            return true;
+        });
+
+        // /cep debug heap - a .hprof for a heap analyser AND a class histogram in plain text, which
+        // is the half that can be read without one. Pauses the server while it walks the heap.
+        cases.put(new ArgumentList("debug^", "heap^"), (sender, parsed) -> {
+            long stamp = System.currentTimeMillis();
+            java.nio.file.Path dir = CraftEnginePolyfills.instance().getDataFolder().toPath()
+                    .resolve("debug");
+            java.nio.file.Path hprof = dir.resolve("heap-" + stamp + ".hprof");
+            java.nio.file.Path hist = dir.resolve("heap-" + stamp + ".txt");
+            sender.sendMessage(MiniMessage.miniMessage().deserialize(
+                    "<gray>Dumping the heap - the server will pause until it finishes."));
+            String error = dev.arubik.craftengine.debug.HeapDump.dump(hprof, hist);
+            sender.sendMessage(MiniMessage.miniMessage().deserialize(error == null
+                    ? "<green>Wrote <white>" + hprof.getFileName() + "<green> and <white>"
+                      + hist.getFileName() + "<green> (the .txt is the readable one)."
+                    : "<red>Heap dump failed: <white>" + error));
+            return true;
+        });
+
         // /cep debug unload - release ONLY what /cep debug load forced.
         cases.put(new ArgumentList("debug^", "unload^"), (sender, parsed) -> {
             int released = dev.arubik.craftengine.debug.DebugLoader.releaseAll();
