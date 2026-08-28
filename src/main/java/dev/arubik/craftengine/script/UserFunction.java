@@ -46,19 +46,19 @@ public record UserFunction(String name, List<String> params, ScriptContext defin
         depth[0]++;
         callStack.push(name);
         try {
-            ScriptContext.Builder fb = ScriptContext.builder();
-            if (definingCtx != null) fb.copyFrom(definingCtx);
-            fb.copyFrom(callerCtx);
+            // over(), not copyFrom(): the parameters sit on top of the caller's context, which
+            // sits on top of the defining scope. That is what these two lines always meant; copying
+            // was just how it was said, and it copied every variable in both contexts on every
+            // single call — 3.16% of server wall time in a profile with a player online.
+            ScriptContext.Builder fb = ScriptContext.builder().over(definingCtx).over(callerCtx);
             for (int i = 0; i < params.size(); i++) {
                 fb.val(params.get(i), i < args.size() ? args.get(i) : ScriptValue.NULL);
             }
-            // peek(), not build() — fb isn't touched again after this point (both reads below are
-            // synchronous), so there's no reason to pay for a full defensive copy either time.
-            // resultB.copyFrom still gives IT a real independent map of its own (it gets mutated by
-            // executor.accept below); the "callerCtx" arg passed to executor is currently unused by
-            // ScriptProgram's only executor implementation (it runs entirely off resultB instead),
-            // so building a whole second defensive copy just for that was pure waste.
-            ScriptContext.Builder resultB = ScriptContext.builder().copyFrom(fb.peek());
+            // Layered as well: the body's writes land in resultB's OWN map and never reach fb,
+            // which is exactly the independence the copy here used to provide. The "callerCtx"
+            // argument to executor is unused by ScriptProgram's only implementation (it runs off
+            // resultB), so it costs nothing to hand it the same view.
+            ScriptContext.Builder resultB = ScriptContext.builder().over(fb.peek());
             executor.accept(fb.peek(), resultB);
             // peek(), not build(), for the same reason the two above are: resultB is dead after
             // this line, so build()'s defensive copy of BOTH maps existed only to read one key out

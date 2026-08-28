@@ -59,6 +59,51 @@ public final class ScriptContext {
         return new ScriptContext(ownVars, ownClasses, parent);
     }
 
+    /**
+     * Past this many layers a lookup walks more maps than copying them would have cost, so
+     * {@link #stack} flattens instead. Recursion is what makes this necessary: each nested call
+     * would otherwise add a layer, and a function 30 frames deep would make every variable read
+     * walk 30 maps.
+     */
+    private static final int MAX_LAYERS = 6;
+
+    private static ScriptContext flattenOf(ScriptContext ctx) {
+        Builder flat = new Builder();
+        flat.copyFrom(ctx);
+        return new ScriptContext(flat.vars, flat.classes);
+    }
+
+    private int depth() {
+        int d = 1;
+        for (ScriptContext c = parent; c != null; c = c.parent) d++;
+        return d;
+    }
+
+    /**
+     * {@code inner} shadowing {@code outer}, without copying either — the cheap form of
+     * "copy outer, then copy inner over it", which is what most context construction actually is.
+     *
+     * <p>{@code inner}'s own layers are re-based onto {@code outer} outermost-first, so relative
+     * shadowing inside {@code inner} is preserved. That allocates one small object per layer and
+     * copies no entries. Beyond {@link #MAX_LAYERS} the result is flattened into a real copy, so a
+     * deep call chain pays the copy once rather than making every later read walk the chain.
+     */
+    static ScriptContext stack(ScriptContext outer, ScriptContext inner) {
+        if (outer == null) return inner;
+        if (inner == null) return outer;
+        if (outer.depth() + inner.depth() > MAX_LAYERS) {
+            Builder flat = new Builder();
+            flat.copyFrom(outer);
+            flat.copyFrom(inner);
+            return new ScriptContext(flat.vars, flat.classes);
+        }
+        java.util.ArrayDeque<ScriptContext> chain = new java.util.ArrayDeque<>();
+        for (ScriptContext c = inner; c != null; c = c.parent) chain.push(c);
+        ScriptContext acc = outer;
+        for (ScriptContext c : chain) acc = new ScriptContext(c.vars, c.classInstances, acc);
+        return acc;
+    }
+
     /** Set only while {@link #beginTracking} is active — records every {@code getVar} name read
      *  during that window, so a caller can determine EXACTLY which context variables a given
      *  formula string actually depends on (used by {@code RendererManager}'s cross-instance shared-
@@ -227,6 +272,17 @@ public final class ScriptContext {
     public static final class Builder {
         private final LinkedHashMap<String, ScriptValue> vars = new LinkedHashMap<>();
         private final LinkedHashMap<String, ScriptValue> classes = new LinkedHashMap<>();
+        /**
+         * A context this builder's own entries sit ON TOP OF, instead of having been copied into
+         * it. Set by {@link #over}.
+         *
+         * <p>Almost every context in the codebase is built as "copy this one, then add a few
+         * things" — a function call layering its parameters over its caller, a script evaluation
+         * layering its assignments over the context it was handed. Copying is how that was
+         * expressed, and on a real server profile it was the single largest cost on the server
+         * thread. Layering expresses the same thing in O(added) instead of O(total).
+         */
+        private ScriptContext base;
 
         public Builder num(String name, double v) {
             vars.put(name, ScriptValue.of(v));
@@ -366,6 +422,28 @@ public final class ScriptContext {
             return this;
         }
 
+        /**
+         * Layer this builder's entries over {@code ctx} rather than copying it in. Reads fall
+         * through to {@code ctx}; writes stay local, so {@code ctx} is never modified — the same
+         * guarantee {@link #copyFrom} gave, without the copy.
+         *
+         * <p>Only valid before anything has been added, since entries already present would
+         * wrongly end up UNDER a base applied afterwards; that case falls back to copying.
+         */
+        public Builder over(ScriptContext ctx) {
+            if (ctx == null) return this;
+            if (!vars.isEmpty() || !classes.isEmpty()) return copyFrom(ctx);
+            if (base == null) {
+                // Flatten a chain that is already deep instead of extending it. Without this an
+                // evaluation whose result feeds the next one adds a layer each time and the chain
+                // grows without bound, turning every variable read into a walk.
+                base = ctx.depth() >= MAX_LAYERS ? flattenOf(ctx) : ctx;
+                return this;
+            }
+            base = ScriptContext.stack(base, ctx);
+            return this;
+        }
+
         public Builder copyFrom(ScriptContext other) {
             // Outermost layer first: a nearer layer must overwrite the one it shadows, which is
             // what the flat snapshot this replaced did by construction.
@@ -387,8 +465,17 @@ public final class ScriptContext {
         // immutable-map-specific construction cost.
         public ScriptContext build() {
             // Not wrapped: the ScriptContext owns these copies outright and only ever hands out the
-            // unmodifiable view its vars()/classInstances() build on demand.
-            return new ScriptContext(new LinkedHashMap<>(vars), new LinkedHashMap<>(classes));
+            // unmodifiable view its vars()/classInstances() build on demand. A base is flattened in
+            // rather than kept as a layer — build() is for contexts that outlive this builder, and
+            // a defensive copy is what that case is asking for.
+            if (base == null) {
+                return new ScriptContext(new LinkedHashMap<>(vars), new LinkedHashMap<>(classes));
+            }
+            Builder flat = new Builder();
+            flat.copyFrom(base);
+            flat.vars.putAll(vars);
+            flat.classes.putAll(classes);
+            return new ScriptContext(flat.vars, flat.classes);
         }
 
         /** Zero-copy "read this builder's CURRENT state right now" view — a live wrapper over this
@@ -405,7 +492,8 @@ public final class ScriptContext {
          *  of the WHOLE accumulated context per statement, for a value read once and thrown away)
          *  costing real server-thread time via {@code LinkedHashMap}'s copy-constructor. */
         public ScriptContext peek() {
-            return new ScriptContext(vars, classes);
+            return base == null ? new ScriptContext(vars, classes)
+                                : ScriptContext.layered(base, vars, classes);
         }
 
         private static int[] facingOffset(String facing) {

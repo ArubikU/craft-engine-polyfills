@@ -187,6 +187,20 @@ public final class ScriptBootstrap {
         return GLOBAL_SINGLETONS;
     }
 
+    /** The same singletons, pre-built as a context so a caller can LAYER them under its own
+     *  bindings instead of copying eighteen entries in per machine per tick. Built once; the map is
+     *  a constant and a ScriptContext is immutable. */
+    private static volatile ScriptContext GLOBAL_SINGLETONS_CTX;
+
+    public static ScriptContext globalSingletonsContext() {
+        ScriptContext c = GLOBAL_SINGLETONS_CTX;
+        if (c == null) {
+            c = ScriptContext.builder().typedAll(GLOBAL_SINGLETONS).build();
+            GLOBAL_SINGLETONS_CTX = c;
+        }
+        return c;
+    }
+
     /** The baseline namespace set every major script-firing entry point in this codebase already
      *  binds — see {@link #globalSingletons()}. Used by {@link ScriptRegistry}'s {@code __init__}/
      *  {@code __unload__} lifecycle hooks, which fire with no other natural "caller context" (no

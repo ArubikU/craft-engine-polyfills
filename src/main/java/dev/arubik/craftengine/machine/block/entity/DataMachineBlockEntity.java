@@ -2682,7 +2682,13 @@ dev.arubik.craftengine.rotation.KineticMember {
             float yaw = f;
             String facingName = facing != null ? facing.getName().toLowerCase() : "north";
             ScriptContext base = mrc.toScriptContext();
-            ScriptContext.Builder b = ScriptContext.builder().copyFrom(base)
+            // The global singletons go UNDERNEATH as a shared layer rather than being copied in at
+            // the end. None of their names (Server, Registry, Plugins, SQL, ...) collides with
+            // anything bound here, so lowest-priority is the same as the highest-priority position
+            // they used to hold — and it stops eighteen entries being copied per machine per tick.
+            ScriptContext.Builder b = ScriptContext.builder()
+                .over(dev.arubik.craftengine.script.ScriptBootstrap.globalSingletonsContext())
+                .over(base)
                 .facing(facingName, yaw)
                 .redstone(n)
                 .num("burn_time", this.burnTime)
@@ -2698,7 +2704,6 @@ dev.arubik.craftengine.rotation.KineticMember {
             // Global singletons available in all machine scripts — precomputed ONCE in
             // ScriptBootstrap, shared across every script-firing entry point in the plugin, rather
             // than re-allocating them here on every single tick for every machine on the server.
-            b.typedAll(dev.arubik.craftengine.script.ScriptBootstrap.globalSingletons());
             if (level instanceof ServerLevel sl) b.world(sl);
             // peek(), not build(): `b` is a local that dies with this return, so nothing can ever
             // mutate the maps the returned context wraps. build()'s defensive copy of both maps was

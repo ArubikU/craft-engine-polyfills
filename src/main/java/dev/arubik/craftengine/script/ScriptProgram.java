@@ -333,13 +333,13 @@ public final class ScriptProgram {
                 // rawVars/rawClasses, not vars()/classInstances(): those build an unmodifiable
                 // view whose iteration allocates a wrapper per entry, and this is the FAST path —
                 // the one taken by every execution of a cacheable file.
-                return ScriptContext.builder().copyFrom(ctx)
+                return ScriptContext.builder().over(ctx)
                         .valsAll(defs.rawVars())
                         .typedAll(defs.rawClasses())
                         .peek(); // the builder is a temporary — see the peek() below
             }
         }
-        ScriptContext.Builder b = ScriptContext.builder().copyFrom(ctx);
+        ScriptContext.Builder b = ScriptContext.builder().over(ctx);
         try { runStatements(statements, b, ctx, new LinkedHashMap<>()); }
         catch (ReturnSignal rs) { b.val("__return__", rs.value); }
         // peek(), not build(): `b` is local and dead the moment this returns, so the context is the
