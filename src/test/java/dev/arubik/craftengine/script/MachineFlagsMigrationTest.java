@@ -95,6 +95,15 @@ class MachineFlagsMigrationTest {
     @DisplayName("flags only ever spell out non-default values")
     void flagsOmitDefaults() throws IOException {
         // Keeps the files readable: a flag equal to the default is noise.
+        //
+        // The four flags MachineFlags.DEFAULT turns ON are deliberately exempt. They are spelled
+        // out in every shipped config even though they match the default, because that explicitness
+        // is what makes the default SAFE to have turned on: it exists only to keep a config
+        // predating the flags schema working (such a file lost every flag at once and silently
+        // stopped running its action_script and renderers), and it must never be what decides
+        // behaviour for a config in this repo. See MachineFlags.DEFAULT's own javadoc.
+        Set<String> exemptBecauseTheyGuardTheDefault =
+                Set.of("io_pull", "renderers", "scripts", "animations");
         Map<String, Boolean> defaults = Map.of(
                 "recipes", MachineFlags.DEFAULT.recipes(),
                 "fuel", MachineFlags.DEFAULT.fuel(),
@@ -112,6 +121,7 @@ class MachineFlagsMigrationTest {
             JsonElement flags = read(p).get("flags");
             if (flags == null) continue;
             for (Map.Entry<String, JsonElement> e : flags.getAsJsonObject().entrySet()) {
+                if (exemptBecauseTheyGuardTheDefault.contains(e.getKey())) continue;
                 Boolean def = defaults.get(e.getKey());
                 // "kinetics" is excluded: its default is derived from power.consumes_stress,
                 // so an explicit value is meaningful even when it matches MachineFlags.DEFAULT.

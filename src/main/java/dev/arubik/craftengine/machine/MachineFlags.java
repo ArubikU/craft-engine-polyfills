@@ -60,9 +60,35 @@ public record MachineFlags(
         boolean redstone
 ) {
 
-    /** Defaults for a plain recipe machine with a GUI and no kinetics. */
-    public static final MachineFlags DEFAULT =
-            new MachineFlags(false, false, false, false, false, false, false, false, false, false, false);
+    /**
+     * What an UNDECLARED flag means.
+     *
+     * <p>This was every-flag-true until the flags system landed, then every-flag-false. Flipping it
+     * was correct for the configs shipped in this repo — they were migrated in the same commit and
+     * now declare what they need — but it silently broke every config ALREADY on a live server: a
+     * plugin only extracts a default resource when the file is absent, so those files kept the old
+     * schema and lost every flag at once. No error, no log line; the machine simply stopped running
+     * its {@code action_script} and its renderers, while {@code on_right_click}/{@code on_break} —
+     * which no flag gates — kept working. That is what this shape is chosen to avoid repeating.
+     *
+     * <p>So the four flags below are true, and the rest are false, and the split is not a judgement
+     * call: {@code ioPull}, {@code renderers}, {@code scripts} and {@code animations} are declared
+     * explicitly by EVERY shipped config, so defaulting them cannot change how any of those
+     * machines behave — it only restores the pre-flags meaning for a config that predates the
+     * schema. {@code recipes}, {@code fuel}, {@code ui}, {@code uiTick} and {@code redstone} are
+     * omitted by 41 to 68 of the shipped configs, which now rely on the false default; defaulting
+     * those true would start recipe pipelines and per-tick redstone polls that machines
+     * deliberately do without. {@code MachineFlagsDefaultTest} pins that invariant so the split
+     * cannot silently stop being true.
+     *
+     * <p>An old config still loses {@code ui}/{@code redstone} this way. Those cannot be fixed from
+     * here without breaking the shipped set — they need the config file itself refreshed.
+     */
+    public static final MachineFlags DEFAULT = new MachineFlags(
+            /* recipes */ false, /* fuel */ false, /* continuousFuel */ false,
+            /* ui */ false, /* uiTick */ false, /* kinetics */ false,
+            /* ioPull */ true, /* renderers */ true, /* scripts */ true,
+            /* animations */ true, /* redstone */ false);
 
     public MachineFlags withRecipes(boolean v) {
         return new MachineFlags(v, fuel, continuousFuel, ui, uiTick, kinetics, ioPull, renderers, scripts, animations, redstone);
