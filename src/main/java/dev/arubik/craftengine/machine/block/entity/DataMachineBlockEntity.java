@@ -1578,8 +1578,19 @@ dev.arubik.craftengine.rotation.KineticMember {
                         boolean rotDirty = this.specDisplays[i].consumeRotationDirty();
                         boolean sendRotUpdate = rotDirty
                                 && this.ticksAlive % (ROTATION_PACKET_INTERVAL * this.lodFactor) == 0;
-                        int h = item.hashCode();
-                        boolean itemChanged = h != this.specDisplayHashes[i];
+                        // Hashing an ItemStack walks its component map, and on a tick this spec was
+                        // not re-evaluated the stack is the same object the last hash was taken
+                        // from — the comparison can only ever say "unchanged". Paid once per
+                        // display per tick before; now only when there is something to detect.
+                        boolean itemChanged;
+                        int h;
+                        if (justCreated || er.refreshedThisTick) {
+                            h = item.hashCode();
+                            itemChanged = h != this.specDisplayHashes[i];
+                        } else {
+                            h = this.specDisplayHashes[i];
+                            itemChanged = false;
+                        }
                         this.specDisplays[i].setNmsItem(item);
                         List<Player> effectiveViewers = viewers;
                         if (er.qualifyingPlayers != null) {

@@ -575,9 +575,11 @@ public final class RendererManager {
             // whenExpr, value formulas, render update) when it says not to refresh this tick. A
             // throttled tick leaves every already-shown display exactly as it was on the last tick
             // that DID update — see shouldUpdateThisTick's own doc for the 3 supported forms.
+            this.evalResults[i].refreshedThisTick = false;
             if (!this.shouldUpdateThisTick(i, spec, ctx, serverLevel, x, y, z)) {
                 continue;
             }
+            this.evalResults[i].refreshedThisTick = true;
             MachineRenderContext evalCtx = ctx;
             String scriptRef = spec.scriptRef();
             ScriptProgram script2 = scriptRef != null ? ScriptRegistry.get(scriptRef) : null;
@@ -1870,6 +1872,14 @@ public final class RendererManager {
         public boolean active;
         public RendererSpec.EvaluatedItemDisplay itemDisplay;
         public boolean emittedThisTick;
+        /**
+         * Whether this spec was re-evaluated on the current tick, or left as the throttle found it.
+         *
+         * <p>Lets the display pass tell "the same values again" apart from "values that happen to
+         * look the same", so it can skip work whose only purpose is detecting a change that cannot
+         * have happened — computing an ItemStack's hash to compare it against itself.
+         */
+        public boolean refreshedThisTick;
         public int particleCount;
         public double pSpreadX;
         public double pSpreadY;
