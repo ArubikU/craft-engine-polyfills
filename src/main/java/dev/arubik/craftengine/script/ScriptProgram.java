@@ -327,7 +327,13 @@ public final class ScriptProgram {
      * Run the script against {@code ctx}, returning an updated context with new variable values.
      */
     public ScriptContext evaluate(ScriptContext ctx) {
-        if (pureDefs || isTopLevelCacheable(ctx)) {
+        // isTopLevelCacheable is what POPULATES cachedDefsResult, so it has to run even when
+        // pureDefs already implies the answer. Written the other way round, || short-circuited past
+        // it whenever pureDefs was true - so a file of nothing but defs, the exact case this fast
+        // path exists for, never had its cache filled and fell through to a full runStatements on
+        // every evaluation. shaft.pf is two defs and no top-level body, and seventy-nine shafts
+        // were re-creating both UserFunctions every tick to do nothing.
+        if (isTopLevelCacheable(ctx) || pureDefs) {
             ScriptContext defs = cachedDefsResult;
             if (defs != null) {
                 // rawVars/rawClasses, not vars()/classInstances(): those build an unmodifiable
