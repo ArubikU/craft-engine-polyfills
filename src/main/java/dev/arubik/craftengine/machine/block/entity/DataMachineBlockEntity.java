@@ -1069,7 +1069,31 @@ dev.arubik.craftengine.rotation.KineticMember {
         }
     }
 
+    /**
+     * This tick's script context, reused between the status evaluation and the renderer pass.
+     *
+     * <p>Those two run a few lines apart in {@link #tick0} and each used to build their own, so
+     * every rendering machine on the server paid for the whole context twice a tick — the tank and
+     * upgrade maps, the neighbour signal, the Machine and Network refs, all of it — to produce two
+     * objects binding identical values.
+     *
+     * <p>Only that stretch is covered, and deliberately. Nothing between the two mutates anything
+     * the context binds: {@code maybeUpdateActivated} changes the BLOCK state, which the context
+     * does not hold (the renderer reads it from the level itself) and which {@code Machine} reads
+     * live anyway. The action script is a different matter — it exists to change progress, fuel and
+     * rpm — so the memo is dropped before it runs, and the animation pass after it builds fresh.
+     */
+    private ScriptContext tickCtxMemo;
+
+    /** {@link #buildScriptContext()}, at most once per tick — see {@link #tickCtxMemo}. */
+    private ScriptContext tickScriptContext() {
+        ScriptContext c = this.tickCtxMemo;
+        if (c == null) this.tickCtxMemo = c = this.buildScriptContext();
+        return c;
+    }
+
     private void tick0(Level level, BlockPos pos, ImmutableBlockState state) {
+        this.tickCtxMemo = null;
         boolean needsRpm;
         this.ensureRenderer();
         if (!level.isClientSide() && level instanceof ServerLevel) {
@@ -1169,7 +1193,7 @@ dev.arubik.craftengine.rotation.KineticMember {
             if (statusRef != null && statusRef.contains(".pf:")) {
                 try {
                     long profSt = dev.arubik.craftengine.debug.MachineProfiler.begin();
-                    dev.arubik.craftengine.script.ScriptContext sctx = this.buildScriptContext();
+                    dev.arubik.craftengine.script.ScriptContext sctx = this.tickScriptContext();
                     if (sctx != null) {
                         String val = evalPfFuncStr(statusRef, sctx);
                         dev.arubik.craftengine.debug.MachineProfiler.end(dev.arubik.craftengine.debug.MachineProfiler.Phase.SCRIPTS, profSt);
@@ -1226,7 +1250,7 @@ dev.arubik.craftengine.rotation.KineticMember {
                 // Building the real tank/upgrade maps here was therefore 100%-wasted allocation +
                 // tank iteration on every tick for every rendering machine in the common case —
                 // only actually needed as a fallback if buildScriptContext() fails, so defer it.
-                ScriptContext machineScriptCtx = this.buildScriptContext();
+                ScriptContext machineScriptCtx = this.tickScriptContext();
                 MachineRenderContext ctx;
                 if (machineScriptCtx != null) {
                     ctx = new MachineRenderContext(this.inputRpm, this.overclock, this.curFuelEff, this.progress, this.maxProgress, this.curGeneration, this.isProcessing(), this.inputRpm > 0.0f, this.isOverclocked(), this.burnTime > 0, null)
@@ -1278,6 +1302,10 @@ dev.arubik.craftengine.rotation.KineticMember {
             this.runActionScript(this.definition.actionScript());
             dev.arubik.craftengine.debug.MachineProfiler.end(dev.arubik.craftengine.debug.MachineProfiler.Phase.SCRIPTS, profS);
         }
+        // The action script is where a machine changes its own progress, fuel and rpm, so the memo
+        // stops describing it here. Up to this point it did: the script READS the same pre-action
+        // state the status evaluation and the renderer pass read, which is why it shares theirs.
+        this.tickCtxMemo = null;
         // Deliver this tick's RPM to neighbours that cannot pull for themselves. Machine-to-machine
         // links resolve by pull (pullRotationalPower), but plain RpmConsumers — conveyors, bearings,
         // movers — never declare an io.rpm.input face and so would never see a source. Driven purely
@@ -2784,7 +2812,7 @@ dev.arubik.craftengine.rotation.KineticMember {
             if (prog != null && prog.topLevelIsInert()) return;
         }
         try {
-            ScriptContext ctx = this.buildScriptContext();
+            ScriptContext ctx = this.tickScriptContext();
             if (ctx == null) return;
             if (SCRIPT_DEBUG) System.out.println("[CEP script] RUN " + scriptRef);
             call.execute(ctx);
