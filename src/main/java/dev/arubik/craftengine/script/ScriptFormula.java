@@ -41,6 +41,8 @@ public final class ScriptFormula {
     // across calls and threads — caching by the exact string is a correct, unbounded-but-small
     // cache since the set of distinct expressions in use is fixed by config, not by tick count.
     private static final java.util.concurrent.ConcurrentHashMap<String, ScriptFormula> CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    /** Separate from CACHE so a .pf expression and an identical inline one keep their own policy. */
+    private static final java.util.concurrent.ConcurrentHashMap<String, ScriptFormula> FILE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
     public static ScriptFormula compile(String expr) {
         if (expr == null) throw new IllegalArgumentException("ScriptFormula: expression must not be null");
@@ -48,6 +50,30 @@ public final class ScriptFormula {
         if (cached != null) return cached;
         ScriptFormula compiled = doCompile(expr);
         CACHE.put(expr, compiled);
+        return compiled;
+    }
+
+    /**
+     * An expression that lives inside a {@code .pf} file, which the expression JIT leaves alone.
+     *
+     * <p>A {@code .pf} is compiled as a WHOLE by {@link ScriptClassCompiler}, one class per file.
+     * Generating a second hidden class per expression inside it duplicates that work and, for the
+     * statements a file only ever runs at start-up, produces classes used exactly once — a
+     * {@code def __init__()} body creating its SQL tables, a {@code SPONSOR_SLOTS = [47, 48, ...]}
+     * constant. Inline expressions from renderers, menus and machine definitions have no such
+     * whole-unit compiler and keep JITting; they are what the expression JIT is for.
+     *
+     * <p>Cached apart from {@link #compile} deliberately: the two caches are keyed on the
+     * expression text alone, so one shared entry would hand whichever caller arrived second the
+     * other's JIT policy, and identical text does occur in both places.
+     */
+    public static ScriptFormula compileInScriptFile(String expr) {
+        if (expr == null) throw new IllegalArgumentException("ScriptFormula: expression must not be null");
+        ScriptFormula cached = FILE_CACHE.get(expr);
+        if (cached != null) return cached;
+        ScriptFormula compiled = doCompile(expr);
+        compiled.jitAllowed = false;
+        FILE_CACHE.put(expr, compiled);
         return compiled;
     }
 
@@ -137,6 +163,19 @@ public final class ScriptFormula {
         Node n = jit;
         if (n != null) return n;
         if (jitAttempted) return root;
+        if (!this.jitAllowed) return root;
+        // The FIRST evaluation always interprets, so an expression evaluated exactly once is never
+        // compiled at all. That is the whole population of script start-up: the body of a
+        // `def __init__()`, which runs when the script is created and never again, and plain
+        // constant assignments like `SPONSOR_SLOTS = [47, 48, 49, 50, 51]`. Each was generating a
+        // hidden class to produce a value used once, and a list of literals cannot be made faster
+        // than the interpreter already builds it.
+        //
+        // Counting rather than looking for `__init__` by name is deliberate: run-once is the actual
+        // property that makes compiling pointless, and it catches every shape of it — a one-shot
+        // command handler, a config expression read at load — not just the one spelling. Anything
+        // on a tick path reaches its second evaluation within a tick and compiles then.
+        if (++this.evals < 2) return root;
         synchronized (this) {
             if (!jitAttempted) {
                 Node compiled = null;
@@ -159,8 +198,17 @@ public final class ScriptFormula {
     /** The lambda-tree interpreter — always present, always correct, the fallback for everything. */
     private final Node root;
     /** The bytecode-JIT node once {@link #node()} has produced one; null if it never will. */
+    /** False for expressions inside a .pf — see {@link #compileInScriptFile}. */
+    private boolean jitAllowed = true;
     private volatile Node jit;
     private volatile boolean jitAttempted;
+    /**
+     * Evaluations so far, capped in effect by {@link #node()} losing interest once compiled.
+     *
+     * <p>Not synchronised, and does not need to be: a race can only miscount by one, which shifts
+     * the compile a single evaluation either way and changes no result.
+     */
+    private int evals;
 
     private ScriptFormula(String rawExpr, Node root) {
         this.rawExpr = rawExpr;

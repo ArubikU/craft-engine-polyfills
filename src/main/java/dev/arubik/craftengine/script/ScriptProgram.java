@@ -448,7 +448,7 @@ public final class ScriptProgram {
      *  with a real {@code IllegalAccessError} at the first actual for-loop call. */
     public static List<ScriptValue[]> resolveForRows(String iterExpr, ScriptContext ctx, int varCount) {
         try {
-            return rowsOf(ScriptFormula.compile(iterExpr).evaluate(ctx), varCount);
+            return rowsOf(ScriptFormula.compileInScriptFile(iterExpr).evaluate(ctx), varCount);
         } catch (Throwable ignored) {
             return null;
         }
@@ -651,7 +651,7 @@ public final class ScriptProgram {
                                 b.val(vars.get(i), i < row.length ? row[i] : ScriptValue.NULL);
                             if (fs.guardExpr() != null) {
                                 boolean pass;
-                                try { pass = ScriptFormula.compile(fs.guardExpr()).evaluateBool(b.peek()); }
+                                try { pass = ScriptFormula.compileInScriptFile(fs.guardExpr()).evaluateBool(b.peek()); }
                                 catch (Throwable ignored) { pass = false; }
                                 if (!pass) continue;
                             }
@@ -667,7 +667,7 @@ public final class ScriptProgram {
                     while (iters++ < ws.maxIter()) {
                         ScriptContext snap = b.peek();
                         boolean cond;
-                        try { cond = ScriptFormula.compile(ws.condExpr()).evaluateBool(snap); }
+                        try { cond = ScriptFormula.compileInScriptFile(ws.condExpr()).evaluateBool(snap); }
                         catch (Throwable ignored) { break; }
                         if (!cond) break;
                         try { runStatements(ws.body(), b, inherited, ownDecls, scopeCarrier); }
@@ -680,7 +680,7 @@ public final class ScriptProgram {
                 case Statement.ReturnStatement rs -> {
                     ScriptValue val = ScriptValue.NULL;
                     if (!rs.expr().isEmpty()) {
-                        try { val = ScriptFormula.compile(rs.expr()).evaluate(b.peek()); }
+                        try { val = ScriptFormula.compileInScriptFile(rs.expr()).evaluate(b.peek()); }
                         catch (Throwable ignored) {}
                     }
                     throw new ReturnSignal(val);
@@ -989,7 +989,7 @@ public final class ScriptProgram {
                 String callExpr = tok.readExprToEOL();
                 lookahead = tok.next();
                 if (callExpr.isEmpty()) return null;
-                try { return new Statement.ExprStatement(ScriptFormula.compile(callExpr)); }
+                try { return new Statement.ExprStatement(ScriptFormula.compileInScriptFile(callExpr)); }
                 catch (Throwable ignored) { return null; }
             }
             int exprStart = op.pos() + 1; // right after '='
@@ -1258,7 +1258,7 @@ public final class ScriptProgram {
             String expr = tok.readExprToEOL();
             lookahead = tok.next();
             if (expr.isEmpty()) return null;
-            try { return new Statement.StaticDecl(declName, ScriptFormula.compile(expr), isFinal); }
+            try { return new Statement.StaticDecl(declName, ScriptFormula.compileInScriptFile(expr), isFinal); }
             catch (IllegalArgumentException ex) {
                 log.warning("[CEPolyfills] Bad expr for '" + declName + "' in " + scriptName + ".pf: " + ex.getMessage());
                 return null;
@@ -1319,14 +1319,14 @@ public final class ScriptProgram {
         }
 
         private Statement.Assign compile(String name, String expr) {
-            try { return new Statement.Assign(name, ScriptFormula.compile(expr)); }
+            try { return new Statement.Assign(name, ScriptFormula.compileInScriptFile(expr)); }
             catch (IllegalArgumentException ex) { log.warning("[CEPolyfills] Bad expr '" + name + "' in " + scriptName + ".pf: " + ex.getMessage()); return null; }
         }
 
         private ScriptFormula compileFormula(String expr) {
-            if (expr.isEmpty()) return ScriptFormula.compile("false");
-            try { return ScriptFormula.compile(expr); }
-            catch (IllegalArgumentException ex) { log.warning("[CEPolyfills] Bad condition in " + scriptName + ".pf: " + ex.getMessage()); return ScriptFormula.compile("false"); }
+            if (expr.isEmpty()) return ScriptFormula.compileInScriptFile("false");
+            try { return ScriptFormula.compileInScriptFile(expr); }
+            catch (IllegalArgumentException ex) { log.warning("[CEPolyfills] Bad condition in " + scriptName + ".pf: " + ex.getMessage()); return ScriptFormula.compileInScriptFile("false"); }
         }
     }
 }
