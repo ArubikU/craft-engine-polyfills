@@ -560,7 +560,7 @@ public final class RendererManager {
                 ScriptContext augmented = script2.evaluate(ctx.toScriptContext());
                 evalCtx = ctx.augmented(augmented);
             }
-            this.evalResults[i].active = active = spec.whenExpr().evaluate(evalCtx);
+            this.evalResults[i].active = active = evaluateWhen(spec.whenExpr(), evalCtx, serverLevel, x, y, z);
             this.evalResults[i].emittedThisTick = false;
             if (actualSpec instanceof RendererSpec.BetterModelSpec) {
                 RendererSpec.BetterModelSpec bm = (RendererSpec.BetterModelSpec)actualSpec;
@@ -1131,6 +1131,31 @@ public final class RendererManager {
     private static boolean dependsOnTick(String expr) {
         FormulaSignature sig = FORMULA_SIGNATURES.get(expr);
         return sig != null && sig.cacheable() && sig.keyVars().contains("tick");
+    }
+
+    /**
+     * A renderer's {@code when}, through the cross-instance cache like every other formula.
+     *
+     * <p>It was not. The value formulas — item, rotations, scale, location — all went through
+     * sharedEval and hit 92.6% of the time, but the gate deciding whether to evaluate them at all
+     * went straight to {@code ScriptFormula.compile(...).evaluateBool(...)}. So seventy-nine shafts
+     * each evaluated all three of their {@code Machine.axis == "..." && Machine.activated}
+     * conditions from scratch every tick, uncached, when the answer depends only on the block state
+     * they share. That is 237 full evaluations a tick, each doing a PolyClass property dispatch, to
+     * compute a handful of distinct results.
+     *
+     * <p>The keyword forms — always/never, and the fast property reads — never touched the script
+     * engine and still do not; only a real expression is routed. Non-cacheable expressions fall
+     * through inside sharedEval exactly as they do everywhere else.
+     */
+    private boolean evaluateWhen(dev.arubik.craftengine.machine.render.WhenCondition when,
+                                  MachineRenderContext evalCtx, ServerLevel serverLevel,
+                                  double x, double y, double z) {
+        if (!(when instanceof dev.arubik.craftengine.machine.render.WhenCondition.ScriptGate gate)
+                || serverLevel == null) {
+            return when.evaluate(evalCtx);
+        }
+        return this.sharedEval(serverLevel, x, y, z, gate.expr(), evalCtx).asBool();
     }
 
     private double[] resolveBoneLocation(LocationPlan plan) {
