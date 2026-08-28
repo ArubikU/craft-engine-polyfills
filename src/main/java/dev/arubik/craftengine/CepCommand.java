@@ -101,6 +101,9 @@ public class CepCommand implements CommandExecutor, TabCompleter {
         // is repopulated.
         cases.put(new ArgumentList("reload^", "items^"), (sender, parsed) -> {
             try {
+                // The built-item cache keys on item id, and reloading is exactly when the
+                // definition behind an id can change.
+                dev.arubik.craftengine.script.ScriptFormula.clearItemCache();
                 int loaders = dev.arubik.craftengine.data.Registries.reloadLoaders("items");
                 reloadMsg(sender, "items",
                         dev.arubik.craftengine.item.ItemDefinition.REGISTRY.size()

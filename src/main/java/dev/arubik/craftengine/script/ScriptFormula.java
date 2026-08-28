@@ -201,6 +201,50 @@ public final class ScriptFormula {
      * same {@link #callBuiltin}, so the user-function override probe and every builtin behave
      * identically however the call site was compiled.
      */
+    /**
+     * A CraftEngine item by id, built once and copied thereafter.
+     *
+     * <p>Building one is a registry lookup, a full Bukkit ItemStack construction with every NBT
+     * component the definition declares, and a conversion to NMS. It is also entirely determined by
+     * the id — so a renderer whose {@code item} is {@code CraftEngineItem("cml:shaft_render")} was
+     * doing all of that repeatedly for a value that cannot differ. In a server profile that build
+     * was the single largest thing under the renderer's formula evaluation.
+     *
+     * <p>Callers get a {@code copy()}, never the cached stack: a ScriptValue.Item flows into script
+     * code that may well mutate it, and handing out the shared instance would let one renderer's
+     * edit appear in every other machine using the same id.
+     *
+     * <p>Cleared on reload, since that is when an item definition can change.
+     */
+    private static final java.util.concurrent.ConcurrentHashMap<String, ItemStack> CE_ITEM_CACHE =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static ItemStack craftEngineItem(String itemId) {
+        ItemStack cached = CE_ITEM_CACHE.get(itemId);
+        if (cached != null) return cached;
+        try {
+            // TODO: Use NMS-only CE item resolution when available
+            var def = net.momirealms.craftengine.bukkit.api.CraftEngineItems.byId(
+                    net.momirealms.craftengine.core.util.Key.of(itemId));
+            if (def != null) {
+                org.bukkit.inventory.ItemStack bukkit = def.buildBukkitItem();
+                if (bukkit != null) {
+                    ItemStack nms = org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(bukkit);
+                    if (nms != null) {
+                        CE_ITEM_CACHE.put(itemId, nms);
+                        return nms;
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+        return null; // not cached: a miss now may resolve after the item registry finishes loading
+    }
+
+    /** Drops the built-item cache. Called on reload, when a definition can genuinely change. */
+    public static void clearItemCache() {
+        CE_ITEM_CACHE.clear();
+    }
+
     public static ScriptValue callBuiltin0(String name, ScriptContext ctx) {
         return callBuiltin(name, List.of(), ctx);
     }
@@ -274,19 +318,8 @@ public final class ScriptFormula {
 
             case "CraftEngineItem" -> {
                 if (args.isEmpty()) yield ScriptValue.NULL;
-                String itemId = args.get(0).asStr();
-                try {
-                    // TODO: Use NMS-only CE item resolution when available
-                    var def = net.momirealms.craftengine.bukkit.api.CraftEngineItems.byId(
-                            net.momirealms.craftengine.core.util.Key.of(itemId));
-                    if (def != null) {
-                        org.bukkit.inventory.ItemStack bukkit = def.buildBukkitItem();
-                        if (bukkit != null) {
-                            yield ScriptValue.ofItem(org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(bukkit));
-                        }
-                    }
-                } catch (Throwable ignored) {}
-                yield ScriptValue.NULL;
+                ItemStack built = craftEngineItem(args.get(0).asStr());
+                yield built == null ? ScriptValue.NULL : ScriptValue.ofItem(built.copy());
             }
 
             case "MinecraftItem", "VanillaItem" -> {
